@@ -1,0 +1,24 @@
+# Laravel
+api/.env
+api/.env.backup
+api/vendor/
+api/storage/logs/
+api/storage/framework/cache/
+api/storage/framework/sessions/
+api/storage/framework/views/
+api/bootstrap/cache/
+
+# Next.js
+web/.env.local
+web/.env*.local
+web/node_modules/
+web/.next/
+
+# Expo
+mobile/.env
+mobile/node_modules/
+mobile/.expo/
+
+# General
+.DS_Store
+*.log
