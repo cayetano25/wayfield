@@ -2,13 +2,14 @@
 
 namespace App\Domain\Auth\Actions;
 
+use App\Mail\EmailVerificationMail;
 use App\Models\AuthMethod;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class RegisterUserAction
 {
@@ -28,7 +29,7 @@ class RegisterUserAction
             'provider_email' => $user->email,
         ]);
 
-        $user->notify(new VerifyEmailNotification());
+        Mail::to($user->email)->queue(new EmailVerificationMail($user));
 
         return $user;
     }

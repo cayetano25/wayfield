@@ -3,6 +3,7 @@
 namespace App\Domain\Notifications\Actions;
 
 use App\Domain\Notifications\Services\EnforceLeaderMessagingRulesService;
+use App\Domain\Notifications\Services\QueueNotificationDeliveryAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Models\Leader;
 use App\Models\Notification;
@@ -17,6 +18,7 @@ class CreateLeaderNotificationAction
 {
     public function __construct(
         private readonly EnforceLeaderMessagingRulesService $messagingRules,
+        private readonly QueueNotificationDeliveryAction $queueDelivery,
     ) {}
 
     /**
@@ -67,6 +69,12 @@ class CreateLeaderNotificationAction
         }
 
         $recipientCount = count($recipientUserIds);
+
+        // Queue email and push delivery for all pending recipients
+        $this->queueDelivery->dispatch(
+            $notification,
+            $notification->recipients()->get()
+        );
 
         // Mandatory audit log for every leader notification
         AuditLogService::record([

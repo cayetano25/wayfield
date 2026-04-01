@@ -1,13 +1,17 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
 use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
-use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\PushTokenController;
+use App\Http\Controllers\Api\V1\UserNotificationController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
@@ -62,6 +66,16 @@ Route::prefix('v1')->group(function () {
         // Auth
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::post('auth/resend-verification', [AuthController::class, 'resendVerification']);
+
+        // 2FA scaffolding (Phase 6 — endpoints return 501 until activation phase)
+        Route::prefix('auth/2fa')->group(function () {
+            Route::get('status', [TwoFactorController::class, 'status']);
+            Route::post('enable', [TwoFactorController::class, 'enable']);
+            Route::post('confirm', [TwoFactorController::class, 'confirm']);
+            Route::post('challenge', [TwoFactorController::class, 'challenge']);
+            Route::post('disable', [TwoFactorController::class, 'disable']);
+            Route::get('recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
+        });
 
         // Profile
         Route::get('me', [ProfileController::class, 'show']);
@@ -155,8 +169,21 @@ Route::prefix('v1')->group(function () {
         Route::get('sessions/{session}/roster', [RosterController::class, 'sessionRoster']);
         Route::get('workshops/{workshop}/attendance-summary', [RosterController::class, 'workshopSummary']);
 
-        // ─── Notifications — leader scope (Phase 5) ───────────────────────────
+        // ─── Notifications (Phase 6) ──────────────────────────────────────────
+        Route::get('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'index']);
         Route::post('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'store']);
+
+        // In-app notifications for current user
+        Route::get('me/notifications', [UserNotificationController::class, 'index']);
+        Route::patch('me/notifications/{notificationRecipient}/read', [UserNotificationController::class, 'markRead']);
+
+        // Push token registration
+        Route::post('me/push-tokens', [PushTokenController::class, 'store']);
+        Route::delete('me/push-tokens/{pushToken}', [PushTokenController::class, 'destroy']);
+
+        // Notification preferences
+        Route::get('me/notification-preferences', [NotificationPreferenceController::class, 'show']);
+        Route::put('me/notification-preferences', [NotificationPreferenceController::class, 'update']);
     });
 
     // ─── Platform Admin (Command Center) ─────────────────────────────────────

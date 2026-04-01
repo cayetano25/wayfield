@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\JoinWorkshopRequest;
 use App\Http\Resources\RegistrationResource;
+use App\Mail\WorkshopJoinConfirmationMail;
 use App\Models\Registration;
 use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class RegistrationController extends Controller
 {
@@ -54,6 +56,8 @@ class RegistrationController extends Controller
             'joined_via_code'     => $request->validated('join_code'),
             'registered_at'       => now(),
         ]);
+
+        Mail::to($user->email)->queue(new WorkshopJoinConfirmationMail($user, $workshop, $registration));
 
         return response()->json(new RegistrationResource($registration), 201);
     }

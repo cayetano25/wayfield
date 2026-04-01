@@ -2,9 +2,10 @@
 
 namespace App\Domain\Auth\Actions;
 
+use App\Mail\PasswordResetMail;
 use App\Models\User;
-use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class RequestPasswordResetAction
@@ -29,6 +30,6 @@ class RequestPasswordResetAction
             ]
         );
 
-        $user->notify(new ResetPasswordNotification($token));
+        Mail::to($user->email)->queue(new PasswordResetMail($user, $token));
     }
 }

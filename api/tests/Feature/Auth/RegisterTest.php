@@ -1,14 +1,15 @@
 <?php
 
+use App\Mail\EmailVerificationMail;
 use App\Models\AuthMethod;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use App\Notifications\VerifyEmailNotification;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 test('user can register with first_name, last_name, email, and password', function () {
-    Notification::fake();
+    Mail::fake();
 
     $response = $this->postJson('/api/v1/auth/register', [
         'first_name'            => 'Jane',
@@ -76,7 +77,7 @@ test('registration rejects duplicate email', function () {
 });
 
 test('verification email is queued on registration', function () {
-    Notification::fake();
+    Mail::fake();
 
     $this->postJson('/api/v1/auth/register', [
         'first_name'            => 'Jane',
@@ -86,12 +87,13 @@ test('verification email is queued on registration', function () {
         'password_confirmation' => 'password123',
     ]);
 
-    $user = User::where('email', 'jane@example.com')->first();
-    Notification::assertSentTo($user, VerifyEmailNotification::class);
+    Mail::assertQueued(EmailVerificationMail::class, function ($mail) {
+        return $mail->hasTo('jane@example.com');
+    });
 });
 
 test('password_hash is never exposed in response', function () {
-    Notification::fake();
+    Mail::fake();
 
     $response = $this->postJson('/api/v1/auth/register', [
         'first_name'            => 'Jane',

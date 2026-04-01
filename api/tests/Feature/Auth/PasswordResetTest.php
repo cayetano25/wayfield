@@ -1,31 +1,33 @@
 <?php
 
+use App\Mail\PasswordResetMail;
 use App\Models\User;
-use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Mail;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 test('forgot password queues reset email for known address', function () {
-    Notification::fake();
+    Mail::fake();
 
     $user = User::factory()->create(['email' => 'user@example.com']);
 
     $this->postJson('/api/v1/auth/forgot-password', ['email' => 'user@example.com'])
         ->assertStatus(200);
 
-    Notification::assertSentTo($user, ResetPasswordNotification::class);
+    Mail::assertQueued(PasswordResetMail::class, function ($mail) {
+        return $mail->hasTo('user@example.com');
+    });
 });
 
 test('forgot password succeeds silently for unknown email (no enumeration)', function () {
-    Notification::fake();
+    Mail::fake();
 
     $this->postJson('/api/v1/auth/forgot-password', ['email' => 'nobody@example.com'])
         ->assertStatus(200);
 
-    Notification::assertNothingSent();
+    Mail::assertNothingQueued();
 });
 
 test('user can reset password with valid token', function () {
