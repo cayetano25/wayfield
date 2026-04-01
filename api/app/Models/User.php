@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,6 +19,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'email',
+        'phone_number',
         'password_hash',
         'email_verified_at',
         'is_active',
@@ -74,6 +76,11 @@ class User extends Authenticatable
     public function organizationUsers(): HasMany
     {
         return $this->hasMany(OrganizationUser::class);
+    }
+
+    public function leader(): HasOne
+    {
+        return $this->hasOne(Leader::class);
     }
 
     public function organizations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

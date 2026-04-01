@@ -12,14 +12,32 @@ class AttachLeaderToSessionAction
 {
     /**
      * Assign a leader to a session via session_leaders.
-     * Roster access, phone visibility, and messaging scope all derive from this assignment.
+     * Roster access, phone visibility, and messaging scope only apply once
+     * assignment_status = 'accepted'.
      * The leader must have an accepted invitation for the organization before assignment.
      *
+     * @param string $roleInSession One of: primary_leader, co_leader, panelist, moderator, assistant
+     * @param bool   $isPrimary     Whether this leader is the primary/lead instructor
      * @throws \InvalidArgumentException if leader is not active in the organization
      */
-    public function execute(Session $session, Leader $leader, User $actor, ?string $roleLabel = null): SessionLeader
-    {
+    public function execute(
+        Session $session,
+        Leader $leader,
+        User $actor,
+        ?string $roleLabel = null,
+        string $roleInSession = 'co_leader',
+        bool $isPrimary = false,
+        string $assignmentStatus = 'accepted',
+    ): SessionLeader {
         $workshop = $session->workshop;
+
+        // Validate role_in_session
+        $validRoles = ['primary_leader', 'co_leader', 'panelist', 'moderator', 'assistant'];
+        if (! in_array($roleInSession, $validRoles)) {
+            throw new \InvalidArgumentException(
+                "Invalid role_in_session value '{$roleInSession}'. Must be one of: " . implode(', ', $validRoles)
+            );
+        }
 
         // Leader must belong to the organization (active)
         $isOrgMember = $leader->organizationLeaders()
@@ -33,28 +51,41 @@ class AttachLeaderToSessionAction
             );
         }
 
-        $sessionLeader = SessionLeader::firstOrCreate(
+        // If designating as primary, clear any existing primary flags first
+        if ($isPrimary) {
+            SessionLeader::where('session_id', $session->id)
+                ->where('is_primary', true)
+                ->update(['is_primary' => false]);
+        }
+
+        $sessionLeader = SessionLeader::updateOrCreate(
             [
                 'session_id' => $session->id,
                 'leader_id'  => $leader->id,
             ],
-            ['role_label' => $roleLabel]
+            [
+                'role_label'        => $roleLabel,
+                'role_in_session'   => $roleInSession,
+                'assignment_status' => $assignmentStatus,
+                'is_primary'        => $isPrimary,
+            ]
         );
-
-        if (! $sessionLeader->wasRecentlyCreated && $roleLabel !== null) {
-            $sessionLeader->update(['role_label' => $roleLabel]);
-        }
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
             'actor_user_id'   => $actor->id,
             'entity_type'     => 'session_leader',
             'entity_id'       => $sessionLeader->id,
-            'action'          => 'leader_assigned_to_session',
+            'action'          => $sessionLeader->wasRecentlyCreated
+                ? 'leader_assigned_to_session'
+                : 'leader_session_assignment_updated',
             'metadata'        => [
-                'leader_id'  => $leader->id,
-                'session_id' => $session->id,
-                'role_label' => $roleLabel,
+                'leader_id'         => $leader->id,
+                'session_id'        => $session->id,
+                'role_label'        => $roleLabel,
+                'role_in_session'   => $roleInSession,
+                'assignment_status' => $assignmentStatus,
+                'is_primary'        => $isPrimary,
             ],
         ]);
 

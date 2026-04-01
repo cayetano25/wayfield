@@ -59,6 +59,11 @@ class Session extends Model
         return $this->hasMany(SessionSelection::class);
     }
 
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
+    }
+
     public function sessionLeaders(): HasMany
     {
         return $this->hasMany(SessionLeader::class);

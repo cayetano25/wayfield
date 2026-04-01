@@ -34,7 +34,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request, LoginUserAction $action): JsonResponse
     {
         try {
-            $result = $action->execute($request->validated());
+            $result = $action->execute($request->validated(), $request);
         } catch (AuthenticationException $e) {
             return response()->json(['message' => $e->getMessage()], 401);
         }

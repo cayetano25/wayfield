@@ -1,5 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
+use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
+use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
+use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
+use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
+use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
@@ -11,6 +18,7 @@ use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
 use App\Http\Controllers\Api\V1\RegistrationController;
+use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
@@ -18,16 +26,21 @@ use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
+use App\Http\Controllers\Api\V1\WorkshopNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
     // ─── Auth (unauthenticated) ───────────────────────────────────────────────
     Route::prefix('auth')->group(function () {
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login', [AuthController::class, 'login']);
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('register', [AuthController::class, 'register'])
+            ->middleware('throttle:10,1');
+        Route::post('login', [AuthController::class, 'login'])
+            ->middleware('throttle:10,1');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:5,1');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:5,1');
         Route::get('verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('verification.verify');
     });
@@ -129,5 +142,61 @@ Route::prefix('v1')->group(function () {
         Route::get('sessions/{session}/leaders', [SessionLeaderController::class, 'index']);
         Route::post('sessions/{session}/leaders', [SessionLeaderController::class, 'store']);
         Route::delete('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'destroy']);
+        Route::patch('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'updateStatus']);
+
+        // ─── Attendance (Phase 5) ─────────────────────────────────────────────
+        // Participant self-check-in
+        Route::post('sessions/{session}/check-in', [AttendanceController::class, 'selfCheckIn']);
+        // Leader manual check-in and no-show
+        Route::post('sessions/{session}/attendance/{user}/leader-check-in', [AttendanceController::class, 'leaderCheckIn']);
+        Route::post('sessions/{session}/attendance/{user}/no-show', [AttendanceController::class, 'markNoShow']);
+
+        // ─── Roster (Phase 5) ─────────────────────────────────────────────────
+        Route::get('sessions/{session}/roster', [RosterController::class, 'sessionRoster']);
+        Route::get('workshops/{workshop}/attendance-summary', [RosterController::class, 'workshopSummary']);
+
+        // ─── Notifications — leader scope (Phase 5) ───────────────────────────
+        Route::post('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'store']);
     });
+
+    // ─── Platform Admin (Command Center) ─────────────────────────────────────
+    Route::prefix('platform')
+        ->middleware(['auth:sanctum', 'platform.admin'])
+        ->group(function () {
+
+            // Organizations
+            Route::get('organizations', [PlatformOrganizationController::class, 'index']);
+            Route::get('organizations/{organization}', [PlatformOrganizationController::class, 'show']);
+
+            // Users
+            Route::get('users', [PlatformUserController::class, 'index']);
+            Route::get('users/{user}', [PlatformUserController::class, 'show']);
+
+            // Audit logs (super_admin and ops only)
+            Route::middleware('platform.admin:super_admin,ops')
+                ->group(function () {
+                    Route::get('audit-logs', [PlatformAuditController::class, 'index']);
+                });
+
+            // Support tickets
+            Route::get('support/tickets', [PlatformSupportController::class, 'index']);
+            Route::get('support/tickets/{ticket}', [PlatformSupportController::class, 'show']);
+            Route::patch('support/tickets/{ticket}', [PlatformSupportController::class, 'update']);
+            Route::post('support/tickets/{ticket}/messages', [PlatformSupportController::class, 'addMessage']);
+
+            // Financials (super_admin and finance only)
+            Route::middleware('platform.admin:super_admin,finance')
+                ->group(function () {
+                    Route::get('financials/invoices', [PlatformFinancialController::class, 'invoices']);
+                    Route::get('financials/subscriptions', [PlatformFinancialController::class, 'subscriptions']);
+                });
+
+            // System health (super_admin and ops only)
+            Route::middleware('platform.admin:super_admin,ops')
+                ->group(function () {
+                    Route::get('health', [PlatformHealthController::class, 'index']);
+                    Route::get('health/security-events', [PlatformHealthController::class, 'securityEvents']);
+                    Route::get('health/login-events', [PlatformHealthController::class, 'loginEvents']);
+                });
+        });
 });

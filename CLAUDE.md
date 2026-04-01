@@ -139,7 +139,7 @@ docs/                              ← All specs and blueprints
 
 ## Current Build Phase
 
-Phase 3 Prompt – Tracks, Sessions, Selections, Capacity, and Virtual Delivery
+Phase 5 — Attendance, Roster Operations, and Leader Messaging
 Working directory: api/
 
 See @docs/06_implementation/PHASED_IMPLEMENTATION_PLAN.md for full scope and exit criteria.

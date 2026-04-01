@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Leaders\Actions\AttachLeaderToSessionAction;
+use App\Domain\Leaders\Actions\UpdateSessionLeaderStatusAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AttachLeaderToSessionRequest;
@@ -44,10 +45,13 @@ class SessionLeaderController extends Controller
 
         try {
             $sessionLeader = $action->execute(
-                $session,
-                $leader,
-                $request->user(),
-                $request->input('role_label'),
+                session: $session,
+                leader: $leader,
+                actor: $request->user(),
+                roleLabel: $request->input('role_label'),
+                roleInSession: $request->input('role_in_session', 'co_leader'),
+                isPrimary: (bool) $request->input('is_primary', false),
+                assignmentStatus: $request->input('assignment_status', 'accepted'),
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -57,6 +61,32 @@ class SessionLeaderController extends Controller
             new SessionLeaderResource($sessionLeader->load('leader')),
             201
         );
+    }
+
+    /**
+     * PATCH /api/v1/sessions/{session}/leaders/{leader}
+     * Update the assignment status of a session leader (accept/decline/remove).
+     */
+    public function updateStatus(
+        Session $session,
+        Leader $leader,
+        UpdateSessionLeaderStatusAction $action,
+    ): JsonResponse {
+        $this->authorize('assignToSession', [Leader::class, $session->workshop->organization]);
+
+        $status = request()->input('assignment_status');
+
+        if (! $status) {
+            return response()->json(['message' => 'The assignment_status field is required.'], 422);
+        }
+
+        try {
+            $sessionLeader = $action->execute($session, $leader, request()->user(), $status);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(new SessionLeaderResource($sessionLeader->load('leader')));
     }
 
     /**
