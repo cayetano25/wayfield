@@ -47,6 +47,11 @@ class PublicWorkshopResource extends JsonResource
                     'body_content'  => $this->publicPage->body_content,
                 ] : null
             ),
+            // Published sessions — meeting_url and all virtual credentials are intentionally excluded.
+            // See PublicSessionResource for the safe field list.
+            'sessions'        => $this->whenLoaded('sessions',
+                fn () => PublicSessionResource::collection($this->sessions)
+            ),
         ];
     }
 }

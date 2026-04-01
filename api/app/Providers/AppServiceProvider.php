@@ -4,10 +4,16 @@ namespace App\Providers;
 
 use App\Models\Location;
 use App\Models\Organization;
+use App\Models\Registration;
+use App\Models\Session;
+use App\Models\Track;
 use App\Models\Workshop;
 use App\Policies\LocationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\OrganizationUserPolicy;
+use App\Policies\RegistrationPolicy;
+use App\Policies\SessionPolicy;
+use App\Policies\TrackPolicy;
 use App\Policies\WorkshopPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -18,6 +24,9 @@ class AppServiceProvider extends AuthServiceProvider
         Organization::class => OrganizationPolicy::class,
         Workshop::class     => WorkshopPolicy::class,
         Location::class     => LocationPolicy::class,
+        Session::class      => SessionPolicy::class,
+        Track::class        => TrackPolicy::class,
+        Registration::class => RegistrationPolicy::class,
     ];
 
     public function register(): void

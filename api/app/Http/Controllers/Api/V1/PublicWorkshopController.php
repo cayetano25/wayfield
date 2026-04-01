@@ -14,7 +14,12 @@ class PublicWorkshopController extends Controller
         $workshop = Workshop::where('public_slug', $slug)
             ->where('status', 'published')
             ->where('public_page_enabled', true)
-            ->with(['defaultLocation', 'logistics', 'publicPage'])
+            ->with([
+                'defaultLocation',
+                'logistics',
+                'publicPage',
+                'sessions' => fn ($q) => $q->where('is_published', true)->orderBy('start_at'),
+            ])
             ->first();
 
         if (! $workshop) {

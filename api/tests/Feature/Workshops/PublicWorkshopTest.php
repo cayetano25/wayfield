@@ -2,6 +2,7 @@
 
 use App\Models\Organization;
 use App\Models\OrganizationUser;
+use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopLogistics;
@@ -240,4 +241,72 @@ test('organizer workshop detail shows join_code but public endpoint does not', f
     $publicResponse = $this->getJson('/api/v1/public/workshops/dual-check');
     $publicResponse->assertStatus(200);
     expect($publicResponse->json())->not->toHaveKey('join_code');
+});
+
+test('test_meeting_url_never_appears_in_public_response', function () {
+    $org     = Organization::factory()->create();
+    $owner   = User::factory()->create();
+    OrganizationUser::factory()->create([
+        'organization_id' => $org->id,
+        'user_id'         => $owner->id,
+        'role'            => 'owner',
+        'is_active'       => true,
+    ]);
+
+    $workshop = Workshop::factory()
+        ->forOrganization($org->id)
+        ->published()
+        ->create([
+            'public_page_enabled' => true,
+            'public_slug'         => 'virtual-privacy-check',
+        ]);
+
+    // 1. Create a virtual session with explicit meeting credentials.
+    $session = Session::factory()
+        ->forWorkshop($workshop->id)
+        ->virtualWithoutUrl()
+        ->create([
+            'title'            => 'Golden Hour Virtual Shoot',
+            'meeting_url'      => 'https://zoom.us/j/secret-meeting-link',
+            'meeting_id'       => 'SECRET-ID-123',
+            'meeting_passcode' => 'secret-passcode',
+            'meeting_platform' => 'Zoom',
+        ]);
+
+    // 2. Publish the session through the API.
+    $this->actingAs($owner, 'sanctum')
+        ->patchJson("/api/v1/sessions/{$session->id}", [
+            'meeting_url' => 'https://zoom.us/j/secret-meeting-link',
+        ]);
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/sessions/{$session->id}/publish")
+        ->assertStatus(200)
+        ->assertJsonPath('is_published', true);
+
+    // 3. Call the public endpoint — no authentication.
+    $response = $this->getJson('/api/v1/public/workshops/virtual-privacy-check')
+        ->assertStatus(200);
+
+    // 4. Assert meeting_url is absent from the entire serialized response body.
+    $body = json_encode($response->json());
+    expect($body)->not->toContain('meeting_url');
+    expect($body)->not->toContain('https://zoom.us/j/secret-meeting-link');
+    expect($body)->not->toContain('SECRET-ID-123');
+    expect($body)->not->toContain('secret-passcode');
+    expect($body)->not->toContain('meeting_id');
+    expect($body)->not->toContain('meeting_passcode');
+    expect($body)->not->toContain('meeting_platform');
+
+    // Confirm the session IS present so the absence of meeting_url is deliberate,
+    // not because the session was silently omitted.
+    $sessions = $response->json('sessions');
+    expect($sessions)->not->toBeNull();
+    expect($sessions)->toHaveCount(1);
+    expect($sessions[0]['title'])->toBe('Golden Hour Virtual Shoot');
+    expect($sessions[0])->not->toHaveKey('meeting_url');
+    expect($sessions[0])->not->toHaveKey('meeting_id');
+    expect($sessions[0])->not->toHaveKey('meeting_passcode');
+    expect($sessions[0])->not->toHaveKey('meeting_instructions');
+    expect($sessions[0])->not->toHaveKey('meeting_platform');
 });

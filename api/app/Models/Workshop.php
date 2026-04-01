@@ -53,6 +53,21 @@ class Workshop extends Model
         return $this->hasOne(PublicPage::class);
     }
 
+    public function tracks(): HasMany
+    {
+        return $this->hasMany(Track::class);
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(Session::class);
+    }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(Registration::class);
+    }
+
     public function isPublished(): bool
     {
         return $this->status === 'published';
