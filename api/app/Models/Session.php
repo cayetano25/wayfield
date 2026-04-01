@@ -59,6 +59,18 @@ class Session extends Model
         return $this->hasMany(SessionSelection::class);
     }
 
+    public function sessionLeaders(): HasMany
+    {
+        return $this->hasMany(SessionLeader::class);
+    }
+
+    public function leaders(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Leader::class, 'session_leaders')
+            ->withPivot(['role_label'])
+            ->withTimestamps();
+    }
+
     public function isVirtual(): bool
     {
         return $this->delivery_type === 'virtual';

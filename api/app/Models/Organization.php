@@ -62,4 +62,21 @@ class Organization extends Model
     {
         return $this->hasMany(Location::class);
     }
+
+    public function organizationLeaders(): HasMany
+    {
+        return $this->hasMany(OrganizationLeader::class);
+    }
+
+    public function leaders(): BelongsToMany
+    {
+        return $this->belongsToMany(Leader::class, 'organization_leaders')
+            ->withPivot(['status'])
+            ->withTimestamps();
+    }
+
+    public function leaderInvitations(): HasMany
+    {
+        return $this->hasMany(LeaderInvitation::class);
+    }
 }

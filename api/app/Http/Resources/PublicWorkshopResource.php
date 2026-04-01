@@ -52,6 +52,11 @@ class PublicWorkshopResource extends JsonResource
             'sessions'        => $this->whenLoaded('sessions',
                 fn () => PublicSessionResource::collection($this->sessions)
             ),
+            // Only accepted + confirmed leaders are publicly listed.
+            // PublicLeaderResource enforces strict privacy — no email, phone, or address.
+            'leaders'         => $this->whenLoaded('confirmedLeaders',
+                fn () => PublicLeaderResource::collection($this->confirmedLeaders)
+            ),
         ];
     }
 }

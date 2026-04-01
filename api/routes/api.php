@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\LeaderAdminController;
+use App\Http\Controllers\Api\V1\LeaderInvitationController;
+use App\Http\Controllers\Api\V1\LeaderSelfController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\OrganizationController;
@@ -9,9 +12,11 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
 use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\V1\SessionController;
+use App\Http\Controllers\Api\V1\SessionLeaderController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
 use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\WorkshopController;
+use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +36,12 @@ Route::prefix('v1')->group(function () {
     Route::prefix('public')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
     });
+
+    // ─── Leader invitation resolve/decline (public-but-tokenized) ────────────
+    // URL shape: /leader-invitations/{id}/{token}
+    // {id} is the non-secret lookup key; {token} is the raw secret verified with hash_equals().
+    Route::get('leader-invitations/{id}/{token}', [LeaderInvitationController::class, 'show']);
+    Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
 
     // ─── Authenticated routes ─────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
@@ -99,5 +110,24 @@ Route::prefix('v1')->group(function () {
 
         // My schedule (participant)
         Route::get('workshops/{workshop}/my-schedule', [MyScheduleController::class, 'show']);
+
+        // ─── Leader invitation acceptance (requires auth) ─────────────────────
+        Route::post('leader-invitations/{id}/{token}/accept', [LeaderInvitationController::class, 'accept']);
+
+        // ─── Leader admin (organizer) ─────────────────────────────────────────
+        Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);
+        Route::post('organizations/{organization}/leaders/invitations', [LeaderAdminController::class, 'invite']);
+
+        // ─── Leader self-service ──────────────────────────────────────────────
+        Route::get('leader/profile', [LeaderSelfController::class, 'showProfile']);
+        Route::patch('leader/profile', [LeaderSelfController::class, 'updateProfile']);
+        Route::get('leader/sessions', [LeaderSelfController::class, 'sessions']);
+        Route::get('leader/workshops', [LeaderSelfController::class, 'workshops']);
+
+        // ─── Workshop/session leader assignment (organizer) ───────────────────
+        Route::post('workshops/{workshop}/leaders', [WorkshopLeaderController::class, 'store']);
+        Route::get('sessions/{session}/leaders', [SessionLeaderController::class, 'index']);
+        Route::post('sessions/{session}/leaders', [SessionLeaderController::class, 'store']);
+        Route::delete('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'destroy']);
     });
 });

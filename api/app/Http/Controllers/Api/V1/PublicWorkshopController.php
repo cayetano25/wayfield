@@ -19,6 +19,8 @@ class PublicWorkshopController extends Controller
                 'logistics',
                 'publicPage',
                 'sessions' => fn ($q) => $q->where('is_published', true)->orderBy('start_at'),
+                // Only load confirmed leaders for public display
+                'confirmedLeaders',
             ])
             ->first();
 

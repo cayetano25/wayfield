@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\Leader;
+use App\Models\LeaderInvitation;
 use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\Track;
 use App\Models\Workshop;
+use App\Policies\LeaderInvitationPolicy;
+use App\Policies\LeaderPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\OrganizationUserPolicy;
@@ -21,12 +25,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class AppServiceProvider extends AuthServiceProvider
 {
     protected $policies = [
-        Organization::class => OrganizationPolicy::class,
-        Workshop::class     => WorkshopPolicy::class,
-        Location::class     => LocationPolicy::class,
-        Session::class      => SessionPolicy::class,
-        Track::class        => TrackPolicy::class,
-        Registration::class => RegistrationPolicy::class,
+        Organization::class    => OrganizationPolicy::class,
+        Workshop::class        => WorkshopPolicy::class,
+        Location::class        => LocationPolicy::class,
+        Session::class         => SessionPolicy::class,
+        Track::class           => TrackPolicy::class,
+        Registration::class    => RegistrationPolicy::class,
+        Leader::class          => LeaderPolicy::class,
+        LeaderInvitation::class => LeaderInvitationPolicy::class,
     ];
 
     public function register(): void

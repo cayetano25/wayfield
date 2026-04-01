@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -66,6 +67,26 @@ class Workshop extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Registration::class);
+    }
+
+    public function workshopLeaders(): HasMany
+    {
+        return $this->hasMany(WorkshopLeader::class);
+    }
+
+    public function leaders(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Leader::class, 'workshop_leaders')
+            ->withPivot(['is_confirmed', 'invitation_id'])
+            ->withTimestamps();
+    }
+
+    public function confirmedLeaders(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Leader::class, 'workshop_leaders')
+            ->wherePivot('is_confirmed', true)
+            ->withPivot(['is_confirmed', 'invitation_id'])
+            ->withTimestamps();
     }
 
     public function isPublished(): bool
