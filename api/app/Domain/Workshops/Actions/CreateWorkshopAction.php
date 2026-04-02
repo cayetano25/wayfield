@@ -2,16 +2,22 @@
 
 namespace App\Domain\Workshops\Actions;
 
+use App\Domain\Subscriptions\Services\EnforceFeatureGateService;
 use App\Domain\Workshops\Services\GenerateJoinCodeService;
 use App\Models\Organization;
 use App\Models\Workshop;
 
 class CreateWorkshopAction
 {
-    public function __construct(private readonly GenerateJoinCodeService $joinCodeService) {}
+    public function __construct(
+        private readonly GenerateJoinCodeService  $joinCodeService,
+        private readonly EnforceFeatureGateService $featureGate,
+    ) {}
 
     public function execute(Organization $organization, array $data): Workshop
     {
+        $this->featureGate->assertCanCreateWorkshop($organization);
+
         return Workshop::create([
             'organization_id'     => $organization->id,
             'workshop_type'       => $data['workshop_type'],

@@ -6,6 +6,7 @@ use App\Domain\Workshops\Actions\ArchiveWorkshopAction;
 use App\Domain\Workshops\Actions\CreateWorkshopAction;
 use App\Domain\Workshops\Actions\PublishWorkshopAction;
 use App\Domain\Workshops\Actions\UpdateWorkshopAction;
+use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
 use App\Domain\Workshops\Exceptions\WorkshopPublishException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreateWorkshopRequest;
@@ -55,7 +56,18 @@ class WorkshopController extends Controller
     ): JsonResponse {
         $this->authorize('create', [Workshop::class, $organization]);
 
-        $workshop = $action->execute($organization, $request->validated());
+        try {
+            $workshop = $action->execute($organization, $request->validated());
+        } catch (PlanLimitExceededException $e) {
+            return response()->json([
+                'error'         => 'plan_limit_exceeded',
+                'message'       => $e->getMessage(),
+                'limit_key'     => $e->limitKey,
+                'current'       => $e->current,
+                'max'           => $e->max,
+                'required_plan' => $e->requiredPlan,
+            ], 403);
+        }
 
         return response()->json(
             new OrganizerWorkshopResource($workshop->load(['defaultLocation', 'logistics', 'publicPage'])),

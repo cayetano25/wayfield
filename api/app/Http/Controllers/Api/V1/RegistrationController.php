@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
+use App\Domain\Subscriptions\Services\EnforceFeatureGateService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\JoinWorkshopRequest;
 use App\Http\Resources\RegistrationResource;
@@ -14,6 +16,8 @@ use Illuminate\Support\Facades\Mail;
 
 class RegistrationController extends Controller
 {
+    public function __construct(private readonly EnforceFeatureGateService $featureGate) {}
+
     /**
      * POST /api/v1/workshops/join
      * Join a workshop by join code.
@@ -30,9 +34,31 @@ class RegistrationController extends Controller
 
         $user = Auth::user();
 
-        $existing = Registration::where('workshop_id', $workshop->id)
+        // Only enforce participant limit on brand-new registrations (not re-activations).
+        // We load the org via the workshop to get the correct plan limits.
+        $existingCheck = Registration::where('workshop_id', $workshop->id)
             ->where('user_id', $user->id)
             ->first();
+
+        if (! $existingCheck) {
+            try {
+                $this->featureGate->assertCanAddParticipant(
+                    $workshop->organization,
+                    $workshop,
+                );
+            } catch (PlanLimitExceededException $e) {
+                return response()->json([
+                    'error'         => 'plan_limit_exceeded',
+                    'message'       => $e->getMessage(),
+                    'limit_key'     => $e->limitKey,
+                    'current'       => $e->current,
+                    'max'           => $e->max,
+                    'required_plan' => $e->requiredPlan,
+                ], 403);
+            }
+        }
+
+        $existing = $existingCheck;
 
         if ($existing) {
             if ($existing->registration_status === 'registered') {

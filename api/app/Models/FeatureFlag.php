@@ -6,23 +6,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Subscription extends Model
+class FeatureFlag extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'organization_id',
-        'plan_code',
-        'status',
-        'starts_at',
-        'ends_at',
+        'feature_key',
+        'is_enabled',
+        'source',
     ];
 
     protected function casts(): array
     {
         return [
-            'starts_at' => 'datetime',
-            'ends_at'   => 'datetime',
+            'is_enabled' => 'boolean',
         ];
     }
 
@@ -31,8 +29,8 @@ class Subscription extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function isActive(): bool
+    public function isManualOverride(): bool
     {
-        return in_array($this->status, ['active', 'trialing']);
+        return $this->source === 'manual_override';
     }
 }

@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\FeatureFlagController;
+use App\Http\Controllers\Api\V1\ReportingController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -190,6 +193,31 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{workshop}/sync-version', [OfflineSyncController::class, 'syncVersion']);
         Route::get('workshops/{workshop}/sync-package', [OfflineSyncController::class, 'syncPackage']);
         Route::post('workshops/{workshop}/offline-actions', [OfflineSyncController::class, 'replayActions']);
+
+        // ─── Subscription / Entitlements (Phase 8) ───────────────────────────
+        Route::get('organizations/{organization}/subscription', [SubscriptionController::class, 'show']);
+        Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
+
+        // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
+        Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
+
+        // ─── Reporting (Phase 8) ─────────────────────────────────────────────
+        // Attendance and workshop reports require Starter+ (reporting feature).
+        // Usage report is available to all plans.
+        Route::get(
+            'organizations/{organization}/reports/attendance',
+            [ReportingController::class, 'attendance']
+        )->middleware('feature:reporting');
+
+        Route::get(
+            'organizations/{organization}/reports/workshops',
+            [ReportingController::class, 'workshops']
+        )->middleware('feature:reporting');
+
+        Route::get(
+            'organizations/{organization}/reports/usage',
+            [ReportingController::class, 'usage']
+        );
     });
 
     // ─── Platform Admin (Command Center) ─────────────────────────────────────

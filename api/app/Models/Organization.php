@@ -79,4 +79,9 @@ class Organization extends Model
     {
         return $this->hasMany(LeaderInvitation::class);
     }
+
+    public function featureFlags(): HasMany
+    {
+        return $this->hasMany(FeatureFlag::class);
+    }
 }
