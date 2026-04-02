@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
 use App\Http\Controllers\Api\V1\WorkshopNotificationController;
+use App\Http\Controllers\Api\V1\OfflineSyncController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -184,6 +185,11 @@ Route::prefix('v1')->group(function () {
         // Notification preferences
         Route::get('me/notification-preferences', [NotificationPreferenceController::class, 'show']);
         Route::put('me/notification-preferences', [NotificationPreferenceController::class, 'update']);
+
+        // ─── Offline Sync (Phase 7) ───────────────────────────────────────────
+        Route::get('workshops/{workshop}/sync-version', [OfflineSyncController::class, 'syncVersion']);
+        Route::get('workshops/{workshop}/sync-package', [OfflineSyncController::class, 'syncPackage']);
+        Route::post('workshops/{workshop}/offline-actions', [OfflineSyncController::class, 'replayActions']);
     });
 
     // ─── Platform Admin (Command Center) ─────────────────────────────────────

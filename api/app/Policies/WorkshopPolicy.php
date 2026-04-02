@@ -56,6 +56,39 @@ class WorkshopPolicy
         return $this->isOrganizerOrAbove($user, $workshop->organization_id);
     }
 
+    /**
+     * Sync package access: registered participants, assigned leaders, and org members.
+     */
+    public function syncDownload(User $user, Workshop $workshop): bool
+    {
+        // Org member always has access
+        if ($this->isMember($user, $workshop->organization_id)) {
+            return true;
+        }
+
+        // Registered participant
+        $isRegistered = \App\Models\Registration::where('workshop_id', $workshop->id)
+            ->where('user_id', $user->id)
+            ->where('registration_status', 'registered')
+            ->exists();
+
+        if ($isRegistered) {
+            return true;
+        }
+
+        // Leader assigned to any session in this workshop
+        $leader = \App\Models\Leader::where('user_id', $user->id)->first();
+        if ($leader) {
+            return \App\Models\SessionLeader::join('sessions', 'sessions.id', '=', 'session_leaders.session_id')
+                ->where('sessions.workshop_id', $workshop->id)
+                ->where('session_leaders.leader_id', $leader->id)
+                ->where('session_leaders.assignment_status', 'accepted')
+                ->exists();
+        }
+
+        return false;
+    }
+
     private function isMember(User $user, int $organizationId): bool
     {
         return $user->organizationUsers()

@@ -57,6 +57,9 @@ class AppServiceProvider extends AuthServiceProvider
         Gate::define('roster.view-phones', [RosterPolicy::class, 'viewPhoneNumbers']);
         Gate::define('notification.create-leader', [NotificationPolicy::class, 'createLeader']);
 
+        // Phase 7: Offline sync
+        Gate::define('sync.download', [WorkshopPolicy::class, 'syncDownload']);
+
         // Pure JSON API — no data wrapper on resources.
         JsonResource::withoutWrapping();
     }
