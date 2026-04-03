@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
+use App\Http\Controllers\Api\V1\SessionParticipantController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
 use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\WorkshopController;
@@ -161,6 +162,10 @@ Route::prefix('v1')->group(function () {
         Route::post('sessions/{session}/leaders', [SessionLeaderController::class, 'store']);
         Route::delete('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'destroy']);
         Route::patch('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'updateStatus']);
+
+        // Session participant management (organizer)
+        Route::delete('workshops/{workshop}/sessions/{session}/participants/{user}', [SessionParticipantController::class, 'removeParticipant'])
+            ->name('session-participants.remove');
 
         // ─── Attendance (Phase 5) ─────────────────────────────────────────────
         // Participant self-check-in

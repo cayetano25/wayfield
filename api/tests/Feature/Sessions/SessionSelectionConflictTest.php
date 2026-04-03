@@ -48,7 +48,7 @@ test('overlapping session selection is rejected', function () {
             'session_id' => $session2->id,
         ])
         ->assertStatus(422)
-        ->assertJsonPath('message', "Session '{$session2->title}' conflicts with an already-selected session.");
+        ->assertJsonPath('message', "This session overlaps with '{$session1->title}' which you have already selected.");
 });
 
 test('non-overlapping sessions can both be selected', function () {

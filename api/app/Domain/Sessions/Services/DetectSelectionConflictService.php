@@ -26,11 +26,12 @@ class DetectSelectionConflictService
                 $query->where('sessions.start_at', '<', $newSession->end_at)
                       ->where('sessions.end_at', '>', $newSession->start_at);
             })
-            ->exists();
+            ->select('sessions.title')
+            ->first();
 
         if ($conflict) {
             throw new SessionConflictException(
-                "Session '{$newSession->title}' conflicts with an already-selected session."
+                "This session overlaps with '{$conflict->title}' which you have already selected."
             );
         }
     }
