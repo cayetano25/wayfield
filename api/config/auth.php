@@ -42,6 +42,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Platform admin guard — exclusively for AdminUser tokens (platform:* ability).
+        // Sanctum uses tokenable_type to separate AdminUser tokens from User tokens.
+        // Tenant tokens (tokenable_type = User) are rejected by this guard automatically.
+        'platform_admin' => [
+            'driver'   => 'sanctum',
+            'provider' => 'admin_users',
+        ],
     ],
 
     /*
@@ -64,13 +72,13 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model'  => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'admin_users' => [
+            'driver' => 'eloquent',
+            'model'  => \App\Models\AdminUser::class,
+        ],
     ],
 
     /*

@@ -28,7 +28,7 @@ class PlatformHealthController extends Controller
             ->where('created_at', '>=', now()->subHours(24))
             ->count();
 
-        $recentFailedLogins = LoginEvent::where('success', false)
+        $recentFailedLogins = LoginEvent::whereIn('outcome', ['failed', 'unverified', 'inactive'])
             ->where('created_at', '>=', now()->subHours(1))
             ->count();
 
@@ -73,8 +73,8 @@ class PlatformHealthController extends Controller
             ->when($request->input('user_id'), fn ($q, $userId) =>
                 $q->where('user_id', $userId)
             )
-            ->when($request->input('success'), fn ($q, $success) =>
-                $q->where('success', filter_var($success, FILTER_VALIDATE_BOOLEAN))
+            ->when($request->input('outcome'), fn ($q, $outcome) =>
+                $q->where('outcome', $outcome)
             )
             ->when($request->input('from'), fn ($q, $from) =>
                 $q->where('created_at', '>=', $from)

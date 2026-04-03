@@ -7,26 +7,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AutomationRun extends Model
 {
+    // Append-only execution log — no updated_at
+    public const UPDATED_AT = null;
+
     protected $fillable = [
-        'rule_id',
-        'triggered_by',
-        'status',
-        'started_at',
-        'finished_at',
-        'input_json',
-        'output_json',
+        'automation_rule_id',
+        'triggered_at',
+        'entity_type',
+        'entity_id',
+        'outcome',
+        'actions_taken_count',
+        'metadata_json',
         'error_message',
     ];
 
     protected $casts = [
-        'started_at'  => 'datetime',
-        'finished_at' => 'datetime',
-        'input_json'  => 'array',
-        'output_json' => 'array',
+        'triggered_at'       => 'datetime',
+        'metadata_json'      => 'array',
     ];
 
     public function rule(): BelongsTo
     {
-        return $this->belongsTo(AutomationRule::class);
+        return $this->belongsTo(AutomationRule::class, 'automation_rule_id');
     }
 }

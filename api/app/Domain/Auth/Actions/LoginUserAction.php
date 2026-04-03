@@ -23,12 +23,10 @@ class LoginUserAction
         $user = User::where('email', $data['email'])->first();
 
         if (! $user || ! Hash::check($data['password'], $user->password_hash)) {
-            // Record failed attempt. $user may be null (unknown email) or set (wrong password).
             $this->loginEventService->record(
                 user: $user,
-                success: false,
+                outcome: 'failed',
                 request: $request,
-                failureReason: ! $user ? 'unknown_email' : 'invalid_password',
                 emailAttempted: $data['email'],
             );
             throw new AuthenticationException('Invalid credentials.');
@@ -37,12 +35,21 @@ class LoginUserAction
         if (! $user->is_active) {
             $this->loginEventService->record(
                 user: $user,
-                success: false,
+                outcome: 'inactive',
                 request: $request,
-                failureReason: 'account_inactive',
                 emailAttempted: $data['email'],
             );
             throw new AuthenticationException('Account is inactive.');
+        }
+
+        if (! $user->email_verified_at) {
+            $this->loginEventService->record(
+                user: $user,
+                outcome: 'unverified',
+                request: $request,
+                emailAttempted: $data['email'],
+            );
+            throw new AuthenticationException('Email address has not been verified.');
         }
 
         $platform = $data['platform'] ?? 'unknown';
@@ -66,7 +73,7 @@ class LoginUserAction
 
         $this->loginEventService->record(
             user: $user,
-            success: true,
+            outcome: 'success',
             request: $request,
             emailAttempted: $data['email'],
         );

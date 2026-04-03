@@ -10,10 +10,18 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // Platform API — Command Center routes (/api/platform/v1/*)
+            // Separate from tenant API (/api/v1/*). Uses the platform_admin guard.
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/platform.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
+            'tenant.user'    => \App\Http\Middleware\EnsureTenantUser::class,
             'feature'        => \App\Http\Middleware\CheckFeatureAccess::class,
             'auth.api_key'   => \App\Http\Middleware\AuthenticateApiKey::class,
         ]);

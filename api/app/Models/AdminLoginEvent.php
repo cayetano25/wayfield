@@ -5,22 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LoginEvent extends Model
+class AdminLoginEvent extends Model
 {
-    // Immutable audit record — no updated_at
+    // Append-only security log — no updated_at
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'user_id',
+        'admin_user_id',
         'email_attempted',
         'outcome',
-        'platform',
         'ip_address',
         'user_agent',
     ];
 
-    public function user(): BelongsTo
+    public function adminUser(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(AdminUser::class, 'admin_user_id');
     }
 }

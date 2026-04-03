@@ -9,30 +9,34 @@ use Illuminate\Http\Request;
 class RecordLoginEventService
 {
     /**
-     * Record a login attempt (successful or failed) in login_events.
+     * Record a login attempt in login_events.
      *
-     * Called from LoginUserAction for both success and failure paths.
+     * outcome values:
+     *   success   — authenticated successfully
+     *   failed    — wrong password or unknown email
+     *   unverified — email not yet verified
+     *   inactive  — account is disabled
+     *
+     * Called from LoginUserAction for all success and failure paths.
      * The table has no updated_at column (append-only audit trail).
      *
-     * @param User|null $user  Resolved user model, or null for unknown-email failures
-     * @param bool      $success
-     * @param string    $failureReason  Short reason string for failed attempts
+     * @param User|null $user           Resolved user model, or null for unknown-email failures
+     * @param string    $outcome        One of: success, failed, unverified, inactive
+     * @param string    $emailAttempted The email address that was submitted
      */
     public function record(
         ?User $user,
-        bool $success,
+        string $outcome,
         ?Request $request = null,
-        string $failureReason = '',
         string $emailAttempted = '',
     ): LoginEvent {
         return LoginEvent::create([
-            'user_id'          => $user?->id,
-            'email_attempted'  => $emailAttempted ?: ($user?->email ?? ''),
-            'success'          => $success,
-            'ip_address'       => $request?->ip(),
-            'user_agent'       => $request?->userAgent(),
-            'platform'         => $request?->input('platform', 'unknown'),
-            'failure_reason'   => $success ? null : $failureReason,
+            'user_id'         => $user?->id,
+            'email_attempted' => $emailAttempted ?: ($user?->email ?? ''),
+            'outcome'         => $outcome,
+            'ip_address'      => $request?->ip(),
+            'user_agent'      => $request?->userAgent(),
+            'platform'        => $request?->input('platform', 'unknown'),
         ]);
     }
 }

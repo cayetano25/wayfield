@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\SystemAnnouncementController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use App\Http\Controllers\Api\V1\ReportingController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
@@ -90,7 +92,8 @@ Route::prefix('v1')->group(function () {
     Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
 
     // ─── Authenticated routes ─────────────────────────────────────────────────
-    Route::middleware('auth:sanctum')->group(function () {
+    // tenant.user rejects platform AdminUser tokens — platform tokens must not work here
+    Route::middleware(['auth:sanctum', 'tenant.user'])->group(function () {
 
         // Auth
         Route::post('auth/logout', [AuthController::class, 'logout']);
@@ -258,11 +261,17 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/api-keys', [ApiKeyController::class, 'index']);
         Route::post('organizations/{organization}/api-keys', [ApiKeyController::class, 'store']);
         Route::delete('organizations/{organization}/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
+
+        // ─── System Announcements ─────────────────────────────────────────────
+        Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
+            ->name('system-announcements.index');
     });
 
-    // ─── Platform Admin (Command Center) ─────────────────────────────────────
+    // ─── Platform Admin (Command Center — legacy v1 platform routes) ─────────
+    // Auth: platform_admin guard (AdminUser tokens only — tenant tokens rejected).
+    // Role values updated to match admin_users.role ENUM: admin, billing (not ops/finance).
     Route::prefix('platform')
-        ->middleware(['auth:sanctum', 'platform.admin'])
+        ->middleware(['auth:platform_admin', 'platform.admin'])
         ->group(function () {
 
             // Organizations
@@ -273,8 +282,8 @@ Route::prefix('v1')->group(function () {
             Route::get('users', [PlatformUserController::class, 'index']);
             Route::get('users/{user}', [PlatformUserController::class, 'show']);
 
-            // Audit logs (super_admin and ops only)
-            Route::middleware('platform.admin:super_admin,ops')
+            // Audit logs (super_admin and admin only)
+            Route::middleware('platform.admin:super_admin,admin')
                 ->group(function () {
                     Route::get('audit-logs', [PlatformAuditController::class, 'index']);
                 });
@@ -285,15 +294,15 @@ Route::prefix('v1')->group(function () {
             Route::patch('support/tickets/{ticket}', [PlatformSupportController::class, 'update']);
             Route::post('support/tickets/{ticket}/messages', [PlatformSupportController::class, 'addMessage']);
 
-            // Financials (super_admin and finance only)
-            Route::middleware('platform.admin:super_admin,finance')
+            // Financials (super_admin and billing only)
+            Route::middleware('platform.admin:super_admin,billing')
                 ->group(function () {
                     Route::get('financials/invoices', [PlatformFinancialController::class, 'invoices']);
                     Route::get('financials/subscriptions', [PlatformFinancialController::class, 'subscriptions']);
                 });
 
-            // System health (super_admin and ops only)
-            Route::middleware('platform.admin:super_admin,ops')
+            // System health (super_admin and admin only)
+            Route::middleware('platform.admin:super_admin,admin')
                 ->group(function () {
                     Route::get('health', [PlatformHealthController::class, 'index']);
                     Route::get('health/security-events', [PlatformHealthController::class, 'securityEvents']);
@@ -309,5 +318,11 @@ Route::prefix('v1')->group(function () {
 
             // Webhook visibility (Phase 9)
             Route::get('organizations/{organization}/webhooks', [PlatformWebhookController::class, 'index']);
+
+            // System Announcements (Command Center)
+            Route::get('system-announcements', [PlatformAnnouncementController::class, 'index']);
+            Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
+            Route::patch('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'update']);
+            Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
         });
 });

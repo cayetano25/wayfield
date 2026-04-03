@@ -5,7 +5,7 @@ use App\Models\User;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('successful login creates a login_event record with success=true', function () {
+test('successful login creates a login_event record with outcome=success', function () {
     $user = User::factory()->create([
         'email'        => 'test@example.com',
         'password_hash' => bcrypt('password123'),
@@ -20,12 +20,11 @@ test('successful login creates a login_event record with success=true', function
     $this->assertDatabaseHas('login_events', [
         'user_id'         => $user->id,
         'email_attempted' => 'test@example.com',
-        'success'         => 1,
-        'failure_reason'  => null,
+        'outcome'         => 'success',
     ]);
 });
 
-test('failed login with wrong password creates a login_event with success=false', function () {
+test('failed login with wrong password creates a login_event with outcome=failed', function () {
     $user = User::factory()->create([
         'email'         => 'test@example.com',
         'password_hash' => bcrypt('correct-password'),
@@ -40,8 +39,7 @@ test('failed login with wrong password creates a login_event with success=false'
     $this->assertDatabaseHas('login_events', [
         'user_id'         => $user->id,
         'email_attempted' => 'test@example.com',
-        'success'         => 0,
-        'failure_reason'  => 'invalid_password',
+        'outcome'         => 'failed',
     ]);
 });
 
@@ -54,12 +52,11 @@ test('login attempt for unknown email creates a login_event with null user_id', 
     $this->assertDatabaseHas('login_events', [
         'user_id'         => null,
         'email_attempted' => 'nobody@example.com',
-        'success'         => 0,
-        'failure_reason'  => 'unknown_email',
+        'outcome'         => 'failed',
     ]);
 });
 
-test('inactive account login attempt is recorded with failure_reason=account_inactive', function () {
+test('inactive account login attempt is recorded with outcome=inactive', function () {
     User::factory()->create([
         'email'         => 'inactive@example.com',
         'password_hash' => bcrypt('password'),
@@ -73,8 +70,25 @@ test('inactive account login attempt is recorded with failure_reason=account_ina
 
     $this->assertDatabaseHas('login_events', [
         'email_attempted' => 'inactive@example.com',
-        'success'         => 0,
-        'failure_reason'  => 'account_inactive',
+        'outcome'         => 'inactive',
+    ]);
+});
+
+test('unverified account login attempt is recorded with outcome=unverified', function () {
+    User::factory()->unverified()->create([
+        'email'         => 'unverified@example.com',
+        'password_hash' => bcrypt('password'),
+        'is_active'     => true,
+    ]);
+
+    $this->postJson('/api/v1/auth/login', [
+        'email'    => 'unverified@example.com',
+        'password' => 'password',
+    ])->assertStatus(401);
+
+    $this->assertDatabaseHas('login_events', [
+        'email_attempted' => 'unverified@example.com',
+        'outcome'         => 'unverified',
     ]);
 });
 
@@ -94,6 +108,5 @@ test('login_events table has no updated_at column — record is immutable', func
     expect($event)->not->toBeNull();
 
     // UPDATED_AT = null means the model never writes updated_at
-    // Confirm the column does not exist in the schema
     expect(\Illuminate\Support\Facades\Schema::hasColumn('login_events', 'updated_at'))->toBeFalse();
 });
