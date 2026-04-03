@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
             'feature'        => \App\Http\Middleware\CheckFeatureAccess::class,
+            'auth.api_key'   => \App\Http\Middleware\AuthenticateApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

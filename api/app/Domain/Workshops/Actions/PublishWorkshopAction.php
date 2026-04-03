@@ -2,12 +2,16 @@
 
 namespace App\Domain\Workshops\Actions;
 
+use App\Domain\Webhooks\WebhookDispatcher;
 use App\Domain\Workshops\Exceptions\WorkshopPublishException;
 use App\Models\Workshop;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class PublishWorkshopAction
 {
+    public function __construct(private readonly WebhookDispatcher $webhookDispatcher) {}
+
     public function execute(Workshop $workshop): Workshop
     {
         if ($workshop->isArchived()) {
@@ -28,7 +32,28 @@ class PublishWorkshopAction
 
         $workshop->update(['status' => 'published']);
 
-        return $workshop->fresh();
+        $fresh = $workshop->fresh();
+
+        // Dispatch webhook event — failure must NOT fail the primary action.
+        try {
+            $this->webhookDispatcher->dispatch('workshop.published', $workshop->organization_id, [
+                'workshop_id'        => $fresh->id,
+                'title'              => $fresh->title,
+                'workshop_type'      => $fresh->workshop_type,
+                'start_date'         => $fresh->start_date?->toDateString(),
+                'end_date'           => $fresh->end_date?->toDateString(),
+                'timezone'           => $fresh->timezone,
+                'public_page_enabled' => $fresh->public_page_enabled,
+                'join_code'          => $fresh->join_code,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('PublishWorkshopAction: webhook dispatch failed', [
+                'workshop_id' => $fresh->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+
+        return $fresh;
     }
 
     /** @return array<string, array<string>> */

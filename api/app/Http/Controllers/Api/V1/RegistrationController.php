@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
 use App\Domain\Subscriptions\Services\EnforceFeatureGateService;
+use App\Domain\Webhooks\WebhookDispatcher;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\JoinWorkshopRequest;
 use App\Http\Resources\RegistrationResource;
@@ -12,11 +13,15 @@ use App\Models\Registration;
 use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class RegistrationController extends Controller
 {
-    public function __construct(private readonly EnforceFeatureGateService $featureGate) {}
+    public function __construct(
+        private readonly EnforceFeatureGateService $featureGate,
+        private readonly WebhookDispatcher $webhookDispatcher,
+    ) {}
 
     /**
      * POST /api/v1/workshops/join
@@ -84,6 +89,25 @@ class RegistrationController extends Controller
         ]);
 
         Mail::to($user->email)->queue(new WorkshopJoinConfirmationMail($user, $workshop, $registration));
+
+        // Dispatch webhook event — failure must NOT fail the primary action.
+        try {
+            $this->webhookDispatcher->dispatch('participant.registered', $workshop->organization_id, [
+                'registration_id' => $registration->id,
+                'workshop_id'     => $workshop->id,
+                'workshop_title'  => $workshop->title,
+                'user_id'         => $user->id,
+                'first_name'      => $user->first_name,
+                'last_name'       => $user->last_name,
+                'registered_at'   => $registration->registered_at?->toIso8601String(),
+                'joined_via_code' => $registration->joined_via_code !== null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('RegistrationController: webhook dispatch failed', [
+                'registration_id' => $registration->id,
+                'error'           => $e->getMessage(),
+            ]);
+        }
 
         return response()->json(new RegistrationResource($registration), 201);
     }

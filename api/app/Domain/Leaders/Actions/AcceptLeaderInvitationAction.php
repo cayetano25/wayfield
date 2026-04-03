@@ -3,15 +3,19 @@
 namespace App\Domain\Leaders\Actions;
 
 use App\Domain\Shared\Services\AuditLogService;
+use App\Domain\Webhooks\WebhookDispatcher;
 use App\Models\Leader;
 use App\Models\LeaderInvitation;
 use App\Models\OrganizationLeader;
 use App\Models\User;
 use App\Models\WorkshopLeader;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AcceptLeaderInvitationAction
 {
+    public function __construct(private readonly WebhookDispatcher $webhookDispatcher) {}
+
     /**
      * Accept a leader invitation.
      *
@@ -117,7 +121,31 @@ class AcceptLeaderInvitationAction
                 ],
             ]);
 
-            return $leader->fresh();
+            $fresh = $leader->fresh();
+
+            // Dispatch webhook event — failure must NOT fail the primary action.
+            try {
+                $this->webhookDispatcher->dispatch(
+                    'leader.invitation_accepted',
+                    $invitation->organization_id,
+                    [
+                        'invitation_id'   => $invitation->id,
+                        'organization_id' => $invitation->organization_id,
+                        'workshop_id'     => $invitation->workshop_id,
+                        'leader_id'       => $fresh->id,
+                        'first_name'      => $fresh->first_name,
+                        'last_name'       => $fresh->last_name,
+                        'accepted_at'     => now()->toIso8601String(),
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::warning('AcceptLeaderInvitationAction: webhook dispatch failed', [
+                    'invitation_id' => $invitation->id,
+                    'error'         => $e->getMessage(),
+                ]);
+            }
+
+            return $fresh;
         });
     }
 }

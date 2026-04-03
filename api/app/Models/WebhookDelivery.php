@@ -9,6 +9,7 @@ class WebhookDelivery extends Model
 {
     protected $fillable = [
         'organization_id',
+        'webhook_endpoint_id',
         'webhook_url',
         'event_type',
         'payload_json',
@@ -17,17 +18,24 @@ class WebhookDelivery extends Model
         'attempt_count',
         'last_attempted_at',
         'delivered_at',
+        'next_retry_at',
     ];
 
     protected $casts = [
         'payload_json'      => 'array',
         'last_attempted_at' => 'datetime',
         'delivered_at'      => 'datetime',
+        'next_retry_at'     => 'datetime',
     ];
 
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function webhookEndpoint(): BelongsTo
+    {
+        return $this->belongsTo(WebhookEndpoint::class);
     }
 
     public function isDelivered(): bool

@@ -12,7 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->index('user_id');
-            $table->enum('provider', ['email', 'google', 'facebook']);
+            // Phase 9: 'saml' and 'oidc' added here so SQLite test databases
+            // include them in the CHECK constraint from the start.
+            // On MySQL production, the separate alter migration handles the column change.
+            $table->enum('provider', ['email', 'google', 'facebook', 'saml', 'oidc']);
             $table->string('provider_user_id', 255)->nullable();
             $table->string('provider_email', 255)->nullable();
             $table->dateTime('created_at');

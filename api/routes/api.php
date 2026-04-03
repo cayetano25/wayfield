@@ -11,10 +11,15 @@ use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
 use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
+use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
+use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\UserNotificationController;
+use App\Http\Controllers\Api\V1\ApiKeyController;
+use App\Http\Controllers\Api\V1\DiscoveryController;
+use App\Http\Controllers\Api\V1\ExternalApiController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
@@ -30,7 +35,9 @@ use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
 use App\Http\Controllers\Api\V1\SessionParticipantController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
+use App\Http\Controllers\Api\V1\SsoController;
 use App\Http\Controllers\Api\V1\TrackController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
@@ -57,6 +64,23 @@ Route::prefix('v1')->group(function () {
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
+    });
+
+    // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
+    Route::get('sso/{organization:slug}/login', [SsoController::class, 'login']);
+    Route::post('sso/{organization:slug}/callback', [SsoController::class, 'callback']);
+
+    // ─── Public Workshop Discovery (no auth required) ─────────────────────────
+    Route::prefix('discover')->group(function () {
+        Route::get('workshops', [DiscoveryController::class, 'index']);
+        Route::get('workshops/{slug}', [DiscoveryController::class, 'show']);
+    });
+
+    // ─── External API (API key authentication — not Sanctum) ─────────────────
+    Route::middleware('auth.api_key')->prefix('external')->group(function () {
+        Route::get('workshops', [ExternalApiController::class, 'workshops']);
+        Route::get('workshops/{workshop}/sessions', [ExternalApiController::class, 'sessions']);
+        Route::get('workshops/{workshop}/participants/count', [ExternalApiController::class, 'participantCount']);
     });
 
     // ─── Leader invitation resolve/decline (public-but-tokenized) ────────────
@@ -223,6 +247,17 @@ Route::prefix('v1')->group(function () {
             'organizations/{organization}/reports/usage',
             [ReportingController::class, 'usage']
         );
+
+        // ─── Webhooks (Phase 9) ───────────────────────────────────────────────
+        Route::get('organizations/{organization}/webhooks', [WebhookController::class, 'index']);
+        Route::post('organizations/{organization}/webhooks', [WebhookController::class, 'store']);
+        Route::delete('organizations/{organization}/webhooks/{endpoint}', [WebhookController::class, 'destroy']);
+        Route::get('organizations/{organization}/webhooks/{endpoint}/deliveries', [WebhookController::class, 'deliveries']);
+
+        // ─── API Keys (Phase 9) ───────────────────────────────────────────────
+        Route::get('organizations/{organization}/api-keys', [ApiKeyController::class, 'index']);
+        Route::post('organizations/{organization}/api-keys', [ApiKeyController::class, 'store']);
+        Route::delete('organizations/{organization}/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
     });
 
     // ─── Platform Admin (Command Center) ─────────────────────────────────────
@@ -264,5 +299,15 @@ Route::prefix('v1')->group(function () {
                     Route::get('health/security-events', [PlatformHealthController::class, 'securityEvents']);
                     Route::get('health/login-events', [PlatformHealthController::class, 'loginEvents']);
                 });
+
+            // SSO configuration (Phase 9)
+            Route::get('organizations/{organization}/sso', [PlatformSsoController::class, 'show']);
+            Route::middleware('platform.admin:super_admin,admin')
+                ->group(function () {
+                    Route::put('organizations/{organization}/sso', [PlatformSsoController::class, 'update']);
+                });
+
+            // Webhook visibility (Phase 9)
+            Route::get('organizations/{organization}/webhooks', [PlatformWebhookController::class, 'index']);
         });
 });
