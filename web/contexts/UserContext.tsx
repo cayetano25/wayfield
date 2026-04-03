@@ -1,0 +1,77 @@
+'use client';
+
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiGet, apiPost } from '@/lib/api/client';
+import { clearStoredUser, clearToken, type AdminUser } from '@/lib/auth/session';
+
+interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  role: string;
+  plan_code: string;
+}
+
+interface UserContextValue {
+  user: AdminUser | null;
+  organizations: Organization[];
+  currentOrg: Organization | null;
+  setCurrentOrg: (org: Organization) => void;
+  logout: () => Promise<void>;
+  isLoading: boolean;
+}
+
+const UserContext = createContext<UserContextValue | null>(null);
+
+export function UserProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const [me, orgsResponse] = await Promise.all([
+          apiGet<AdminUser>('/me'),
+          apiGet<{ data: Organization[] }>('/me/organizations'),
+        ]);
+        setUser(me);
+        const orgs = orgsResponse.data ?? [];
+        setOrganizations(orgs);
+        setCurrentOrg(orgs[0] ?? null);
+      } catch {
+        // 401 is handled in client.ts (redirects to /login)
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadUser();
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiPost('/auth/logout');
+    } catch {
+      // ignore errors on logout
+    } finally {
+      clearToken();
+      clearStoredUser();
+      router.push('/login');
+    }
+  }, [router]);
+
+  return (
+    <UserContext.Provider value={{ user, organizations, currentOrg, setCurrentOrg, logout, isLoading }}>
+      {children}
+    </UserContext.Provider>
+  );
+}
+
+export function useUser(): UserContextValue {
+  const ctx = useContext(UserContext);
+  if (!ctx) throw new Error('useUser must be used within UserProvider');
+  return ctx;
+}
