@@ -138,8 +138,8 @@ export default function OrganizationBillingPage() {
       setLoading(false);
       return;
     }
-    apiGet<{ data: SubscriptionData }>(`/organizations/${currentOrg.id}/subscription`)
-      .then((res) => setData(res.data))
+    apiGet<SubscriptionData>(`/organizations/${currentOrg.id}/subscription`)
+      .then((res) => setData(res))
       .catch(() => toast.error('Failed to load billing information'))
       .finally(() => setLoading(false));
   }, [currentOrg, canAccess]);

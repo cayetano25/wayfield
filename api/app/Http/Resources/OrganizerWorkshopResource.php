@@ -41,6 +41,19 @@ class OrganizerWorkshopResource extends JsonResource
                     'updated_at'    => $this->publicPage->updated_at?->toIso8601String(),
                 ] : null
             ),
+            'confirmed_leaders'   => $this->whenLoaded('confirmedLeaders', fn () =>
+                $this->confirmedLeaders->map(fn ($leader) => [
+                    'id'                => $leader->id,
+                    'first_name'        => $leader->first_name,
+                    'last_name'         => $leader->last_name,
+                    'display_name'      => $leader->display_name,
+                    'bio'               => $leader->bio,
+                    'profile_image_url' => $leader->profile_image_url,
+                    'website_url'       => $leader->website_url,
+                    'city'              => $leader->city,
+                    'state_or_region'   => $leader->state_or_region,
+                ])
+            ),
             'created_at'          => $this->created_at->toIso8601String(),
             'updated_at'          => $this->updated_at->toIso8601String(),
         ];

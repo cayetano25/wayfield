@@ -47,9 +47,9 @@ export default function OrganizationSettingsPage() {
 
   useEffect(() => {
     if (!currentOrg) return;
-    apiGet<{ data: OrgDetail }>(`/organizations/${currentOrg.id}`)
+    apiGet<OrgDetail>(`/organizations/${currentOrg.id}`)
       .then((res) => {
-        const d = res.data;
+        const d = res;
         setOrg(d);
         setForm({
           name: d.name ?? '',

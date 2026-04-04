@@ -8,20 +8,39 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 
-function getTimezones(): string[] {
-  try {
-    return (Intl as unknown as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf('timeZone');
-  } catch {
-    return [
-      'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-      'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu',
-      'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Rome',
-      'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
-      'Australia/Sydney', 'Australia/Melbourne',
-      'UTC',
-    ];
-  }
-}
+const TIMEZONES = [
+  'Pacific/Honolulu',
+  'America/Anchorage',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Phoenix',
+  'America/Chicago',
+  'America/New_York',
+  'America/Halifax',
+  'America/St_Johns',
+  'America/Sao_Paulo',
+  'America/Argentina/Buenos_Aires',
+  'Atlantic/Azores',
+  'UTC',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Rome',
+  'Europe/Helsinki',
+  'Europe/Moscow',
+  'Asia/Dubai',
+  'Asia/Karachi',
+  'Asia/Kolkata',
+  'Asia/Dhaka',
+  'Asia/Bangkok',
+  'Asia/Shanghai',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Australia/Perth',
+  'Australia/Adelaide',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
 
 export interface WorkshopFormValues {
   title: string;
@@ -57,8 +76,6 @@ interface WorkshopFormProps {
   onCancel: () => void;
 }
 
-const TIMEZONES = getTimezones();
-
 const TYPE_OPTIONS: { value: 'session_based' | 'event_based'; label: string; description: string }[] = [
   {
     value: 'session_based',
@@ -86,7 +103,7 @@ export function WorkshopForm({
     workshop_type: '',
     start_date: '',
     end_date: '',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+    timezone: 'UTC',
     public_page_enabled: false,
     location_name: '',
     location_address: '',

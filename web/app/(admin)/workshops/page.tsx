@@ -6,7 +6,7 @@ import { Plus, Copy, Check, CalendarDays, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
-import { apiGet } from '@/lib/api/client';
+import { getWorkshops } from '@/lib/api/workshops';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -61,8 +61,8 @@ export default function WorkshopsPage() {
   useEffect(() => {
     if (!currentOrg) return;
     setLoading(true);
-    apiGet<{ data: WorkshopSummary[] }>(`/organizations/${currentOrg.id}/workshops`)
-      .then((res) => setWorkshops(res.data ?? []))
+    (getWorkshops(currentOrg.id) as Promise<WorkshopSummary[]>)
+      .then((res) => setWorkshops(res ?? []))
       .catch(() => toast.error('Failed to load workshops'))
       .finally(() => setLoading(false));
   }, [currentOrg]);

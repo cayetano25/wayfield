@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiPost, ApiError } from '@/lib/api/client';
+import { createWorkshop } from '@/lib/api/workshops';
 import { WorkshopForm, type WorkshopFormValues, type WorkshopFormErrors } from '@/components/workshops/WorkshopForm';
 
 export default function NewWorkshopPage() {
@@ -20,7 +21,10 @@ export default function NewWorkshopPage() {
   const [errors, setErrors] = useState<WorkshopFormErrors>({});
 
   async function handleSubmit(values: WorkshopFormValues) {
-    if (!currentOrg) return;
+    if (!currentOrg) {
+      toast.error('No organization selected. Please refresh and try again.');
+      return;
+    }
     if (!values.workshop_type) {
       setErrors({ workshop_type: 'Please select a workshop type' });
       return;
@@ -34,7 +38,7 @@ export default function NewWorkshopPage() {
 
       // Create location first if location fields are filled
       if (values.location_name.trim()) {
-        const locationRes = await apiPost<{ data: { id: number } }>(
+        const locationRes = await apiPost<{ id: number }>(
           `/organizations/${currentOrg.id}/locations`,
           {
             name: values.location_name,
@@ -44,25 +48,22 @@ export default function NewWorkshopPage() {
             country: values.location_country || null,
           },
         );
-        defaultLocationId = locationRes.data.id;
+        defaultLocationId = locationRes.id;
       }
 
-      const workshopRes = await apiPost<{ data: { id: number } }>(
-        `/organizations/${currentOrg.id}/workshops`,
-        {
-          workshop_type: values.workshop_type,
-          title: values.title,
-          description: values.description,
-          start_date: values.start_date,
-          end_date: values.end_date,
-          timezone: values.timezone,
-          public_page_enabled: values.public_page_enabled,
-          default_location_id: defaultLocationId,
-        },
-      );
+      const workshopRes = await createWorkshop(currentOrg.id, {
+        workshop_type: values.workshop_type,
+        title: values.title,
+        description: values.description,
+        start_date: values.start_date,
+        end_date: values.end_date,
+        timezone: values.timezone,
+        public_page_enabled: values.public_page_enabled,
+        default_location_id: defaultLocationId,
+      }) as { id: number };
 
       toast.success('Workshop created');
-      router.push(`/workshops/${workshopRes.data.id}`);
+      router.push(`/workshops/${workshopRes.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         const fieldErrors: WorkshopFormErrors = {};

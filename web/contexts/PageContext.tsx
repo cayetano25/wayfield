@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Breadcrumb } from '@/components/shared/TopBar';
 
 interface PageContextValue {
@@ -19,10 +19,10 @@ export function PageProvider({ children }: { children: React.ReactNode }) {
   const [title, setTitle] = useState('');
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
 
-  function setPage(t: string, crumbs: Breadcrumb[] = []) {
+  const setPage = useCallback((t: string, crumbs: Breadcrumb[] = []) => {
     setTitle(t);
     setBreadcrumbs(crumbs);
-  }
+  }, []);
 
   return (
     <PageContext.Provider value={{ title, breadcrumbs, setPage }}>

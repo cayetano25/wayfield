@@ -29,12 +29,12 @@ export default function EditWorkshopPage() {
   const [errors, setErrors] = useState<WorkshopFormErrors>({});
 
   useEffect(() => {
-    apiGet<{ data: WorkshopDetail }>(`/workshops/${id}`)
+    apiGet<WorkshopDetail>(`/workshops/${id}`)
       .then((res) => {
-        setWorkshop(res.data);
-        setPage(res.data.title, [
+        setWorkshop(res);
+        setPage(res.title, [
           { label: 'Workshops', href: '/workshops' },
-          { label: res.data.title, href: `/workshops/${id}` },
+          { label: res.title, href: `/workshops/${id}` },
           { label: 'Edit' },
         ]);
       })

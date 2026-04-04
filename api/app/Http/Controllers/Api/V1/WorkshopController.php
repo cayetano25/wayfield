@@ -80,7 +80,7 @@ class WorkshopController extends Controller
         $this->authorize('view', $workshop);
 
         return new OrganizerWorkshopResource(
-            $workshop->load(['defaultLocation', 'logistics', 'publicPage'])
+            $workshop->load(['defaultLocation', 'logistics', 'publicPage', 'confirmedLeaders'])
         );
     }
 

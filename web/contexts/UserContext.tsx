@@ -34,12 +34,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadUser() {
       try {
-        const [me, orgsResponse] = await Promise.all([
+        const [me, orgs] = await Promise.all([
           apiGet<AdminUser>('/me'),
-          apiGet<{ data: Organization[] }>('/me/organizations'),
+          apiGet<Organization[]>('/me/organizations'),
         ]);
         setUser(me);
-        const orgs = orgsResponse.data ?? [];
         setOrganizations(orgs);
         setCurrentOrg(orgs[0] ?? null);
       } catch {

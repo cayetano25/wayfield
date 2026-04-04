@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\SystemAnnouncementController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
@@ -115,6 +116,7 @@ Route::prefix('v1')->group(function () {
         Route::get('me/organizations', [ProfileController::class, 'organizations']);
 
         // Organizations
+        Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index']);
         Route::get('organizations', [OrganizationController::class, 'index']);
         Route::post('organizations', [OrganizationController::class, 'store']);
         Route::get('organizations/{organization}', [OrganizationController::class, 'show']);
@@ -184,6 +186,7 @@ Route::prefix('v1')->group(function () {
         Route::get('leader/workshops', [LeaderSelfController::class, 'workshops']);
 
         // ─── Workshop/session leader assignment (organizer) ───────────────────
+        Route::get('workshops/{workshop}/leaders', [WorkshopLeaderController::class, 'index']);
         Route::post('workshops/{workshop}/leaders', [WorkshopLeaderController::class, 'store']);
         Route::get('sessions/{session}/leaders', [SessionLeaderController::class, 'index']);
         Route::post('sessions/{session}/leaders', [SessionLeaderController::class, 'store']);

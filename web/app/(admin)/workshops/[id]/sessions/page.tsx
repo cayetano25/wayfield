@@ -686,19 +686,19 @@ export default function WorkshopSessionsPage() {
   const load = useCallback(async () => {
     try {
       const [wRes, tRes, sRes] = await Promise.all([
-        apiGet<{ data: Workshop }>(`/workshops/${id}`),
-        apiGet<{ data: Track[] }>(`/workshops/${id}/tracks`),
-        apiGet<{ data: Session[] }>(`/workshops/${id}/sessions`),
+        apiGet<Workshop>(`/workshops/${id}`),
+        apiGet<Track[]>(`/workshops/${id}/tracks`),
+        apiGet<Session[]>(`/workshops/${id}/sessions`),
       ]);
-      const ws = wRes.data;
+      const ws = wRes;
       setWorkshop(ws);
-      setTracks((tRes.data ?? []).sort((a, b) => a.order - b.order));
-      setSessions(sRes.data ?? []);
+      setTracks((tRes ?? []).sort((a, b) => a.order - b.order));
+      setSessions(sRes ?? []);
 
       // Load locations for the org
       try {
-        const lRes = await apiGet<{ data: Location[] }>(`/organizations/${ws.organization_id}/locations`);
-        setLocations(lRes.data ?? []);
+        const lRes = await apiGet<Location[]>(`/organizations/${ws.organization_id}/locations`);
+        setLocations(lRes ?? []);
       } catch {
         // locations are optional
       }

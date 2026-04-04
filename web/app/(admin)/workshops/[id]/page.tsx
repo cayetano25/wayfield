@@ -110,11 +110,11 @@ export default function WorkshopOverviewPage() {
   const load = useCallback(async () => {
     try {
       const [wRes, sRes] = await Promise.all([
-        apiGet<{ data: Workshop }>(`/workshops/${id}`),
-        apiGet<{ data: Session[] }>(`/workshops/${id}/sessions`),
+        apiGet<Workshop>(`/workshops/${id}`),
+        apiGet<Session[]>(`/workshops/${id}/sessions`),
       ]);
-      setWorkshop(wRes.data);
-      setSessions(sRes.data ?? []);
+      setWorkshop(wRes);
+      setSessions(sRes ?? []);
     } catch {
       toast.error('Failed to load workshop');
     } finally {
@@ -143,7 +143,7 @@ export default function WorkshopOverviewPage() {
       meeting_room_details: workshop.logistics?.meeting_room_details ?? null,
       meetup_instructions: workshop.logistics?.meetup_instructions ?? null,
     });
-  }, [workshop, setPage]);
+  }, [workshop?.title, setPage]);
 
   async function copyJoinCode() {
     if (!workshop) return;

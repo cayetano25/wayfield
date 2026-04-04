@@ -82,8 +82,8 @@ export default function OrganizationMembersPage() {
   function loadMembers() {
     if (!currentOrg) return;
     setLoading(true);
-    apiGet<{ data: OrgMember[] }>(`/organizations/${currentOrg.id}/users`)
-      .then((res) => setMembers(res.data ?? []))
+    apiGet<OrgMember[]>(`/organizations/${currentOrg.id}/users`)
+      .then((res) => setMembers(res ?? []))
       .catch(() => toast.error('Failed to load members'))
       .finally(() => setLoading(false));
   }

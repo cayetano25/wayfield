@@ -49,7 +49,7 @@ interface Leader {
   invitation_id: number | null;
   invitation_created_at: string | null;
   sessions_count: number;
-  assigned_sessions: AssignedSession[];
+  assigned_sessions?: AssignedSession[];
 }
 
 interface Session {
@@ -123,6 +123,7 @@ function LeaderCard({
   onView: () => void;
 }) {
   const location = [leader.city, leader.state_or_region].filter(Boolean).join(', ');
+  const sessionCount = (leader.assigned_sessions ?? []).length;
 
   return (
     <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -132,21 +133,19 @@ function LeaderCard({
           <p className="font-heading font-semibold text-dark text-sm leading-snug truncate">
             {leader.first_name} {leader.last_name}
           </p>
-          {location && (
-            <p className="text-[13px] text-medium-gray mt-0.5 truncate">{location}</p>
-          )}
+          <p className="text-[13px] text-medium-gray mt-0.5 truncate">
+            {sessionCount === 0
+              ? 'Not assigned to any sessions'
+              : `Leading ${sessionCount} session${sessionCount === 1 ? '' : 's'}`}
+          </p>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
         <InviteStatusBadge status={leader.invitation_status} />
-        <span className="text-xs text-medium-gray">
-          {leader.sessions_count === 0
-            ? 'No sessions'
-            : leader.sessions_count === 1
-              ? 'Leading 1 session'
-              : `Leading ${leader.sessions_count} sessions`}
-        </span>
+        {location && (
+          <span className="text-xs text-medium-gray truncate">{location}</span>
+        )}
       </div>
 
       <Button
@@ -562,13 +561,13 @@ function LeaderSlideOver({
                 )}
               </div>
 
-              {leader.assigned_sessions.length === 0 ? (
+              {(leader.assigned_sessions ?? []).length === 0 ? (
                 <p className="text-sm text-light-gray mb-3">
                   Not assigned to any sessions yet.
                 </p>
               ) : (
                 <div className="space-y-2 mb-3">
-                  {leader.assigned_sessions.map((s) => (
+                  {(leader.assigned_sessions ?? []).map((s) => (
                     <div
                       key={s.id}
                       className="flex items-center justify-between gap-2 rounded-lg border border-border-gray bg-surface px-3 py-2"
@@ -643,18 +642,14 @@ export default function WorkshopLeadersPage() {
 
   const load = useCallback(async () => {
     try {
-      const [wRes, sRes] = await Promise.all([
-        apiGet<{ data: Workshop }>(`/workshops/${id}`),
-        apiGet<{ data: Session[] }>(`/workshops/${id}/sessions`),
+      const [wRes, sRes, lRes] = await Promise.all([
+        apiGet<Workshop>(`/workshops/${id}`),
+        apiGet<Session[]>(`/workshops/${id}/sessions`),
+        apiGet<Leader[]>(`/workshops/${id}/leaders`),
       ]);
-      const ws = wRes.data;
-      setWorkshop(ws);
-      setSessions(sRes.data ?? []);
-
-      const lRes = await apiGet<{ data: Leader[] }>(
-        `/organizations/${ws.organization_id}/leaders?workshop_id=${id}`,
-      );
-      setLeaders(lRes.data ?? []);
+      setWorkshop(wRes);
+      setSessions(sRes ?? []);
+      setLeaders((lRes ?? []).map((l) => ({ ...l, assigned_sessions: l.assigned_sessions ?? [] })));
     } catch {
       toast.error('Failed to load leaders');
     } finally {
@@ -688,10 +683,8 @@ export default function WorkshopLeadersPage() {
   function handleSlideUpdated() {
     // Refresh leaders to get updated session assignment counts
     if (!workshop) return;
-    apiGet<{ data: Leader[] }>(
-      `/organizations/${workshop.organization_id}/leaders?workshop_id=${id}`,
-    ).then((res) => {
-      const updated = res.data ?? [];
+    apiGet<Leader[]>(`/workshops/${id}/leaders`).then((res) => {
+      const updated = (res ?? []).map((l) => ({ ...l, assigned_sessions: l.assigned_sessions ?? [] }));
       setLeaders(updated);
       // Keep slide-over data in sync
       if (slideLeader) {
