@@ -23,3 +23,7 @@ export interface DashboardStats {
 export async function getDashboardStats(orgId: number): Promise<DashboardStats> {
   return apiGet(`/organizations/${orgId}/dashboard`);
 }
+
+export async function getWorkshopParticipants(workshopId: number) {
+  return apiGet(`/workshops/${workshopId}/participants`);
+}

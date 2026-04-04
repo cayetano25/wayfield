@@ -57,6 +57,18 @@ class WorkshopPolicy
     }
 
     /**
+     * Owner, admin, and staff may view the workshop's participant list.
+     */
+    public function viewParticipants(User $user, Workshop $workshop): bool
+    {
+        return $user->organizationUsers()
+            ->where('organization_id', $workshop->organization_id)
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin', 'staff'])
+            ->exists();
+    }
+
+    /**
      * Sync package access: registered participants, assigned leaders, and org members.
      */
     public function syncDownload(User $user, Workshop $workshop): bool

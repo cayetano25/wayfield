@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
 use App\Http\Controllers\Api\V1\WorkshopNotificationController;
 use App\Http\Controllers\Api\V1\OfflineSyncController;
+use App\Http\Controllers\Api\V1\ParticipantController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -157,6 +158,9 @@ Route::prefix('v1')->group(function () {
         Route::get('sessions/{session}', [SessionController::class, 'show']);
         Route::patch('sessions/{session}', [SessionController::class, 'update']);
         Route::post('sessions/{session}/publish', [SessionController::class, 'publish']);
+
+        // Workshop participants (organizer/staff)
+        Route::get('workshops/{workshop}/participants', [ParticipantController::class, 'index']);
 
         // Workshop join and registration (participant)
         // Note: join route must come before {workshop} routes to avoid conflict
