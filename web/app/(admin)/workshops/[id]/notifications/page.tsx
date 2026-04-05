@@ -342,8 +342,8 @@ function HistorySection({ notifications }: { notifications: SentNotification[] }
               </tr>
             </thead>
             <tbody className="divide-y divide-border-gray">
-              {notifications.map((n) => (
-                <tr key={n.id} className="hover:bg-surface/50 transition-colors">
+              {notifications.map((n, index) => (
+                <tr key={`notification-${n.id}-${index}`} className="hover:bg-surface/50 transition-colors">
                   <td className="px-4 py-3 max-w-[160px]">
                     <span className="block truncate font-medium text-dark" title={n.title}>
                       {n.title}
@@ -399,7 +399,11 @@ export default function WorkshopNotificationsPage() {
         ]);
         setWorkshop(wRes);
         setSessions((sRes ?? []).filter((s) => s.is_published));
-        setHistory(nRes ?? []);
+        const raw = nRes ?? [];
+        const unique = Array.from(
+          new Map(raw.map((n: SentNotification) => [n.id, n])).values()
+        );
+        setHistory(unique);
       } catch {
         toast.error('Failed to load notifications');
       } finally {
@@ -419,7 +423,10 @@ export default function WorkshopNotificationsPage() {
   }, [workshop, id, setPage]);
 
   function handleSent(notification: SentNotification) {
-    setHistory((prev) => [notification, ...prev]);
+    setHistory((prev) => {
+      const merged = [notification, ...prev];
+      return Array.from(new Map(merged.map((n) => [n.id, n])).values());
+    });
   }
 
   if (loading) {
