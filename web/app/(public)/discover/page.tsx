@@ -38,7 +38,7 @@ function WorkshopCard({ workshop, index }: { workshop: DiscoverWorkshop; index: 
 
   return (
     <Link
-      href={`/workshops/${workshop.public_slug}`}
+      href={`/w/${workshop.public_slug}`}
       className="group bg-white rounded-xl border border-border-gray shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
     >
       {/* Card image / placeholder */}
