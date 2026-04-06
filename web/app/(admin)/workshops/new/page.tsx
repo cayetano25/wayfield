@@ -65,7 +65,11 @@ export default function NewWorkshopPage() {
       toast.success('Workshop created');
       router.push(`/workshops/${workshopRes.id}`);
     } catch (err) {
-      if (err instanceof ApiError && err.errors) {
+      if (err instanceof ApiError && err.status === 403 && !err.errors) {
+        toast.error('You have reached your plan\'s workshop limit. Upgrade to add more workshops.');
+        router.push('/organization/billing');
+        return;
+      } else if (err instanceof ApiError && err.errors) {
         const fieldErrors: WorkshopFormErrors = {};
         for (const [key, msgs] of Object.entries(err.errors)) {
           fieldErrors[key] = msgs[0];

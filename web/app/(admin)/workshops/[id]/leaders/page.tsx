@@ -8,7 +8,8 @@ import {
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
-import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
+import { apiGet, apiPost, apiDelete, apiPatch, ApiError } from '@/lib/api/client';
+import { ImageUploader } from '@/components/ui/ImageUploader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -475,7 +476,22 @@ function LeaderSlideOver({
             {/* Profile header */}
             <div className="px-6 py-5 border-b border-border-gray">
               <div className="flex items-start gap-4">
-                <LeaderAvatar leader={leader} size="lg" />
+                <div className="shrink-0">
+                  <ImageUploader
+                    currentUrl={leader.profile_image_url}
+                    entityType="leader"
+                    entityId={leader.id}
+                    fieldName="profile_image_url"
+                    shape="circle"
+                    width={80}
+                    height={80}
+                    onUploadComplete={(url) => onUpdated()}
+                    onRemove={async () => {
+                      await apiPatch(`/leaders/${leader.id}`, { profile_image_url: null });
+                      onUpdated();
+                    }}
+                  />
+                </div>
                 <div className="flex-1 min-w-0 pt-1">
                   <h3 className="font-heading font-semibold text-dark text-base leading-snug">
                     {fullName}

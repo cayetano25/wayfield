@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
+import { ImageUploader } from '@/components/ui/ImageUploader';
+import { apiPatch } from '@/lib/api/client';
 
 const TIMEZONES = [
   'Pacific/Honolulu',
@@ -74,6 +76,9 @@ interface WorkshopFormProps {
   submitLabel: string;
   onSubmit: (values: WorkshopFormValues) => void;
   onCancel: () => void;
+  /** When provided, shows the header image uploader (edit mode only). */
+  workshopId?: number;
+  initialHeaderImageUrl?: string | null;
 }
 
 const TYPE_OPTIONS: { value: 'session_based' | 'event_based'; label: string; description: string }[] = [
@@ -96,6 +101,8 @@ export function WorkshopForm({
   submitLabel,
   onSubmit,
   onCancel,
+  workshopId,
+  initialHeaderImageUrl = null,
 }: WorkshopFormProps) {
   const [values, setValues] = useState<WorkshopFormValues>({
     title: '',
@@ -113,6 +120,7 @@ export function WorkshopForm({
     ...initialValues,
   });
   const [locationExpanded, setLocationExpanded] = useState(false);
+  const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(initialHeaderImageUrl);
 
   function set(field: keyof WorkshopFormValues, value: string | boolean) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -123,8 +131,33 @@ export function WorkshopForm({
     onSubmit(values);
   }
 
+  async function handleRemoveHeaderImage() {
+    if (!workshopId) return;
+    await apiPatch(`/workshops/${workshopId}`, { header_image_url: null });
+    setHeaderImageUrl(null);
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-[720px]">
+      {/* Header image — only shown when editing an existing workshop */}
+      {workshopId && (
+        <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] px-6 py-6">
+          <h2 className="font-heading text-base font-semibold text-dark mb-4">Workshop Header Image</h2>
+          <ImageUploader
+            currentUrl={headerImageUrl}
+            entityType="workshop"
+            entityId={workshopId}
+            fieldName="header_image_url"
+            shape="rectangle"
+            width={680}
+            height={200}
+            onUploadComplete={(url) => setHeaderImageUrl(url)}
+            onRemove={handleRemoveHeaderImage}
+            label="Workshop Header Image"
+          />
+        </div>
+      )}
+
       {/* Basic info */}
       <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
         <div className="px-6 py-5 border-b border-border-gray">

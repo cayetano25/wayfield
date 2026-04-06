@@ -202,10 +202,11 @@ function RosterTable({
 
   return (
     <div className="bg-white rounded-xl border border-border-gray overflow-hidden">
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[600px]">
         <thead>
           <tr className="border-b border-border-gray bg-surface">
-            <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
+            <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide sticky left-0 bg-surface">
               Name
             </th>
             {showPhone && (
@@ -237,7 +238,7 @@ function RosterTable({
 
             return (
               <tr key={entry.user_id} className={`${rowTint} transition-colors`}>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 sticky left-0 bg-inherit">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center shrink-0 select-none">
                       {`${entry.first_name[0] ?? ''}${entry.last_name[0] ?? ''}`.toUpperCase()}
@@ -297,6 +298,7 @@ function RosterTable({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

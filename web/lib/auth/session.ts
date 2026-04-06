@@ -5,6 +5,9 @@ export interface AdminUser {
   email: string;
   email_verified: boolean;
   is_active: boolean;
+  profile_image_url: string | null;
+  onboarding_intent: 'organizer' | 'participant' | null;
+  onboarding_completed_at: string | null;
   organizations: Array<{
     id: number;
     name: string;

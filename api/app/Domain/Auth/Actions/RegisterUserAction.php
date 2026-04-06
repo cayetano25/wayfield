@@ -16,11 +16,12 @@ class RegisterUserAction
     public function execute(array $data): User
     {
         $user = User::create([
-            'first_name'   => $data['first_name'],
-            'last_name'    => $data['last_name'],
-            'email'        => $data['email'],
-            'password_hash' => Hash::make($data['password']),
-            'is_active'    => true,
+            'first_name'         => $data['first_name'],
+            'last_name'          => $data['last_name'],
+            'email'              => $data['email'],
+            'password_hash'      => Hash::make($data['password']),
+            'is_active'          => true,
+            'onboarding_intent'  => $data['intent'] ?? null,
         ]);
 
         AuthMethod::create([

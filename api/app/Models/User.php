@@ -24,6 +24,9 @@ class User extends Authenticatable
         'email_verified_at',
         'is_active',
         'last_login_at',
+        'profile_image_url',
+        'onboarding_intent',
+        'onboarding_completed_at',
     ];
 
     protected $hidden = [
@@ -33,9 +36,10 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'last_login_at'     => 'datetime',
-            'is_active'         => 'boolean',
+            'email_verified_at'       => 'datetime',
+            'last_login_at'           => 'datetime',
+            'is_active'               => 'boolean',
+            'onboarding_completed_at' => 'datetime',
         ];
     }
 

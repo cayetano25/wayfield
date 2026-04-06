@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Copy, Check, Camera, Pencil, AlertTriangle,
+  Copy, Check, Camera, Pencil, AlertTriangle, AlertCircle,
   CalendarDays, MapPin, Phone, ParkingSquare, DoorOpen, Info,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -53,6 +53,7 @@ interface Workshop {
   timezone: string;
   join_code: string;
   public_page_enabled: boolean;
+  header_image_url: string | null;
   sessions_count: number;
   participants_count: number;
   confirmed_leaders: Leader[];
@@ -91,6 +92,7 @@ export default function WorkshopOverviewPage() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
   const [publishOpen, setPublishOpen] = useState(false);
@@ -108,6 +110,8 @@ export default function WorkshopOverviewPage() {
   });
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
     try {
       const [wRes, sRes] = await Promise.all([
         apiGet<Workshop>(`/workshops/${id}`),
@@ -116,6 +120,7 @@ export default function WorkshopOverviewPage() {
       setWorkshop(wRes);
       setSessions(sRes ?? []);
     } catch {
+      setLoadError(true);
       toast.error('Failed to load workshop');
     } finally {
       setLoading(false);
@@ -225,11 +230,24 @@ export default function WorkshopOverviewPage() {
     );
   }
 
-  if (!workshop) {
+  if (loadError || !workshop) {
     return (
       <div className="max-w-[1280px] mx-auto">
-        <Card className="p-8 text-center">
-          <p className="text-medium-gray">Workshop not found.</p>
+        <Card className="p-8 flex flex-col items-center text-center gap-4">
+          <AlertCircle className="w-10 h-10 text-danger" />
+          <div>
+            <p className="font-heading font-semibold text-dark mb-1">
+              {loadError ? 'Failed to load workshop' : 'Workshop not found'}
+            </p>
+            <p className="text-sm text-medium-gray">
+              {loadError
+                ? 'There was a problem fetching this workshop. Please try again.'
+                : 'This workshop could not be found.'}
+            </p>
+          </div>
+          {loadError && (
+            <Button variant="secondary" onClick={() => load()}>Retry</Button>
+          )}
         </Card>
       </div>
     );
@@ -239,6 +257,23 @@ export default function WorkshopOverviewPage() {
 
   return (
     <div className="max-w-[1280px] mx-auto space-y-5">
+      {/* Hero image */}
+      {workshop.header_image_url ? (
+        <div className="w-full h-48 rounded-xl overflow-hidden">
+          <img
+            src={workshop.header_image_url}
+            alt={workshop.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-full h-48 rounded-xl bg-gradient-to-br from-primary to-[#0fa3b1] flex items-center justify-center">
+          <span className="font-heading text-4xl font-extrabold text-white/20 select-none uppercase tracking-widest">
+            {workshop.title.charAt(0)}
+          </span>
+        </div>
+      )}
+
       {/* Header card */}
       <Card className="p-6">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">

@@ -29,6 +29,7 @@ class Session extends Model
         'meeting_passcode',
         'notes',
         'is_published',
+        'header_image_url',
     ];
 
     protected $casts = [

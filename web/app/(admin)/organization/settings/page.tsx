@@ -8,11 +8,13 @@ import { apiGet, apiPatch, ApiError } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { ImageUploader } from '@/components/ui/ImageUploader';
 
 interface OrgDetail {
   id: number;
   name: string;
   slug: string;
+  logo_url: string | null;
   primary_contact_first_name: string;
   primary_contact_last_name: string;
   primary_contact_email: string;
@@ -121,6 +123,27 @@ export default function OrganizationSettingsPage() {
             <p className="text-sm text-medium-gray mt-0.5">
               These details identify your organization across the platform.
             </p>
+          </div>
+          <div className="px-6 pt-6 pb-2 flex justify-center">
+            <ImageUploader
+              currentUrl={org.logo_url}
+              entityType="organization"
+              entityId={org.id}
+              fieldName="logo_url"
+              shape="circle"
+              width={96}
+              height={96}
+              onUploadComplete={(url) => setOrg((prev) => prev ? { ...prev, logo_url: url } : prev)}
+              onRemove={
+                canEdit
+                  ? async () => {
+                      await apiPatch(`/organizations/${org.id}`, { logo_url: null });
+                      setOrg((prev) => prev ? { ...prev, logo_url: null } : prev);
+                    }
+                  : undefined
+              }
+              label="Organization Logo"
+            />
           </div>
           <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <Input

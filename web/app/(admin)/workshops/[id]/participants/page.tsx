@@ -415,10 +415,11 @@ export default function WorkshopParticipantsPage() {
           </Card>
         ) : (
           <div className="bg-white rounded-xl border border-border-gray overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-border-gray bg-surface">
-                  <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
+                  <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide sticky left-0 bg-surface">
                     Name
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
@@ -447,10 +448,10 @@ export default function WorkshopParticipantsPage() {
                     onClick={() => openSlide(p)}
                     className="hover:bg-surface cursor-pointer transition-colors"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 sticky left-0 bg-white">
                       <div className="flex items-center gap-3">
                         <ParticipantAvatar first_name={p.first_name} last_name={p.last_name} />
-                        <span className="font-medium text-dark">
+                        <span className="font-medium text-dark whitespace-nowrap">
                           {p.first_name} {p.last_name}
                         </span>
                       </div>
@@ -476,6 +477,7 @@ export default function WorkshopParticipantsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

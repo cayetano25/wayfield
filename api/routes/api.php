@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MyScheduleController;
+use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
 use App\Http\Controllers\Api\V1\WorkshopNotificationController;
 use App\Http\Controllers\Api\V1\OfflineSyncController;
+use App\Http\Controllers\Api\V1\FileUploadController;
 use App\Http\Controllers\Api\V1\ParticipantController;
 use Illuminate\Support\Facades\Route;
 
@@ -114,7 +116,11 @@ Route::prefix('v1')->group(function () {
         // Profile
         Route::get('me', [ProfileController::class, 'show']);
         Route::patch('me', [ProfileController::class, 'update']);
+        Route::post('me/password', [ProfileController::class, 'changePassword']);
         Route::get('me/organizations', [ProfileController::class, 'organizations']);
+
+        // Onboarding
+        Route::post('me/onboarding/complete', [OnboardingController::class, 'complete']);
 
         // Organizations
         Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index']);
@@ -272,7 +278,14 @@ Route::prefix('v1')->group(function () {
         // ─── System Announcements ─────────────────────────────────────────────
         Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
             ->name('system-announcements.index');
+
+        // ─── File Uploads ─────────────────────────────────────────────────────
+        Route::post('files/presigned-url', [FileUploadController::class, 'presignedUrl']);
+        Route::post('files/confirm', [FileUploadController::class, 'confirm']);
     });
+
+    // ─── Local file upload handler (local env only, no auth required) ───────────
+    Route::post('files/local-upload', [FileUploadController::class, 'localUpload']);
 
     // ─── Platform Admin (Command Center — legacy v1 platform routes) ─────────
     // Auth: platform_admin guard (AdminUser tokens only — tenant tokens rejected).

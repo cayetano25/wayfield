@@ -108,6 +108,10 @@ export default function DashboardPage() {
 
   const { workshops, participants, sessions_this_month, attendance, plan } = stats;
 
+  const activeWorkshops = workshops.published + workshops.draft;
+  const atLimit =
+    plan.workshops_limit !== null && activeWorkshops >= plan.workshops_limit;
+
   // Plan badge variant
   const planVariant = (
     ['free', 'starter', 'pro', 'enterprise'].includes(plan.plan_code)
@@ -173,11 +177,13 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3">
             <Button
               size="md"
-              onClick={() => router.push('/admin/workshops/new')}
+              onClick={() =>
+                router.push(atLimit ? '/organization/billing' : '/workshops/new')
+              }
               className="w-full justify-center"
             >
               <Plus className="w-4 h-4" />
-              New Workshop
+              {atLimit ? 'Upgrade Plan' : 'New Workshop'}
             </Button>
             <Button
               variant="secondary"

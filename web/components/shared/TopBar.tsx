@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, Megaphone, ChevronRight, CheckCheck } from 'lucide-react';
+import { Bell, Megaphone, ChevronRight, CheckCheck, Menu } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { usePage } from '@/contexts/PageContext';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -120,7 +120,11 @@ export interface Breadcrumb {
   href?: string;
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onMenuOpen?: () => void;
+}
+
+export function TopBar({ onMenuOpen }: TopBarProps) {
   const { user } = useUser();
   const { title, breadcrumbs } = usePage();
 
@@ -166,7 +170,17 @@ export function TopBar() {
   }, [notifications]);
 
   return (
-    <header className="h-16 bg-white border-b border-border-gray flex items-center px-8 shrink-0">
+    <header className="h-16 bg-white border-b border-border-gray flex items-center px-4 lg:px-8 shrink-0 gap-3">
+      {/* Hamburger — mobile only */}
+      <button
+        type="button"
+        onClick={onMenuOpen}
+        className="p-2 rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors lg:hidden shrink-0"
+        aria-label="Open navigation"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Left: title + breadcrumbs */}
       <div className="flex-1 min-w-0">
         {breadcrumbs.length > 0 ? (

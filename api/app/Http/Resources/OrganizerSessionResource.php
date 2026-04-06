@@ -29,6 +29,7 @@ class OrganizerSessionResource extends JsonResource
             'meeting_passcode'             => $this->meeting_passcode,
             'notes'                        => $this->notes,
             'is_published'                 => $this->is_published,
+            'header_image_url'             => $this->header_image_url,
             'created_at'                   => $this->created_at?->toIso8601String(),
             'updated_at'                   => $this->updated_at?->toIso8601String(),
         ];

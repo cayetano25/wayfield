@@ -18,6 +18,7 @@ class OrganizationResource extends JsonResource
             'primary_contact_email'       => $this->primary_contact_email,
             'primary_contact_phone'       => $this->primary_contact_phone,
             'status'                      => $this->status,
+            'logo_url'                    => $this->logo_url,
             'created_at'                  => $this->created_at->toIso8601String(),
         ];
     }

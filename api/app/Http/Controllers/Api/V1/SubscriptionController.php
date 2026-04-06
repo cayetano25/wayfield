@@ -14,33 +14,48 @@ class SubscriptionController extends Controller
         private readonly ResolveOrganizationEntitlementsService $entitlementsService,
     ) {}
 
+    private const PLAN_NAMES = [
+        'free'       => 'Free',
+        'starter'    => 'Starter',
+        'pro'        => 'Pro',
+        'enterprise' => 'Enterprise',
+    ];
+
     /**
      * GET /api/v1/organizations/{organization}/subscription
-     * Return the organization's active subscription summary.
+     * Return the organization's subscription, usage, limits, and invoice history.
      */
     public function show(Organization $organization): JsonResponse
     {
         $this->authorize('view', $organization);
+
+        $resolved = $this->entitlementsService->resolve($organization);
 
         $subscription = $organization->subscriptions()
             ->whereIn('status', ['active', 'trialing'])
             ->latest('starts_at')
             ->first();
 
-        if (! $subscription) {
-            return response()->json([
-                'plan_code' => 'free',
-                'status'    => 'none',
-                'starts_at' => null,
-                'ends_at'   => null,
-            ]);
-        }
+        $planCode = $resolved['plan'];
 
         return response()->json([
-            'plan_code' => $subscription->plan_code,
-            'status'    => $subscription->status,
-            'starts_at' => $subscription->starts_at,
-            'ends_at'   => $subscription->ends_at,
+            'plan_code'            => $planCode,
+            'plan_name'            => self::PLAN_NAMES[$planCode] ?? ucfirst($planCode),
+            'status'               => $resolved['subscription_status'],
+            'current_period_start' => $subscription?->starts_at,
+            'current_period_end'   => $subscription?->ends_at,
+            'renewal_date'         => $subscription?->ends_at,
+            'limits' => [
+                'max_workshops'                => $resolved['limits']['max_active_workshops'],
+                'max_participants_per_workshop' => $resolved['limits']['max_participants_per_workshop'],
+                'max_managers'                 => $resolved['limits']['max_managers'],
+            ],
+            'usage' => [
+                'active_workshops'   => $resolved['usage']['active_workshop_count'],
+                'total_participants' => 0,
+                'managers'           => $resolved['usage']['active_manager_count'],
+            ],
+            'invoices' => [],
         ]);
     }
 

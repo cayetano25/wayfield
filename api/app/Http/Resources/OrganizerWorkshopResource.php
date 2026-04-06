@@ -26,6 +26,7 @@ class OrganizerWorkshopResource extends JsonResource
             'join_code'           => $this->join_code,
             'public_page_enabled' => $this->public_page_enabled,
             'public_slug'         => $this->public_slug,
+            'header_image_url'    => $this->header_image_url,
             'default_location'    => $this->whenLoaded('defaultLocation', fn () =>
                 new LocationResource($this->defaultLocation)
             ),

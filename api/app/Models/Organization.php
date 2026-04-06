@@ -22,6 +22,7 @@ class Organization extends Model
         'primary_contact_email',
         'primary_contact_phone',
         'status',
+        'logo_url',
     ];
 
     public function organizationUsers(): HasMany

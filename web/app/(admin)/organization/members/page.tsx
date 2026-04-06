@@ -201,7 +201,8 @@ export default function OrganizationMembersPage() {
             <p className="text-medium-gray text-sm">No members found.</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[480px]">
             <thead>
               <tr className="border-b border-border-gray">
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray">
@@ -332,6 +333,7 @@ export default function OrganizationMembersPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 

@@ -11,6 +11,7 @@ import {
   BarChart3,
   HelpCircle,
   LogOut,
+  X,
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 
@@ -56,7 +57,24 @@ function NavLink({ href, label, icon: Icon, active }: NavItem & { active: boolea
   );
 }
 
-function UserAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
+function UserAvatar({
+  firstName,
+  lastName,
+  imageUrl,
+}: {
+  firstName: string;
+  lastName: string;
+  imageUrl?: string | null;
+}) {
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={`${firstName} ${lastName}`}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+      />
+    );
+  }
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
   return (
     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-semibold shrink-0">
@@ -65,7 +83,11 @@ function UserAvatar({ firstName, lastName }: { firstName: string; lastName: stri
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, currentOrg, logout } = useUser();
 
@@ -80,10 +102,23 @@ export function Sidebar() {
   return (
     <aside className="w-[240px] h-full bg-white border-r border-border-gray flex flex-col shrink-0">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-border-gray">
-        <span className="font-heading text-2xl font-extrabold text-primary">Wayfield</span>
-        {currentOrg && (
-          <p className="text-xs text-light-gray mt-1 truncate">{currentOrg.name}</p>
+      <div className="px-6 py-5 border-b border-border-gray flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="font-heading text-2xl font-extrabold text-primary">Wayfield</span>
+          {currentOrg && (
+            <p className="text-xs text-light-gray mt-1 truncate">{currentOrg.name}</p>
+          )}
+        </div>
+        {/* Close button — mobile only */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-1 p-1 rounded-md text-light-gray hover:text-dark hover:bg-surface transition-colors shrink-0 lg:hidden"
+            aria-label="Close navigation"
+          >
+            <X className="w-4 h-4" />
+          </button>
         )}
       </div>
 
@@ -122,12 +157,21 @@ export function Sidebar() {
       <div className="border-t border-border-gray px-4 py-4">
         {user && (
           <div className="flex items-center gap-3">
-            <UserAvatar firstName={user.first_name} lastName={user.last_name} />
+            <UserAvatar
+              firstName={user.first_name}
+              lastName={user.last_name}
+              imageUrl={user.profile_image_url}
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-dark truncate">
                 {user.first_name} {user.last_name}
               </p>
-              <p className="text-xs text-light-gray capitalize">{role}</p>
+              <Link
+                href="/profile"
+                className="text-xs text-light-gray hover:text-primary transition-colors"
+              >
+                Profile
+              </Link>
             </div>
             <button
               type="button"

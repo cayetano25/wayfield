@@ -26,6 +26,7 @@ class Workshop extends Model
         'default_location_id',
         'public_page_enabled',
         'public_slug',
+        'header_image_url',
     ];
 
     protected $casts = [

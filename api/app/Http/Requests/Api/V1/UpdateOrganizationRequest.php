@@ -15,6 +15,8 @@ class UpdateOrganizationRequest extends FormRequest
     {
         return [
             'name'                       => ['sometimes', 'required', 'string', 'max:255'],
+            'slug'                       => ['sometimes', 'required', 'string', 'max:100'],
+            'logo_url'                   => ['sometimes', 'nullable', 'string', 'max:2048'],
             'primary_contact_first_name' => ['sometimes', 'required', 'string', 'max:100'],
             'primary_contact_last_name'  => ['sometimes', 'required', 'string', 'max:100'],
             'primary_contact_email'      => ['sometimes', 'required', 'email', 'max:255'],

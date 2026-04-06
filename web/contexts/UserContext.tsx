@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api/client';
-import { clearStoredUser, clearToken, type AdminUser } from '@/lib/auth/session';
+import { clearStoredUser, clearToken, setStoredUser, type AdminUser } from '@/lib/auth/session';
 
 interface Organization {
   id: number;
@@ -18,6 +18,7 @@ interface UserContextValue {
   organizations: Organization[];
   currentOrg: Organization | null;
   setCurrentOrg: (org: Organization) => void;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -30,6 +31,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const [me, orgs] = await Promise.all([
+        apiGet<AdminUser>('/me'),
+        apiGet<Organization[]>('/me/organizations'),
+      ]);
+      setUser(me);
+      setOrganizations(orgs);
+      setCurrentOrg((prev) => {
+        if (prev) return orgs.find((o) => o.id === prev.id) ?? orgs[0] ?? null;
+        return orgs[0] ?? null;
+      });
+      setStoredUser(me);
+    } catch {
+      // 401 is handled in client.ts
+    }
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -63,7 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <UserContext.Provider value={{ user, organizations, currentOrg, setCurrentOrg, logout, isLoading }}>
+    <UserContext.Provider value={{ user, organizations, currentOrg, setCurrentOrg, refreshUser, logout, isLoading }}>
       {children}
     </UserContext.Provider>
   );

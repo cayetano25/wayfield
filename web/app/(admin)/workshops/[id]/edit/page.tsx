@@ -16,6 +16,7 @@ interface WorkshopDetail {
   end_date: string;
   timezone: string;
   public_page_enabled: boolean;
+  header_image_url: string | null;
 }
 
 export default function EditWorkshopPage() {
@@ -107,6 +108,8 @@ export default function EditWorkshopPage() {
           timezone: workshop.timezone,
           public_page_enabled: workshop.public_page_enabled,
         }}
+        workshopId={workshop.id}
+        initialHeaderImageUrl={workshop.header_image_url}
         errors={errors}
         submitting={submitting}
         submitLabel="Save Changes"

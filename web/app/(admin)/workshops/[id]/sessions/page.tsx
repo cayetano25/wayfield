@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
+import { ImageUploader } from '@/components/ui/ImageUploader';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -43,6 +44,7 @@ interface Session {
   capacity: number | null;
   confirmed_count: number;
   is_published: boolean;
+  header_image_url: string | null;
 }
 
 interface Location {
@@ -324,6 +326,27 @@ function SessionSlideOver({
             placeholder="e.g. Landscape Photography Fundamentals"
             error={errors.title}
           />
+
+          {/* Session image — only available when editing an existing session */}
+          {editingSession && (
+            <ImageUploader
+              currentUrl={editingSession.header_image_url ?? null}
+              entityType="session"
+              entityId={editingSession.id}
+              fieldName="header_image_url"
+              shape="rectangle"
+              width={432}
+              height={160}
+              onUploadComplete={() => onSaved()}
+              onRemove={async () => {
+                await import('@/lib/api/client').then(({ apiPatch }) =>
+                  apiPatch(`/sessions/${editingSession.id}`, { header_image_url: null })
+                );
+                onSaved();
+              }}
+              label="Session Image (optional)"
+            />
+          )}
 
           <Textarea
             label="Description"

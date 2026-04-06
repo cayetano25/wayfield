@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Check } from 'lucide-react';
+import { Eye, EyeOff, Check, CalendarDays, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError, apiPost } from '@/lib/api/client';
@@ -31,6 +31,7 @@ const schema = z
   });
 
 type FormValues = z.infer<typeof schema>;
+type Intent = 'organizer' | 'participant';
 
 const passwordRules = [
   { label: '10+ characters', test: (v: string) => v.length >= 10 },
@@ -43,6 +44,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [intent, setIntent] = useState<Intent | null>(null);
+  const [intentError, setIntentError] = useState(false);
 
   const {
     register,
@@ -57,9 +60,14 @@ export default function RegisterPage() {
   const passwordValue = useWatch({ control, name: 'password', defaultValue: '' });
 
   async function onSubmit(values: FormValues) {
+    if (!intent) {
+      setIntentError(true);
+      return;
+    }
     setApiError(null);
+    setIntentError(false);
     try {
-      await apiPost('/auth/register', values);
+      await apiPost('/auth/register', { ...values, intent });
       router.push('/verify-email');
     } catch (err) {
       if (err instanceof ApiError) {
@@ -103,6 +111,61 @@ export default function RegisterPage() {
           error={errors.email?.message}
           {...register('email')}
         />
+
+        {/* Account type selector */}
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-dark">I am a…</span>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => { setIntent('organizer'); setIntentError(false); }}
+              className={`
+                flex flex-col items-center gap-2 p-4 rounded-lg border-2 text-left transition-colors
+                ${intent === 'organizer'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border-gray bg-white hover:border-gray-300'}
+              `}
+            >
+              <CalendarDays
+                className={`w-12 h-12 ${intent === 'organizer' ? 'text-primary' : 'text-light-gray'}`}
+              />
+              <div>
+                <div className={`text-sm font-semibold ${intent === 'organizer' ? 'text-primary' : 'text-dark'}`}>
+                  Workshop Organizer
+                </div>
+                <div className="text-xs text-medium-gray mt-0.5 leading-snug">
+                  I run workshops and creative events
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setIntent('participant'); setIntentError(false); }}
+              className={`
+                flex flex-col items-center gap-2 p-4 rounded-lg border-2 text-left transition-colors
+                ${intent === 'participant'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border-gray bg-white hover:border-gray-300'}
+              `}
+            >
+              <Users
+                className={`w-12 h-12 ${intent === 'participant' ? 'text-primary' : 'text-light-gray'}`}
+              />
+              <div>
+                <div className={`text-sm font-semibold ${intent === 'participant' ? 'text-primary' : 'text-dark'}`}>
+                  Workshop Participant
+                </div>
+                <div className="text-xs text-medium-gray mt-0.5 leading-snug">
+                  I attend workshops and want to find new ones
+                </div>
+              </div>
+            </button>
+          </div>
+          {intentError && (
+            <p className="text-xs text-danger mt-1">Please select your account type to continue.</p>
+          )}
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <Input

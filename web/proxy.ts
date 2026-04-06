@@ -1,22 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/workshops',
+  '/organization',
+  '/reports',
+  '/onboarding',
+  '/profile',
+];
+
 export function proxy(req: NextRequest) {
-  const token = req.cookies.get('wayfield_token')?.value;
   const { pathname } = req.nextUrl;
 
-  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
+  const tokenCookie = req.cookies.get('wayfield_token');
+  const userCookie = req.cookies.get('wayfield_user');
+
+  const hasToken = !!tokenCookie?.value;
+
+  let user: { onboarding_completed_at?: string | null } | null = null;
+  if (userCookie?.value) {
+    try {
+      user = JSON.parse(decodeURIComponent(userCookie.value));
+    } catch {
+      // ignore malformed cookie
+    }
+  }
+
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const isOnboarding = pathname.startsWith('/onboarding');
   const isAuthRoute = pathname === '/login' || pathname === '/register';
 
-  if (isAdminRoute && !token) {
+  // Unauthenticated user hitting a protected route → login
+  if (isProtected && !hasToken) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  if (isAuthRoute && token) {
+  // Authenticated user on auth routes → dashboard
+  if (isAuthRoute && hasToken) {
     const url = req.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
+  }
+
+  if (hasToken && user) {
+    const onboardingComplete = !!user.onboarding_completed_at;
+
+    // Authenticated user with incomplete onboarding → redirect to wizard
+    if (!onboardingComplete && isProtected && !isOnboarding) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/onboarding';
+      return NextResponse.redirect(url);
+    }
+
+    // Authenticated user who already finished onboarding hitting /onboarding → dashboard
+    if (onboardingComplete && isOnboarding) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
   }
 
   return NextResponse.next();
@@ -24,8 +67,12 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/admin/:path*',
     '/dashboard/:path*',
+    '/workshops/:path*',
+    '/organization/:path*',
+    '/reports/:path*',
+    '/onboarding/:path*',
+    '/profile/:path*',
     '/login',
     '/register',
   ],

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Copy, Check, CalendarDays, Users } from 'lucide-react';
+import { Plus, Copy, Check, CalendarDays, Users, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { getWorkshops } from '@/lib/api/workshops';
+import { getEntitlements, type Entitlements } from '@/lib/api/reports';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -24,13 +25,6 @@ interface WorkshopSummary {
 }
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
-
-const PLAN_LIMITS: Record<string, number | null> = {
-  free: 2,
-  starter: 10,
-  pro: null,
-  enterprise: null,
-};
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -54,28 +48,44 @@ export default function WorkshopsPage() {
 
   const { currentOrg } = useUser();
   const [workshops, setWorkshops] = useState<WorkshopSummary[]>([]);
+  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  function loadData(orgId: number) {
+    setLoading(true);
+    setError(false);
+    Promise.all([
+      getWorkshops(orgId) as Promise<WorkshopSummary[]>,
+      getEntitlements(orgId),
+    ])
+      .then(([ws, ent]) => {
+        setWorkshops(ws ?? []);
+        setEntitlements(ent);
+      })
+      .catch(() => {
+        setError(true);
+        toast.error('Failed to load workshops');
+      })
+      .finally(() => setLoading(false));
+  }
+
   useEffect(() => {
     if (!currentOrg) return;
-    setLoading(true);
-    (getWorkshops(currentOrg.id) as Promise<WorkshopSummary[]>)
-      .then((res) => setWorkshops(res ?? []))
-      .catch(() => toast.error('Failed to load workshops'))
-      .finally(() => setLoading(false));
-  }, [currentOrg]);
+    loadData(currentOrg.id);
+  }, [currentOrg?.id]);
 
   const filtered = workshops.filter(
     (w) => statusFilter === 'all' || w.status === statusFilter,
   );
 
-  // Plan usage: count non-archived workshops
-  const activeCount = workshops.filter((w) => w.status !== 'archived').length;
-  const planCode = currentOrg?.plan_code ?? 'free';
-  const planLimit = PLAN_LIMITS[planCode] ?? null;
-  const atLimit = planLimit !== null && activeCount >= planLimit;
+  // Plan usage from entitlements API
+  const workshopLimit = entitlements?.limits?.max_active_workshops ?? null;
+  const workshopUsed  = entitlements?.usage?.active_workshop_count ?? workshops.filter((w) => w.status !== 'archived').length;
+  const planCode      = entitlements?.plan ?? currentOrg?.plan_code ?? 'free';
+  const atLimit       = workshopLimit !== null && workshopUsed >= workshopLimit;
 
   async function copyJoinCode(e: React.MouseEvent, workshop: WorkshopSummary) {
     e.preventDefault();
@@ -91,15 +101,29 @@ export default function WorkshopsPage() {
   }
 
   const newButton = (
-    <Button
-      onClick={() => {/* handled by Link wrapper */}}
-      disabled={atLimit}
-      title={atLimit ? `Plan limit reached (${planLimit} active workshops)` : undefined}
-    >
+    <Button>
       <Plus className="w-4 h-4" />
-      New Workshop
+      {atLimit ? 'Upgrade plan' : 'New Workshop'}
     </Button>
   );
+
+  // Error state
+  if (error && !loading) {
+    return (
+      <div className="max-w-[1280px] mx-auto">
+        <Card className="p-8 flex flex-col items-center text-center gap-4">
+          <AlertCircle className="w-10 h-10 text-danger" />
+          <div>
+            <p className="font-heading font-semibold text-dark mb-1">Failed to load workshops</p>
+            <p className="text-sm text-medium-gray">There was a problem fetching your workshops. Please try again.</p>
+          </div>
+          <Button variant="secondary" onClick={() => currentOrg && loadData(currentOrg.id)}>
+            Retry
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1280px] mx-auto">
@@ -108,27 +132,28 @@ export default function WorkshopsPage() {
         <div />
         <div className="flex flex-col items-end gap-2">
           {atLimit ? (
-            <span title={`Plan limit reached: ${planLimit} active workshops`}>
-              {newButton}
-            </span>
+            <Link href="/organization/billing">{newButton}</Link>
           ) : (
             <Link href="/workshops/new">{newButton}</Link>
           )}
-          {planLimit !== null && (
+          {workshopLimit !== null && (
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end mb-1">
                 <span className="text-xs text-medium-gray">
-                  {activeCount}/{planLimit} active workshops
+                  {workshopUsed}/{workshopLimit} active workshops
                 </span>
                 <span className="text-xs font-medium text-primary capitalize">{planCode}</span>
               </div>
               <div className="w-48 h-1.5 bg-surface rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${atLimit ? 'bg-danger' : 'bg-primary'}`}
-                  style={{ width: `${Math.min((activeCount / planLimit) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((workshopUsed / workshopLimit) * 100, 100)}%` }}
                 />
               </div>
             </div>
+          )}
+          {workshopLimit === null && planCode !== 'free' && (
+            <span className="text-xs text-medium-gray capitalize">{planCode} · Unlimited</span>
           )}
         </div>
       </div>
@@ -173,11 +198,11 @@ export default function WorkshopsPage() {
               ? 'Create your first workshop to get started.'
               : `You don't have any ${statusFilter} workshops.`}
           </p>
-          {statusFilter === 'all' && !atLimit && (
-            <Link href="/workshops/new">
+          {statusFilter === 'all' && (
+            <Link href={atLimit ? '/organization/billing' : '/workshops/new'}>
               <Button>
                 <Plus className="w-4 h-4" />
-                Create workshop
+                {atLimit ? 'Upgrade plan' : 'Create workshop'}
               </Button>
             </Link>
           )}
