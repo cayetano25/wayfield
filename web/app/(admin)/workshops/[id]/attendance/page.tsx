@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { ClipboardList, UserCheck, UserX } from 'lucide-react';
+import { ClipboardList, UserCheck, UserX, UserPlus } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -11,6 +11,7 @@ import { apiGet, apiPost } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { AddParticipantModal } from '@/components/participants/AddParticipantModal';
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
@@ -18,12 +19,16 @@ interface Workshop {
   id: number;
   title: string;
   timezone: string;
+  join_code: string;
+  organization_id: number;
 }
 
 interface Session {
   id: number;
   title: string;
   start_at: string;
+  capacity: number | null;
+  confirmed_count: number;
 }
 
 type AttendanceStatus = 'not_checked_in' | 'checked_in' | 'no_show';
@@ -321,6 +326,7 @@ export default function WorkshopAttendancePage() {
   const [summaryData, setSummaryData] = useState<SessionSummary[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [actioning, setActioning] = useState<Set<number>>(new Set());
+  const [addParticipantOpen, setAddParticipantOpen] = useState(false);
 
   // Initial load: workshop + sessions + summary
   useEffect(() => {
@@ -419,7 +425,7 @@ export default function WorkshopAttendancePage() {
   return (
     <div className="max-w-[1280px] mx-auto space-y-6">
       {/* Session selector */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="w-72">
           <Select
             value={selectedSessionId ?? ''}
@@ -435,6 +441,16 @@ export default function WorkshopAttendancePage() {
         </div>
         {selectedSessionId && total > 0 && (
           <span className="text-sm text-medium-gray">{total} registered</span>
+        )}
+        {selectedSessionId && workshop && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setAddParticipantOpen(true)}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Add Participant
+          </Button>
         )}
       </div>
 
@@ -482,6 +498,27 @@ export default function WorkshopAttendancePage() {
 
       {/* Summary chart — across all sessions */}
       {summaryData.length > 0 && <AttendanceChart data={summaryData} />}
+
+      {/* Add Participant modal */}
+      {workshop && selectedSessionId && (() => {
+        const selectedSession = sessions.find((s) => s.id === selectedSessionId);
+        return (
+          <AddParticipantModal
+            open={addParticipantOpen}
+            onClose={() => setAddParticipantOpen(false)}
+            workshopId={workshop.id}
+            sessionId={selectedSessionId}
+            sessionTitle={selectedSession?.title ?? ''}
+            organizationId={workshop.organization_id}
+            joinCode={workshop.join_code}
+            capacity={selectedSession?.capacity ?? null}
+            confirmedCount={roster.length}
+            onSuccess={() => {
+              if (selectedSessionId) loadRoster(selectedSessionId);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

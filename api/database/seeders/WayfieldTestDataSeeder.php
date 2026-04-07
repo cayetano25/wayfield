@@ -75,76 +75,92 @@ class WayfieldTestDataSeeder extends Seeder
         $users = [
             // Org 1 users
             [
-                'first_name' => 'Jordan',
-                'last_name'  => 'Alvarez',
-                'email'      => 'owner@wayfield.test',
-                'org_id'     => $org1Id,
-                'role'       => 'owner',
-                'verified'   => true,
+                'first_name'              => 'Jordan',
+                'last_name'               => 'Alvarez',
+                'email'                   => 'owner@wayfield.test',
+                'org_id'                  => $org1Id,
+                'role'                    => 'owner',
+                'verified'                => true,
+                'onboarding_intent'       => 'organizer',
+                'onboarding_completed_at' => now(),
             ],
             [
-                'first_name' => 'Casey',
-                'last_name'  => 'Morgan',
-                'email'      => 'admin@wayfield.test',
-                'org_id'     => $org1Id,
-                'role'       => 'admin',
-                'verified'   => true,
+                'first_name'              => 'Casey',
+                'last_name'               => 'Morgan',
+                'email'                   => 'admin@wayfield.test',
+                'org_id'                  => $org1Id,
+                'role'                    => 'admin',
+                'verified'                => true,
+                'onboarding_intent'       => 'organizer',
+                'onboarding_completed_at' => now(),
             ],
             [
-                'first_name' => 'Drew',
-                'last_name'  => 'Patterson',
-                'email'      => 'staff@wayfield.test',
-                'org_id'     => $org1Id,
-                'role'       => 'staff',
-                'verified'   => true,
+                'first_name'              => 'Drew',
+                'last_name'               => 'Patterson',
+                'email'                   => 'staff@wayfield.test',
+                'org_id'                  => $org1Id,
+                'role'                    => 'staff',
+                'verified'                => true,
+                'onboarding_intent'       => 'organizer',
+                'onboarding_completed_at' => now(),
             ],
             // Org 2 users
             [
-                'first_name' => 'Riley',
-                'last_name'  => 'Thompson',
-                'email'      => 'owner2@wayfield.test',
-                'org_id'     => $org2Id,
-                'role'       => 'owner',
-                'verified'   => true,
+                'first_name'              => 'Riley',
+                'last_name'               => 'Thompson',
+                'email'                   => 'owner2@wayfield.test',
+                'org_id'                  => $org2Id,
+                'role'                    => 'owner',
+                'verified'                => true,
+                'onboarding_intent'       => 'organizer',
+                'onboarding_completed_at' => now(),
             ],
             // Participants (no org membership)
             [
-                'first_name' => 'Alex',
-                'last_name'  => 'Rivera',
-                'email'      => 'participant1@wayfield.test',
-                'org_id'     => null,
-                'role'       => null,
-                'verified'   => true,
+                'first_name'              => 'Alex',
+                'last_name'               => 'Rivera',
+                'email'                   => 'participant1@wayfield.test',
+                'org_id'                  => null,
+                'role'                    => null,
+                'verified'                => true,
+                'onboarding_intent'       => 'participant',
+                'onboarding_completed_at' => now(),
             ],
             [
-                'first_name' => 'Sam',
-                'last_name'  => 'Chen',
-                'email'      => 'participant2@wayfield.test',
-                'org_id'     => null,
-                'role'       => null,
-                'verified'   => true,
+                'first_name'              => 'Sam',
+                'last_name'               => 'Chen',
+                'email'                   => 'participant2@wayfield.test',
+                'org_id'                  => null,
+                'role'                    => null,
+                'verified'                => true,
+                'onboarding_intent'       => 'participant',
+                'onboarding_completed_at' => now(),
             ],
             [
-                'first_name' => 'Taylor',
-                'last_name'  => 'Kim',
-                'email'      => 'participant3@wayfield.test',
-                'org_id'     => null,
-                'role'       => null,
-                'verified'   => false, // unverified — for edge case testing
+                'first_name'              => 'Taylor',
+                'last_name'               => 'Kim',
+                'email'                   => 'participant3@wayfield.test',
+                'org_id'                  => null,
+                'role'                    => null,
+                'verified'                => false, // unverified — for edge case testing
+                'onboarding_intent'       => 'participant',
+                'onboarding_completed_at' => now(),
             ],
         ];
 
         $userIds = [];
         foreach ($users as $userData) {
             $userId = DB::table('users')->insertGetId([
-                'first_name'        => $userData['first_name'],
-                'last_name'         => $userData['last_name'],
-                'email'             => $userData['email'],
-                'password_hash'     => Hash::make('Testing!2024'),
-                'email_verified_at' => $userData['verified'] ? now() : null,
-                'is_active'         => true,
-                'created_at'        => now(),
-                'updated_at'        => now(),
+                'first_name'              => $userData['first_name'],
+                'last_name'               => $userData['last_name'],
+                'email'                   => $userData['email'],
+                'password_hash'           => Hash::make('Testing!2024'),
+                'email_verified_at'       => $userData['verified'] ? now() : null,
+                'is_active'               => true,
+                'onboarding_intent'       => $userData['onboarding_intent'],
+                'onboarding_completed_at' => $userData['onboarding_completed_at'],
+                'created_at'              => now(),
+                'updated_at'              => now(),
             ]);
 
             DB::table('auth_methods')->insert([
@@ -207,6 +223,7 @@ class WayfieldTestDataSeeder extends Seeder
             'default_location_id' => $locationId,
             'public_page_enabled' => true,
             'public_slug'         => 'landscape-photography-intensive',
+            'header_image_url'    => 'https://picsum.photos/seed/rainier-landscape/1200/630',
             'created_at'          => now(),
             'updated_at'          => now(),
         ]);
@@ -363,14 +380,16 @@ class WayfieldTestDataSeeder extends Seeder
 
         // Leader 1 — has user account, accepted
         $leader1UserId = DB::table('users')->insertGetId([
-            'first_name'        => 'Morgan',
-            'last_name'         => 'Blake',
-            'email'             => 'leader@wayfield.test',
-            'password_hash'     => Hash::make('Testing!2024'),
-            'email_verified_at' => now(),
-            'is_active'         => true,
-            'created_at'        => now(),
-            'updated_at'        => now(),
+            'first_name'              => 'Morgan',
+            'last_name'               => 'Blake',
+            'email'                   => 'leader@wayfield.test',
+            'password_hash'           => Hash::make('Testing!2024'),
+            'email_verified_at'       => now(),
+            'is_active'               => true,
+            'onboarding_intent'       => null,
+            'onboarding_completed_at' => now(),
+            'created_at'              => now(),
+            'updated_at'              => now(),
         ]);
 
         DB::table('auth_methods')->insert([
@@ -381,18 +400,19 @@ class WayfieldTestDataSeeder extends Seeder
         ]);
 
         $leader1Id = DB::table('leaders')->insertGetId([
-            'user_id'          => $leader1UserId,
-            'first_name'       => 'Morgan',
-            'last_name'        => 'Blake',
-            'display_name'     => 'Morgan Blake Photography',
-            'bio'              => 'Award-winning landscape photographer with 15 years of field experience across the Pacific Northwest.',
-            'website_url'      => 'https://morganblakephoto.com',
-            'email'            => 'morgan@morganblakephoto.com',
-            'phone_number'     => '+1-555-0199',
-            'city'             => 'Seattle',
-            'state_or_region'  => 'WA',
-            'created_at'       => now(),
-            'updated_at'       => now(),
+            'user_id'           => $leader1UserId,
+            'first_name'        => 'Morgan',
+            'last_name'         => 'Blake',
+            'display_name'      => 'Morgan Blake Photography',
+            'bio'               => 'Award-winning landscape photographer with 15 years of field experience across the Pacific Northwest.',
+            'profile_image_url' => 'https://picsum.photos/seed/morgan-blake/200/200',
+            'website_url'       => 'https://morganblakephoto.com',
+            'email'             => 'morgan@morganblakephoto.com',
+            'phone_number'      => '+1-555-0199',
+            'city'              => 'Seattle',
+            'state_or_region'   => 'WA',
+            'created_at'        => now(),
+            'updated_at'        => now(),
         ]);
 
         // Leader 2 — invitation pending (no user account yet)
@@ -409,14 +429,16 @@ class WayfieldTestDataSeeder extends Seeder
 
         // Leader 3 — accepted, second org
         $leader3UserId = DB::table('users')->insertGetId([
-            'first_name'        => 'Priya',
-            'last_name'         => 'Sharma',
-            'email'             => 'leader2@wayfield.test',
-            'password_hash'     => Hash::make('Testing!2024'),
-            'email_verified_at' => now(),
-            'is_active'         => true,
-            'created_at'        => now(),
-            'updated_at'        => now(),
+            'first_name'              => 'Priya',
+            'last_name'               => 'Sharma',
+            'email'                   => 'leader2@wayfield.test',
+            'password_hash'           => Hash::make('Testing!2024'),
+            'email_verified_at'       => now(),
+            'is_active'               => true,
+            'onboarding_intent'       => null,
+            'onboarding_completed_at' => now(),
+            'created_at'              => now(),
+            'updated_at'              => now(),
         ]);
 
         DB::table('auth_methods')->insert([
@@ -427,16 +449,17 @@ class WayfieldTestDataSeeder extends Seeder
         ]);
 
         $leader3Id = DB::table('leaders')->insertGetId([
-            'user_id'         => $leader3UserId,
-            'first_name'      => 'Priya',
-            'last_name'       => 'Sharma',
-            'bio'             => 'Wildlife and macro photographer specializing in Pacific Northwest fauna.',
-            'website_url'     => 'https://priyasharma.photo',
-            'phone_number'    => '+1-555-0198',
-            'city'            => 'Bellingham',
-            'state_or_region' => 'WA',
-            'created_at'      => now(),
-            'updated_at'      => now(),
+            'user_id'           => $leader3UserId,
+            'first_name'        => 'Priya',
+            'last_name'         => 'Sharma',
+            'bio'               => 'Wildlife and macro photographer specializing in Pacific Northwest fauna.',
+            'profile_image_url' => 'https://picsum.photos/seed/priya-sharma/200/200',
+            'website_url'       => 'https://priyasharma.photo',
+            'phone_number'      => '+1-555-0198',
+            'city'              => 'Bellingham',
+            'state_or_region'   => 'WA',
+            'created_at'        => now(),
+            'updated_at'        => now(),
         ]);
 
         // Link leaders to organization

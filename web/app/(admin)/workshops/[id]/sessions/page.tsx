@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   Plus, Pencil, Trash2, GripVertical, X, Info,
@@ -617,11 +618,13 @@ function TrackItem({
 function SessionRow({
   session,
   timezone,
+  workshopId,
   onEdit,
   onDelete,
 }: {
   session: Session;
   timezone: string;
+  workshopId: number;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -636,9 +639,13 @@ function SessionRow({
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${session.is_published ? 'bg-emerald-500' : 'bg-border-gray'}`}
             title={session.is_published ? 'Published' : 'Draft'}
           />
-          <span className="text-sm font-medium text-dark truncate max-w-[200px]">
+          <Link
+            href={`/workshops/${workshopId}/sessions/${session.id}`}
+            className="text-sm font-medium text-dark truncate max-w-[200px] hover:text-primary transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
             {session.title}
-          </span>
+          </Link>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-medium-gray whitespace-nowrap">
@@ -960,6 +967,7 @@ export default function WorkshopSessionsPage() {
                           key={session.id}
                           session={session}
                           timezone={workshop.timezone}
+                          workshopId={workshop.id}
                           onEdit={() => openEdit(session)}
                           onDelete={() => handleDeleteSession(session)}
                         />

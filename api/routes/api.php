@@ -167,6 +167,9 @@ Route::prefix('v1')->group(function () {
 
         // Workshop participants (organizer/staff)
         Route::get('workshops/{workshop}/participants', [ParticipantController::class, 'index']);
+        // Participant search across all org workshops (for organizer add-to-session flow)
+        Route::get('organizations/{organization}/participants/search', [ParticipantController::class, 'search'])
+            ->name('org-participants.search');
 
         // Workshop join and registration (participant)
         // Note: join route must come before {workshop} routes to avoid conflict
@@ -204,6 +207,8 @@ Route::prefix('v1')->group(function () {
         Route::patch('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'updateStatus']);
 
         // Session participant management (organizer)
+        Route::post('workshops/{workshop}/sessions/{session}/participants', [SessionParticipantController::class, 'add'])
+            ->name('session-participants.add');
         Route::delete('workshops/{workshop}/sessions/{session}/participants/{user}', [SessionParticipantController::class, 'removeParticipant'])
             ->name('session-participants.remove');
 

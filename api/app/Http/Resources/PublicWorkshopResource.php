@@ -34,6 +34,7 @@ class PublicWorkshopResource extends JsonResource
             'start_date'      => $this->start_date?->toDateString(),
             'end_date'        => $this->end_date?->toDateString(),
             'public_slug'     => $this->public_slug,
+            'hero_image_url'  => $this->header_image_url,
             'default_location' => $this->whenLoaded('defaultLocation', fn () =>
                 $this->defaultLocation ? new LocationResource($this->defaultLocation) : null
             ),

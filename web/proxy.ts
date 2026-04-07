@@ -17,7 +17,7 @@ export function proxy(req: NextRequest) {
 
   const hasToken = !!tokenCookie?.value;
 
-  let user: { onboarding_completed_at?: string | null } | null = null;
+  let user: { onboarding_intent?: string | null; onboarding_completed_at?: string | null } | null = null;
   if (userCookie?.value) {
     try {
       user = JSON.parse(decodeURIComponent(userCookie.value));
@@ -47,8 +47,10 @@ export function proxy(req: NextRequest) {
   if (hasToken && user) {
     const onboardingComplete = !!user.onboarding_completed_at;
 
-    // Authenticated user with incomplete onboarding → redirect to wizard
-    if (!onboardingComplete && isProtected && !isOnboarding) {
+    // Authenticated user with incomplete onboarding → redirect to wizard.
+    // Only redirect if onboarding_intent is explicitly set: users who have no
+    // intent predate the onboarding system and must never be sent to /onboarding.
+    if (user.onboarding_intent != null && !onboardingComplete && isProtected && !isOnboarding) {
       const url = req.nextUrl.clone();
       url.pathname = '/onboarding';
       return NextResponse.redirect(url);

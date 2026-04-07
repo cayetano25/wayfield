@@ -10,7 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError, apiPost } from '@/lib/api/client';
-import { setStoredUser, setToken } from '@/lib/auth/session';
+import { setStoredUser, setToken, type AdminUser } from '@/lib/auth/session';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -21,7 +21,7 @@ type FormValues = z.infer<typeof schema>;
 
 interface LoginResponse {
   token: string;
-  user: object;
+  user: AdminUser;
 }
 
 export default function LoginPage() {
