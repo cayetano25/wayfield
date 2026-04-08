@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\SessionSelectionController;
 use App\Http\Controllers\Api\V1\SsoController;
 use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\WebhookController;
+use App\Http\Controllers\Api\V1\WorkshopAnalyticsController;
 use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
@@ -147,6 +148,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('workshops/{workshop}', [WorkshopController::class, 'update']);
         Route::post('workshops/{workshop}/publish', [WorkshopController::class, 'publish']);
         Route::post('workshops/{workshop}/archive', [WorkshopController::class, 'archive']);
+        Route::get('workshops/{workshop}/analytics', [WorkshopAnalyticsController::class, 'show']);
 
         // Workshop logistics
         Route::get('workshops/{workshop}/logistics', [WorkshopLogisticsController::class, 'show']);

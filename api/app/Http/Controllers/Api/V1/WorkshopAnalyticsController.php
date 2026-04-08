@@ -3,23 +3,24 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Organization;
+use App\Models\Workshop;
 use App\Services\Dashboard\DashboardMetricsService;
 use Illuminate\Http\JsonResponse;
 
-class DashboardController extends Controller
+class WorkshopAnalyticsController extends Controller
 {
     /**
-     * GET /api/v1/organizations/{organization}/dashboard
+     * GET /api/v1/workshops/{workshop}/analytics
      *
-     * Plan-aware aggregate stats for the organizer web admin dashboard.
-     * Plan code is always resolved from the database — never from the request.
+     * Returns the same analytics shape as the org dashboard but scoped to
+     * a single workshop. Plan code is always resolved from the database.
      */
-    public function index(Organization $organization): JsonResponse
+    public function show(Workshop $workshop): JsonResponse
     {
-        $this->authorize('view', $organization);
+        $this->authorize('view', $workshop);
 
-        $service = new DashboardMetricsService($organization);
+        $org     = $workshop->organization;
+        $service = new DashboardMetricsService($org, $workshop->id);
 
         return response()->json([
             'core'      => $service->getCoreMetrics(),
