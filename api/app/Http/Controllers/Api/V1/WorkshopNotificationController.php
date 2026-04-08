@@ -44,6 +44,7 @@ class WorkshopNotificationController extends Controller
 
         if ($isOrganizer) {
             $notifications = Notification::where('workshop_id', $workshop->id)
+                ->with(['createdBy', 'session'])
                 ->withCount('recipients')
                 ->orderByDesc('sent_at')
                 ->get();
@@ -63,6 +64,7 @@ class WorkshopNotificationController extends Controller
             $notifications = Notification::where('workshop_id', $workshop->id)
                 ->where('sender_scope', 'leader')
                 ->whereIn('session_id', $assignedSessionIds)
+                ->with(['createdBy', 'session'])
                 ->withCount('recipients')
                 ->orderByDesc('sent_at')
                 ->get();
@@ -102,6 +104,75 @@ class WorkshopNotificationController extends Controller
         }
 
         return response()->json(['message' => 'Unauthorized.'], 403);
+    }
+
+    /**
+     * GET /api/v1/workshops/{workshop}/notifications/{notification}
+     *
+     * Return a single notification with full detail including channel breakdown.
+     */
+    public function show(Request $request, Workshop $workshop, Notification $notification): JsonResponse
+    {
+        if ($notification->workshop_id !== $workshop->id) {
+            return response()->json(['message' => 'Not found.'], 404);
+        }
+
+        $user = $request->user();
+
+        $isOrganizer = $user->organizationUsers()
+            ->where('organization_id', $workshop->organization_id)
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin', 'staff'])
+            ->exists();
+
+        if (!$isOrganizer) {
+            $leader = Leader::where('user_id', $user->id)->first();
+
+            if (!$leader || $notification->sender_scope !== 'leader' || !$notification->session_id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $hasAccess = $leader->sessionLeaders()
+                ->where('session_id', $notification->session_id)
+                ->where('assignment_status', 'accepted')
+                ->exists();
+
+            if (!$hasAccess) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+        }
+
+        $notification->load(['createdBy', 'session']);
+
+        $recipients = $notification->recipients();
+        $recipientCount = (clone $recipients)->count();
+        $emailSent   = (clone $recipients)->whereIn('email_status', ['sent', 'delivered'])->count();
+        $pushSent    = (clone $recipients)->whereIn('push_status', ['sent', 'delivered'])->count();
+        $inAppSent   = (clone $recipients)->whereIn('in_app_status', ['delivered', 'read'])->count();
+
+        return response()->json([
+            'id'                => $notification->id,
+            'workshop_id'       => $notification->workshop_id,
+            'session_id'        => $notification->session_id,
+            'session_title'     => $notification->session?->title,
+            'title'             => $notification->title,
+            'message'           => $notification->message,
+            'notification_type' => $notification->notification_type,
+            'sender_scope'      => $notification->sender_scope,
+            'delivery_scope'    => $notification->delivery_scope,
+            'sent_at'           => $notification->sent_at?->toIso8601String(),
+            'recipient_count'   => $recipientCount,
+            'sent_by'           => $notification->createdBy ? [
+                'first_name' => $notification->createdBy->first_name,
+                'last_name'  => $notification->createdBy->last_name,
+            ] : null,
+            'channel_breakdown' => [
+                'email'  => $emailSent,
+                'push'   => $pushSent,
+                'in_app' => $inAppSent,
+            ],
+            'created_at'        => $notification->created_at->toIso8601String(),
+        ]);
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

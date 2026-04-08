@@ -48,7 +48,7 @@ class ParticipantController extends Controller
                     ->values();
 
                 $data = [
-                    'id'                  => $user->id,
+                    'user_id'             => $user->id,
                     'registration_id'     => $registration->id,
                     'first_name'          => $user->first_name,
                     'last_name'           => $user->last_name,
@@ -56,7 +56,7 @@ class ParticipantController extends Controller
                     'registration_status' => $registration->registration_status,
                     'registered_at'       => $registration->registered_at,
                     'sessions_count'      => $selectedSessions->count(),
-                    'selected_sessions'   => $selectedSessions,
+                    'sessions'            => $selectedSessions,
                 ];
 
                 if ($showPhone) {

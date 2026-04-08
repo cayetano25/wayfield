@@ -226,6 +226,7 @@ Route::prefix('v1')->group(function () {
         // ─── Notifications (Phase 6) ──────────────────────────────────────────
         Route::get('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'index']);
         Route::post('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'store']);
+        Route::get('workshops/{workshop}/notifications/{notification}', [WorkshopNotificationController::class, 'show']);
 
         // In-app notifications for current user
         Route::get('me/notifications', [UserNotificationController::class, 'index']);

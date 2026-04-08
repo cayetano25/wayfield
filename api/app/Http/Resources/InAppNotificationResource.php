@@ -26,6 +26,7 @@ class InAppNotificationResource extends JsonResource
             'workshop_id'       => $notification->workshop_id,
             'session_id'        => $notification->session_id,
             'sent_at'           => $notification->sent_at?->toIso8601String(),
+            'created_at'        => $this->created_at->toIso8601String(),
         ];
     }
 }
