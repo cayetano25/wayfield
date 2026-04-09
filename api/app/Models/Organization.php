@@ -94,19 +94,68 @@ class Organization extends Model
     }
 
     /**
-     * Returns true if the given user is an active operational member of this organisation.
+     * Returns the stored role value for the given user in this organisation,
+     * or null if the user has no membership row.
      *
-     * Allowed: owner, admin, staff
-     * Denied:  billing_admin, non-members, unauthenticated
+     * Role values: 'owner' | 'admin' | 'staff' | 'billing_admin' | null
      *
-     * Used for phone-number visibility and other operational-staff gates.
+     * Always queries the database. Never trusts a cached or client-provided value.
+     * Per ROLE_MODEL.md Section 6: role must be read from DB on every check.
      */
-    public function isOperationalMember(User $user): bool
+    public function memberRole(User $user): ?string
     {
         return $this->organizationUsers()
             ->where('user_id', $user->id)
             ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin', 'staff'])
-            ->exists();
+            ->value('role');
+    }
+
+    /**
+     * Returns true if the user has owner or admin role in this organisation.
+     * Use for: workshop management, leader invitations, member management.
+     * Allowed: owner, admin
+     * Denied: staff, billing_admin, null
+     */
+    public function isElevatedMember(User $user): bool
+    {
+        return in_array($this->memberRole($user), ['owner', 'admin'], true);
+    }
+
+    /**
+     * Returns true if the user has any operational access to this organisation.
+     * Use for: workshop viewing, attendance management, notifications.
+     * Allowed: owner, admin, staff
+     * Denied: billing_admin, null
+     */
+    public function isOperationalMember(User $user): bool
+    {
+        return in_array($this->memberRole($user), ['owner', 'admin', 'staff'], true);
+    }
+
+    /**
+     * Returns true if the user has billing access for this organisation.
+     * Use for: subscription management, invoice viewing, plan changes.
+     * Allowed: owner, billing_admin
+     * Denied: admin, staff, null
+     */
+    public function hasBillingAccess(User $user): bool
+    {
+        return in_array($this->memberRole($user), ['owner', 'billing_admin'], true);
+    }
+
+    /**
+     * Returns true if the user is the sole active owner of this organisation.
+     * Use for: blocking owner removal, blocking org deletion without transfer.
+     */
+    public function isSoleOwner(User $user): bool
+    {
+        if ($this->memberRole($user) !== 'owner') {
+            return false;
+        }
+
+        return $this->organizationUsers()
+            ->where('role', 'owner')
+            ->where('is_active', true)
+            ->count() === 1;
     }
 }
