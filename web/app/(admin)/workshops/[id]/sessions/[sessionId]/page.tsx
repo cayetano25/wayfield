@@ -8,7 +8,9 @@ import {
   Infinity, ArrowLeft, UserPlus,
 } from 'lucide-react';
 import { SessionLocationDisplay } from '@/components/sessions/SessionLocationDisplay';
+import { SessionLeaderCard } from '@/components/sessions/SessionLeaderCard';
 import type { SessionLocationResponse } from '@/lib/types/session-location';
+import type { SessionLeader } from '@/lib/types/leader';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -40,6 +42,7 @@ interface Session {
   is_published: boolean;
   track_id: number | null;
   location: SessionLocationResponse | null;
+  leaders: SessionLeader[];
 }
 
 interface RosterEntry {
@@ -261,6 +264,9 @@ export default function SessionDetailPage() {
                 <span className="text-sm text-dark">{deliveryLabels[session.delivery_type]}</span>
               </div>
             </Card>
+
+            {/* Leaders */}
+            <SessionLeaderCard leaders={session.leaders ?? []} />
 
             {/* Description */}
             {session.description && (
