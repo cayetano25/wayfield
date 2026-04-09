@@ -20,6 +20,8 @@ class SessionFactory extends Factory
             'start_at'                     => $startAt->format('Y-m-d H:i:s'),
             'end_at'                       => $endAt->format('Y-m-d H:i:s'),
             'location_id'                  => null,
+            'location_type'                => null,
+            'location_notes'               => null,
             'capacity'                     => null,
             'delivery_type'                => 'in_person',
             'virtual_participation_allowed' => false,

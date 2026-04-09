@@ -22,16 +22,34 @@ class Location extends Model
         'country',
         'latitude',
         'longitude',
+        'address_id',
+        'country_code',
     ];
 
     protected $casts = [
-        'latitude'  => 'decimal:7',
+        'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
     ];
 
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    /**
+     * Returns true if this location is defined by coordinates only,
+     * with no structured address.
+     */
+    public function isCoordinateOnly(): bool
+    {
+        return $this->latitude !== null
+            && $this->longitude !== null
+            && $this->address_id === null;
     }
 
     public function workshops(): HasMany
