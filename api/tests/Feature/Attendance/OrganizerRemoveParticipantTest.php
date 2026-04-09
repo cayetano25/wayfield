@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\AuditLog;
 use App\Models\AttendanceRecord;
+use App\Models\AuditLog;
 use App\Models\Leader;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
@@ -11,20 +11,21 @@ use App\Models\SessionLeader;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function makeRemoveParticipantFixture(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
 
     $participant = User::factory()->create();
-    $reg         = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -36,9 +37,9 @@ function makeOrganizerForFixture(Organization $org, string $role = 'owner'): Use
     $organizer = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $organizer->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $organizer->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return $organizer;
@@ -56,14 +57,14 @@ test('owner can remove participant from session', function () {
         ->assertJsonPath('message', 'Participant removed from session successfully.');
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 
     // Workshop registration must still exist.
     $this->assertDatabaseHas('registrations', [
-        'id'                  => $reg->id,
+        'id' => $reg->id,
         'registration_status' => 'registered',
     ]);
 });
@@ -79,8 +80,8 @@ test('admin can remove participant from session', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 });
@@ -96,8 +97,8 @@ test('staff can remove participant from session', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 });
@@ -108,10 +109,10 @@ test('leader cannot remove participant from session', function () {
     [$org, $workshop, $session, $participant] = makeRemoveParticipantFixture();
 
     $leaderUser = User::factory()->create();
-    $leader     = Leader::factory()->create(['user_id' => $leaderUser->id]);
+    $leader = Leader::factory()->create(['user_id' => $leaderUser->id]);
     SessionLeader::factory()->create([
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
     // No OrganizationUser row — leader has no org membership.
 
@@ -128,9 +129,9 @@ test('billing_admin cannot remove participant from session', function () {
     $billingUser = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $billingUser->id,
-        'role'            => 'billing_admin',
-        'is_active'       => true,
+        'user_id' => $billingUser->id,
+        'role' => 'billing_admin',
+        'is_active' => true,
     ]);
 
     $this->actingAs($billingUser, 'sanctum')
@@ -152,10 +153,10 @@ test('removal resets checked-in attendance record', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('attendance_records', [
-        'session_id'            => $session->id,
-        'user_id'               => $participant->id,
-        'status'                => 'not_checked_in',
-        'check_in_method'       => null,
+        'session_id' => $session->id,
+        'user_id' => $participant->id,
+        'status' => 'not_checked_in',
+        'check_in_method' => null,
         'checked_in_by_user_id' => null,
     ]);
 
@@ -213,8 +214,8 @@ test('removal does not affect the participant\'s other session selections', func
     // Give the participant a second session selection.
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
     $selectionB = SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $sessionB->id,
+        'registration_id' => $reg->id,
+        'session_id' => $sessionB->id,
         'selection_status' => 'selected',
     ]);
 
@@ -225,14 +226,14 @@ test('removal does not affect the participant\'s other session selections', func
 
     // First session selection is canceled.
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 
     // Second session selection is still active.
     $this->assertDatabaseHas('session_selections', [
-        'id'               => $selectionB->id,
+        'id' => $selectionB->id,
         'selection_status' => 'selected',
     ]);
 });
@@ -244,8 +245,8 @@ test('cross-tenant organizer cannot remove participant from another org\'s sessi
     [$orgA, $workshop, $session, $participant] = makeRemoveParticipantFixture();
 
     // Org B owner has no membership in Org A.
-    $orgB        = Organization::factory()->create();
-    $orgBOwner   = makeOrganizerForFixture($orgB, 'owner');
+    $orgB = Organization::factory()->create();
+    $orgBOwner = makeOrganizerForFixture($orgB, 'owner');
 
     $this->actingAs($orgBOwner, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/sessions/{$session->id}/participants/{$participant->id}")

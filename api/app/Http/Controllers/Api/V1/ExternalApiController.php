@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiKey;
+use App\Models\AttendanceRecord;
+use App\Models\Session;
 use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,14 +42,14 @@ class ExternalApiController extends Controller
             ->orderByDesc('start_date')
             ->get()
             ->map(fn (Workshop $w) => [
-                'id'            => $w->id,
-                'title'         => $w->title,
+                'id' => $w->id,
+                'title' => $w->title,
                 'workshop_type' => $w->workshop_type,
-                'start_date'    => $w->start_date?->toDateString(),
-                'end_date'      => $w->end_date?->toDateString(),
-                'timezone'      => $w->timezone,
+                'start_date' => $w->start_date?->toDateString(),
+                'end_date' => $w->end_date?->toDateString(),
+                'timezone' => $w->timezone,
                 'session_count' => $w->sessions_count,
-                'public_slug'   => $w->public_slug,
+                'public_slug' => $w->public_slug,
                 // join_code is intentionally absent — it grants workshop access
             ]);
 
@@ -76,16 +78,16 @@ class ExternalApiController extends Controller
             ->withCount(['selections' => fn ($q) => $q->where('selection_status', 'selected')])
             ->orderBy('start_at')
             ->get()
-            ->map(fn (\App\Models\Session $s) => [
-                'id'              => $s->id,
-                'title'           => $s->title,
-                'start_at'        => $s->start_at?->toIso8601String(),
-                'end_at'          => $s->end_at?->toIso8601String(),
-                'delivery_type'   => $s->delivery_type,
-                'capacity'        => $s->capacity,
+            ->map(fn (Session $s) => [
+                'id' => $s->id,
+                'title' => $s->title,
+                'start_at' => $s->start_at?->toIso8601String(),
+                'end_at' => $s->end_at?->toIso8601String(),
+                'delivery_type' => $s->delivery_type,
+                'capacity' => $s->capacity,
                 'confirmed_count' => $s->selections_count,
-                'location'        => $s->location ? [
-                    'city'            => $s->location->city,
+                'location' => $s->location ? [
+                    'city' => $s->location->city,
                     'state_or_region' => $s->location->state_or_region,
                 ] : null,
                 // meeting_url, meeting_id, meeting_passcode, notes are intentionally absent
@@ -114,18 +116,16 @@ class ExternalApiController extends Controller
             ->where('registration_status', 'registered')
             ->count();
 
-        $totalCheckedIn = \App\Models\AttendanceRecord::whereHas('session', fn ($q) =>
-            $q->where('workshop_id', $workshop->id)
+        $totalCheckedIn = AttendanceRecord::whereHas('session', fn ($q) => $q->where('workshop_id', $workshop->id)
         )->where('status', 'checked_in')->distinct('user_id')->count('user_id');
 
-        $totalNoShow = \App\Models\AttendanceRecord::whereHas('session', fn ($q) =>
-            $q->where('workshop_id', $workshop->id)
+        $totalNoShow = AttendanceRecord::whereHas('session', fn ($q) => $q->where('workshop_id', $workshop->id)
         )->where('status', 'no_show')->distinct('user_id')->count('user_id');
 
         return response()->json([
             'total_registered' => $totalRegistered,
             'total_checked_in' => $totalCheckedIn,
-            'total_no_show'    => $totalNoShow,
+            'total_no_show' => $totalNoShow,
             // Never return individual participant records, emails, names, or phone numbers
         ]);
     }
@@ -137,7 +137,7 @@ class ExternalApiController extends Controller
     {
         if (! in_array($scope, $request->apiKeyScopes ?? [], true)) {
             abort(response()->json([
-                'error'    => 'insufficient_scope',
+                'error' => 'insufficient_scope',
                 'required' => $scope,
             ], 403));
         }

@@ -12,8 +12,8 @@ class OrganizationLeaderFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'leader_id'       => Leader::factory(),
-            'status'          => 'active',
+            'leader_id' => Leader::factory(),
+            'status' => 'active',
         ];
     }
 

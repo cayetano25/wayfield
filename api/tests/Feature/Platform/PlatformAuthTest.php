@@ -1,23 +1,23 @@
 <?php
 
-use App\Models\AdminLoginEvent;
 use App\Models\AdminUser;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function makeAdminUser(array $overrides = []): AdminUser
 {
     return AdminUser::create(array_merge([
-        'first_name'    => 'Platform',
-        'last_name'     => 'Admin',
-        'email'         => 'admin@wayfield.internal',
+        'first_name' => 'Platform',
+        'last_name' => 'Admin',
+        'email' => 'admin@wayfield.internal',
         'password_hash' => Hash::make('secure-password'),
-        'role'          => 'admin',
-        'is_active'     => true,
+        'role' => 'admin',
+        'is_active' => true,
     ], $overrides));
 }
 
@@ -27,7 +27,7 @@ test('platform admin can log in with valid credentials', function () {
     makeAdminUser();
 
     $response = $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'admin@wayfield.internal',
+        'email' => 'admin@wayfield.internal',
         'password' => 'secure-password',
     ]);
 
@@ -43,13 +43,13 @@ test('platform admin login creates admin_login_events record on success', functi
     makeAdminUser();
 
     $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'admin@wayfield.internal',
+        'email' => 'admin@wayfield.internal',
         'password' => 'secure-password',
     ]);
 
     $this->assertDatabaseHas('admin_login_events', [
         'email_attempted' => 'admin@wayfield.internal',
-        'outcome'         => 'success',
+        'outcome' => 'success',
     ]);
 });
 
@@ -57,13 +57,13 @@ test('invalid credentials create failed admin_login_events record', function () 
     makeAdminUser();
 
     $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'admin@wayfield.internal',
+        'email' => 'admin@wayfield.internal',
         'password' => 'wrong-password',
     ]);
 
     $this->assertDatabaseHas('admin_login_events', [
         'email_attempted' => 'admin@wayfield.internal',
-        'outcome'         => 'failed',
+        'outcome' => 'failed',
     ]);
 });
 
@@ -71,7 +71,7 @@ test('login fails with wrong password and returns 401', function () {
     makeAdminUser();
 
     $response = $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'admin@wayfield.internal',
+        'email' => 'admin@wayfield.internal',
         'password' => 'wrong-password',
     ]);
 
@@ -80,7 +80,7 @@ test('login fails with wrong password and returns 401', function () {
 
 test('login fails for unknown email and returns 401', function () {
     $response = $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'nobody@wayfield.internal',
+        'email' => 'nobody@wayfield.internal',
         'password' => 'any-password',
     ]);
 
@@ -146,7 +146,7 @@ test('inactive platform admin cannot log in', function () {
     makeAdminUser(['is_active' => false]);
 
     $response = $this->postJson('/api/platform/v1/auth/login', [
-        'email'    => 'admin@wayfield.internal',
+        'email' => 'admin@wayfield.internal',
         'password' => 'secure-password',
     ]);
 
@@ -154,6 +154,6 @@ test('inactive platform admin cannot log in', function () {
 
     $this->assertDatabaseHas('admin_login_events', [
         'email_attempted' => 'admin@wayfield.internal',
-        'outcome'         => 'locked',
+        'outcome' => 'locked',
     ]);
 });

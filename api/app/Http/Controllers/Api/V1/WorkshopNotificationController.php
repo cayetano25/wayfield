@@ -125,10 +125,10 @@ class WorkshopNotificationController extends Controller
             ->whereIn('role', ['owner', 'admin', 'staff'])
             ->exists();
 
-        if (!$isOrganizer) {
+        if (! $isOrganizer) {
             $leader = Leader::where('user_id', $user->id)->first();
 
-            if (!$leader || $notification->sender_scope !== 'leader' || !$notification->session_id) {
+            if (! $leader || $notification->sender_scope !== 'leader' || ! $notification->session_id) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
 
@@ -137,7 +137,7 @@ class WorkshopNotificationController extends Controller
                 ->where('assignment_status', 'accepted')
                 ->exists();
 
-            if (!$hasAccess) {
+            if (! $hasAccess) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
         }
@@ -146,32 +146,32 @@ class WorkshopNotificationController extends Controller
 
         $recipients = $notification->recipients();
         $recipientCount = (clone $recipients)->count();
-        $emailSent   = (clone $recipients)->whereIn('email_status', ['sent', 'delivered'])->count();
-        $pushSent    = (clone $recipients)->whereIn('push_status', ['sent', 'delivered'])->count();
-        $inAppSent   = (clone $recipients)->whereIn('in_app_status', ['delivered', 'read'])->count();
+        $emailSent = (clone $recipients)->whereIn('email_status', ['sent', 'delivered'])->count();
+        $pushSent = (clone $recipients)->whereIn('push_status', ['sent', 'delivered'])->count();
+        $inAppSent = (clone $recipients)->whereIn('in_app_status', ['delivered', 'read'])->count();
 
         return response()->json([
-            'id'                => $notification->id,
-            'workshop_id'       => $notification->workshop_id,
-            'session_id'        => $notification->session_id,
-            'session_title'     => $notification->session?->title,
-            'title'             => $notification->title,
-            'message'           => $notification->message,
+            'id' => $notification->id,
+            'workshop_id' => $notification->workshop_id,
+            'session_id' => $notification->session_id,
+            'session_title' => $notification->session?->title,
+            'title' => $notification->title,
+            'message' => $notification->message,
             'notification_type' => $notification->notification_type,
-            'sender_scope'      => $notification->sender_scope,
-            'delivery_scope'    => $notification->delivery_scope,
-            'sent_at'           => $notification->sent_at?->toIso8601String(),
-            'recipient_count'   => $recipientCount,
-            'sent_by'           => $notification->createdBy ? [
+            'sender_scope' => $notification->sender_scope,
+            'delivery_scope' => $notification->delivery_scope,
+            'sent_at' => $notification->sent_at?->toIso8601String(),
+            'recipient_count' => $recipientCount,
+            'sent_by' => $notification->createdBy ? [
                 'first_name' => $notification->createdBy->first_name,
-                'last_name'  => $notification->createdBy->last_name,
+                'last_name' => $notification->createdBy->last_name,
             ] : null,
             'channel_breakdown' => [
-                'email'  => $emailSent,
-                'push'   => $pushSent,
+                'email' => $emailSent,
+                'push' => $pushSent,
                 'in_app' => $inAppSent,
             ],
-            'created_at'        => $notification->created_at->toIso8601String(),
+            'created_at' => $notification->created_at->toIso8601String(),
         ]);
     }
 
@@ -198,9 +198,9 @@ class WorkshopNotificationController extends Controller
         }
 
         return response()->json([
-            'message'          => 'Notification created and queued for delivery.',
-            'notification_id'  => $notification->id,
-            'recipient_count'  => $notification->recipients_count ?? $notification->recipients()->count(),
+            'message' => 'Notification created and queued for delivery.',
+            'notification_id' => $notification->id,
+            'recipient_count' => $notification->recipients_count ?? $notification->recipients()->count(),
         ], 201);
     }
 
@@ -231,9 +231,9 @@ class WorkshopNotificationController extends Controller
         }
 
         return response()->json([
-            'message'          => 'Notification created and queued for delivery.',
-            'notification_id'  => $notification->id,
-            'recipient_count'  => $notification->recipients_count ?? $notification->recipients()->count(),
+            'message' => 'Notification created and queued for delivery.',
+            'notification_id' => $notification->id,
+            'recipient_count' => $notification->recipients_count ?? $notification->recipients()->count(),
         ], 201);
     }
 }

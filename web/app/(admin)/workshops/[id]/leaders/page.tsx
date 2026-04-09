@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { AddressForm } from '@/components/ui/AddressForm';
+import type { AddressFormData } from '@/lib/types/address';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -46,6 +48,7 @@ interface Leader {
   phone_number: string | null;
   city: string | null;
   state_or_region: string | null;
+  address?: AddressFormData | null;
   invitation_status: InvitationStatus;
   invitation_id: number | null;
   invitation_created_at: string | null;
@@ -386,6 +389,29 @@ function LeaderSlideOver({
 }) {
   const [assigning, setAssigning] = useState(false);
   const [resending, setResending] = useState(false);
+  const [leaderAddress, setLeaderAddress] = useState<AddressFormData | null>(
+    leader?.address ?? null,
+  );
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  // Sync address when leader changes
+  useEffect(() => {
+    setLeaderAddress(leader?.address ?? null);
+  }, [leader?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSaveAddress() {
+    if (!leader) return;
+    setSavingAddress(true);
+    try {
+      await apiPatch(`/leaders/${leader.id}`, { address: leaderAddress });
+      toast.success('Address saved');
+      onUpdated();
+    } catch {
+      toast.error('Failed to save address');
+    } finally {
+      setSavingAddress(false);
+    }
+  }
 
   async function handleAssign(sessionId: number) {
     if (!leader) return;
@@ -565,6 +591,27 @@ function LeaderSlideOver({
                 <p className="text-sm text-dark leading-relaxed">{leader.bio}</p>
               </div>
             )}
+
+            {/* Address (private) */}
+            <div className="px-6 py-5 border-b border-border-gray">
+              <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-3">Address</p>
+              <AddressForm
+                value={leaderAddress}
+                onChange={setLeaderAddress}
+                defaultCountryCode={leaderAddress?.country_code ?? 'US'}
+                privacyNote="Leader address is private and never shown to participants."
+              />
+              <div className="mt-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={savingAddress}
+                  onClick={handleSaveAddress}
+                >
+                  Save Address
+                </Button>
+              </div>
+            </div>
 
             {/* Assigned sessions */}
             <div className="px-6 py-5">

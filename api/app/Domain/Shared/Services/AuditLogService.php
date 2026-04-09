@@ -22,11 +22,11 @@ class AuditLogService
     {
         return AuditLog::create([
             'organization_id' => $data['organization_id'] ?? null,
-            'actor_user_id'   => $data['actor_user_id'] ?? null,
-            'entity_type'     => $data['entity_type'],
-            'entity_id'       => $data['entity_id'] ?? null,
-            'action'          => $data['action'],
-            'metadata_json'   => $data['metadata'] ?? null,
+            'actor_user_id' => $data['actor_user_id'] ?? null,
+            'entity_type' => $data['entity_type'],
+            'entity_id' => $data['entity_id'] ?? null,
+            'action' => $data['action'],
+            'metadata_json' => $data['metadata'] ?? null,
         ]);
     }
 }

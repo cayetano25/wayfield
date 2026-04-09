@@ -8,29 +8,30 @@ use App\Models\Session;
 use App\Models\SessionLeader;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function setupSessionAssignmentFixture(): array
 {
-    $org    = Organization::factory()->create();
-    $admin  = User::factory()->create();
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     $leader = Leader::factory()->create();
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'active',
+        'leader_id' => $leader->id,
+        'status' => 'active',
     ]);
 
     return [$org, $admin, $workshop, $session, $leader];
@@ -43,14 +44,14 @@ test('organizer can assign a leader to a session', function () {
 
     $this->actingAs($admin, 'sanctum')
         ->postJson("/api/v1/sessions/{$session->id}/leaders", [
-            'leader_id'  => $leader->id,
+            'leader_id' => $leader->id,
             'role_label' => 'Lead Instructor',
         ])
         ->assertStatus(201);
 
     $this->assertDatabaseHas('session_leaders', [
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
         'role_label' => 'Lead Instructor',
     ]);
 });
@@ -89,9 +90,9 @@ test('non-admin cannot assign leaders to sessions', function () {
     $staff = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $staff->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $staff->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     $this->actingAs($staff, 'sanctum')
@@ -106,7 +107,7 @@ test('organizer can remove a leader from a session', function () {
 
     SessionLeader::factory()->create([
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $this->actingAs($admin, 'sanctum')
@@ -115,7 +116,7 @@ test('organizer can remove a leader from a session', function () {
 
     $this->assertDatabaseMissing('session_leaders', [
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 });
 
@@ -124,7 +125,7 @@ test('removing session leader is logged to audit_logs', function () {
 
     SessionLeader::factory()->create([
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $this->actingAs($admin, 'sanctum')
@@ -133,26 +134,26 @@ test('removing session leader is logged to audit_logs', function () {
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,
-        'actor_user_id'   => $admin->id,
-        'entity_type'     => 'session_leader',
-        'action'          => 'leader_removed_from_session',
+        'actor_user_id' => $admin->id,
+        'entity_type' => 'session_leader',
+        'action' => 'leader_removed_from_session',
     ]);
 });
 
 // ─── Leader access enforcement ────────────────────────────────────────────────
 
 test('leader not assigned to a session cannot view its leaders list', function () {
-    $org    = Organization::factory()->create();
-    $user   = User::factory()->create();
+    $org = Organization::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create();
 
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     // user is a leader but not an org member via organization_users, so they cannot view sessions
     $this->actingAs($user, 'sanctum')
@@ -189,8 +190,8 @@ test('assignment creates audit_log entry', function () {
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,
-        'actor_user_id'   => $admin->id,
-        'entity_type'     => 'session_leader',
-        'action'          => 'leader_assigned_to_session',
+        'actor_user_id' => $admin->id,
+        'entity_type' => 'session_leader',
+        'action' => 'leader_assigned_to_session',
     ]);
 });

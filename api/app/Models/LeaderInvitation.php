@@ -27,8 +27,8 @@ class LeaderInvitation extends Model
     ];
 
     protected $casts = [
-        'expires_at'    => 'datetime',
-        'responded_at'  => 'datetime',
+        'expires_at' => 'datetime',
+        'responded_at' => 'datetime',
     ];
 
     public function organization(): BelongsTo

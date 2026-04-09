@@ -32,11 +32,11 @@ class UserNotificationController extends Controller
             ->update(['in_app_status' => 'delivered']);
 
         return response()->json([
-            'data'  => InAppNotificationResource::collection($recipients->items()),
-            'meta'  => [
-                'total'        => $recipients->total(),
+            'data' => InAppNotificationResource::collection($recipients->items()),
+            'meta' => [
+                'total' => $recipients->total(),
                 'current_page' => $recipients->currentPage(),
-                'last_page'    => $recipients->lastPage(),
+                'last_page' => $recipients->lastPage(),
             ],
         ]);
     }
@@ -55,7 +55,7 @@ class UserNotificationController extends Controller
 
         $notificationRecipient->update([
             'in_app_status' => 'read',
-            'read_at'       => now(),
+            'read_at' => now(),
         ]);
 
         return response()->json(['message' => 'Notification marked as read.']);

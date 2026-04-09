@@ -14,10 +14,10 @@ class InviteLeaderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'invited_email'      => ['required', 'email', 'max:255'],
+            'invited_email' => ['required', 'email', 'max:255'],
             'invited_first_name' => ['nullable', 'string', 'max:100'],
-            'invited_last_name'  => ['nullable', 'string', 'max:100'],
-            'workshop_id'        => ['nullable', 'integer', 'exists:workshops,id'],
+            'invited_last_name' => ['nullable', 'string', 'max:100'],
+            'workshop_id' => ['nullable', 'integer', 'exists:workshops,id'],
         ];
     }
 }

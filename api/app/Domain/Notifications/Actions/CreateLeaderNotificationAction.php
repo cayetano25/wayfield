@@ -29,7 +29,7 @@ class CreateLeaderNotificationAction
      * - Time window must be valid (workshop timezone)
      * - Recipients are resolved from session participants only
      *
-     * @param array{title: string, message: string, notification_type: string} $data
+     * @param  array{title: string, message: string, notification_type: string}  $data
      */
     public function execute(User $user, Session $session, array $data): Notification
     {
@@ -43,16 +43,16 @@ class CreateLeaderNotificationAction
 
         // Create the notification record
         $notification = Notification::create([
-            'organization_id'    => $workshop->organization_id,
-            'workshop_id'        => $workshop->id,
-            'session_id'         => $session->id,
+            'organization_id' => $workshop->organization_id,
+            'workshop_id' => $workshop->id,
+            'session_id' => $session->id,
             'created_by_user_id' => $user->id,
-            'title'              => $data['title'],
-            'message'            => $data['message'],
-            'notification_type'  => $data['notification_type'] ?? 'informational',
-            'sender_scope'       => 'leader',
-            'delivery_scope'     => 'session_participants',
-            'sent_at'            => Carbon::now(),
+            'title' => $data['title'],
+            'message' => $data['message'],
+            'notification_type' => $data['notification_type'] ?? 'informational',
+            'sender_scope' => 'leader',
+            'delivery_scope' => 'session_participants',
+            'sent_at' => Carbon::now(),
         ]);
 
         // Resolve recipients from this session's participants only
@@ -61,10 +61,10 @@ class CreateLeaderNotificationAction
         foreach ($recipientUserIds as $recipientUserId) {
             NotificationRecipient::create([
                 'notification_id' => $notification->id,
-                'user_id'         => $recipientUserId,
-                'email_status'    => 'pending',
-                'push_status'     => 'pending',
-                'in_app_status'   => 'pending',
+                'user_id' => $recipientUserId,
+                'email_status' => 'pending',
+                'push_status' => 'pending',
+                'in_app_status' => 'pending',
             ]);
         }
 
@@ -79,17 +79,17 @@ class CreateLeaderNotificationAction
         // Mandatory audit log for every leader notification
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $user->id,
-            'entity_type'     => 'notification',
-            'entity_id'       => $notification->id,
-            'action'          => 'leader_notification_sent',
-            'metadata'        => [
-                'leader_id'        => $leader->id,
-                'session_id'       => $session->id,
-                'workshop_id'      => $workshop->id,
-                'organization_id'  => $workshop->organization_id,
-                'recipient_count'  => $recipientCount,
-                'sent_at'          => $notification->sent_at->toIso8601String(),
+            'actor_user_id' => $user->id,
+            'entity_type' => 'notification',
+            'entity_id' => $notification->id,
+            'action' => 'leader_notification_sent',
+            'metadata' => [
+                'leader_id' => $leader->id,
+                'session_id' => $session->id,
+                'workshop_id' => $workshop->id,
+                'organization_id' => $workshop->organization_id,
+                'recipient_count' => $recipientCount,
+                'sent_at' => $notification->sent_at->toIso8601String(),
             ],
         ]);
 

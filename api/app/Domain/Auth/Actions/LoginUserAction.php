@@ -60,14 +60,14 @@ class LoginUserAction
 
         UserSession::updateOrCreate(
             [
-                'user_id'            => $user->id,
+                'user_id' => $user->id,
                 'session_token_hash' => hash('sha256', $token->plainTextToken),
             ],
             [
-                'platform'     => $platform,
-                'device_name'  => $data['device_name'] ?? null,
+                'platform' => $platform,
+                'device_name' => $data['device_name'] ?? null,
                 'last_seen_at' => now(),
-                'expires_at'   => now()->addDays(30),
+                'expires_at' => now()->addDays(30),
             ]
         );
 
@@ -80,7 +80,7 @@ class LoginUserAction
 
         return [
             'token' => $token->plainTextToken,
-            'user'  => $user,
+            'user' => $user,
         ];
     }
 }

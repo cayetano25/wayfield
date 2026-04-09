@@ -14,11 +14,11 @@ class UpdateNotificationPreferencesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email_enabled'            => ['sometimes', 'boolean'],
-            'push_enabled'             => ['sometimes', 'boolean'],
+            'email_enabled' => ['sometimes', 'boolean'],
+            'push_enabled' => ['sometimes', 'boolean'],
             'workshop_updates_enabled' => ['sometimes', 'boolean'],
-            'reminder_enabled'         => ['sometimes', 'boolean'],
-            'marketing_enabled'        => ['sometimes', 'boolean'],
+            'reminder_enabled' => ['sometimes', 'boolean'],
+            'marketing_enabled' => ['sometimes', 'boolean'],
         ];
     }
 }

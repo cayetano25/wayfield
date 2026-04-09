@@ -26,36 +26,33 @@ class PublicWorkshopResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'              => $this->id,
-            'workshop_type'   => $this->workshop_type,
-            'title'           => $this->title,
-            'description'     => $this->description,
-            'timezone'        => $this->timezone,
-            'start_date'      => $this->start_date?->toDateString(),
-            'end_date'        => $this->end_date?->toDateString(),
-            'public_slug'     => $this->public_slug,
-            'hero_image_url'  => $this->header_image_url,
-            'default_location' => $this->whenLoaded('defaultLocation', fn () =>
-                $this->defaultLocation ? new LocationResource($this->defaultLocation) : null
+            'id' => $this->id,
+            'workshop_type' => $this->workshop_type,
+            'title' => $this->title,
+            'description' => $this->description,
+            'timezone' => $this->timezone,
+            'start_date' => $this->start_date?->toDateString(),
+            'end_date' => $this->end_date?->toDateString(),
+            'public_slug' => $this->public_slug,
+            'hero_image_url' => $this->header_image_url,
+            'default_location' => $this->whenLoaded('defaultLocation', fn () => $this->defaultLocation ? new LocationResource($this->defaultLocation) : null
             ),
-            'logistics'       => $this->whenLoaded('logistics', fn () =>
-                $this->logistics ? new PublicWorkshopLogisticsResource($this->logistics) : null
+            'logistics' => $this->whenLoaded('logistics', fn () => $this->logistics ? new PublicWorkshopLogisticsResource($this->logistics) : null
             ),
-            'public_page'     => $this->whenLoaded('publicPage', fn () =>
-                $this->publicPage ? [
-                    'hero_title'    => $this->publicPage->hero_title,
-                    'hero_subtitle' => $this->publicPage->hero_subtitle,
-                    'body_content'  => $this->publicPage->body_content,
-                ] : null
+            'public_page' => $this->whenLoaded('publicPage', fn () => $this->publicPage ? [
+                'hero_title' => $this->publicPage->hero_title,
+                'hero_subtitle' => $this->publicPage->hero_subtitle,
+                'body_content' => $this->publicPage->body_content,
+            ] : null
             ),
             // Published sessions — meeting_url and all virtual credentials are intentionally excluded.
             // See PublicSessionResource for the safe field list.
-            'sessions'        => $this->whenLoaded('sessions',
+            'sessions' => $this->whenLoaded('sessions',
                 fn () => PublicSessionResource::collection($this->sessions)
             ),
             // Only accepted + confirmed leaders are publicly listed.
             // PublicLeaderResource enforces strict privacy — no email, phone, or address.
-            'leaders'         => $this->whenLoaded('confirmedLeaders',
+            'leaders' => $this->whenLoaded('confirmedLeaders',
                 fn () => PublicLeaderResource::collection($this->confirmedLeaders)
             ),
         ];

@@ -7,6 +7,13 @@ import {
   Plus, Pencil, Trash2, GripVertical, X, Info,
   Monitor, MapPin, Layers, Infinity,
 } from 'lucide-react';
+import { SessionLocationPicker, isSessionLocationValid } from '@/components/sessions/SessionLocationPicker';
+import { buildLocationPayload } from '@/lib/api/sessions';
+import {
+  EMPTY_SESSION_LOCATION,
+  type SessionLocationFormData,
+  type SessionLocationResponse,
+} from '@/lib/types/session-location';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -22,11 +29,16 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
+interface WorkshopLogistics {
+  hotel_name: string | null;
+}
+
 interface Workshop {
   id: number;
   title: string;
   timezone: string;
   organization_id: number;
+  logistics: WorkshopLogistics | null;
 }
 
 interface Track {
@@ -46,6 +58,7 @@ interface Session {
   confirmed_count: number;
   is_published: boolean;
   header_image_url: string | null;
+  location: SessionLocationResponse | null;
 }
 
 interface Location {
@@ -175,6 +188,7 @@ function SessionSlideOver({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState<SessionForm>(EMPTY_FORM);
+  const [locationData, setLocationData] = useState<SessionLocationFormData>(EMPTY_SESSION_LOCATION);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -200,8 +214,19 @@ function SessionSlideOver({
         notes: '',
         is_published: editingSession.is_published,
       });
+      // Pre-populate location from existing session
+      const loc = editingSession.location;
+      setLocationData(loc ? {
+        location_type:  loc.type ?? null,
+        location_notes: loc.notes ?? '',
+        latitude:       loc.latitude != null ? String(loc.latitude) : '',
+        longitude:      loc.longitude != null ? String(loc.longitude) : '',
+        location_name:  loc.name ?? '',
+        address:        loc.address ?? null,
+      } : EMPTY_SESSION_LOCATION);
     } else {
       setForm(EMPTY_FORM);
+      setLocationData(EMPTY_SESSION_LOCATION);
     }
     setErrors({});
     setTimeout(() => firstInputRef.current?.focus(), 50);
@@ -225,6 +250,9 @@ function SessionSlideOver({
     }
     if (form.capacity && isNaN(Number(form.capacity))) {
       e.capacity = 'Must be a number';
+    }
+    if (!isSessionLocationValid(locationData)) {
+      e.location = 'Please complete the location fields';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -251,6 +279,7 @@ function SessionSlideOver({
       meeting_passcode: form.meeting_passcode.trim() || null,
       notes: form.notes.trim() || null,
       is_published: form.is_published,
+      ...buildLocationPayload(locationData),
     };
 
     try {
@@ -386,18 +415,16 @@ function SessionSlideOver({
             />
           </div>
 
-          <Select
-            label="Location"
-            value={form.location_id}
-            onChange={(e) => setF('location_id', e.target.value)}
-          >
-            <option value="">Use workshop default</option>
-            {locations.map((l) => (
-              <option key={l.id} value={String(l.id)}>
-                {l.name}{l.city ? ` · ${l.city}` : ''}
-              </option>
-            ))}
-          </Select>
+          <SessionLocationPicker
+            value={locationData}
+            onChange={setLocationData}
+            workshopTimezone={workshop.timezone}
+            hasHotel={!!(workshop.logistics?.hotel_name)}
+            hotelName={workshop.logistics?.hotel_name ?? undefined}
+          />
+          {errors.location && (
+            <p className="text-xs text-danger">{errors.location}</p>
+          )}
 
           <div>
             <Input

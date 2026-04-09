@@ -14,9 +14,9 @@ class UpdateTrackRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['sometimes', 'required', 'string', 'max:255'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

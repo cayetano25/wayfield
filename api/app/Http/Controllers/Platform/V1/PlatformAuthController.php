@@ -19,7 +19,7 @@ class PlatformAuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
@@ -28,11 +28,11 @@ class PlatformAuthController extends Controller
         // ── Failed authentication ────────────────────────────────────────────
         if (! $adminUser || ! Hash::check($data['password'], $adminUser->password_hash)) {
             AdminLoginEvent::create([
-                'admin_user_id'  => $adminUser?->id,
+                'admin_user_id' => $adminUser?->id,
                 'email_attempted' => $data['email'],
-                'outcome'        => 'failed',
-                'ip_address'     => $request->ip(),
-                'user_agent'     => $request->userAgent(),
+                'outcome' => 'failed',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
             $this->checkBruteForce($request);
@@ -44,11 +44,11 @@ class PlatformAuthController extends Controller
 
         if (! $adminUser->is_active) {
             AdminLoginEvent::create([
-                'admin_user_id'  => $adminUser->id,
+                'admin_user_id' => $adminUser->id,
                 'email_attempted' => $data['email'],
-                'outcome'        => 'locked',
-                'ip_address'     => $request->ip(),
-                'user_agent'     => $request->userAgent(),
+                'outcome' => 'locked',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
             throw ValidationException::withMessages([
@@ -63,21 +63,21 @@ class PlatformAuthController extends Controller
         $adminUser->update(['last_login_at' => now()]);
 
         AdminLoginEvent::create([
-            'admin_user_id'  => $adminUser->id,
+            'admin_user_id' => $adminUser->id,
             'email_attempted' => $data['email'],
-            'outcome'        => 'success',
-            'ip_address'     => $request->ip(),
-            'user_agent'     => $request->userAgent(),
+            'outcome' => 'success',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
         ]);
 
         return response()->json([
-            'token'      => $token->plainTextToken,
+            'token' => $token->plainTextToken,
             'admin_user' => [
-                'id'         => $adminUser->id,
+                'id' => $adminUser->id,
                 'first_name' => $adminUser->first_name,
-                'last_name'  => $adminUser->last_name,
-                'email'      => $adminUser->email,
-                'role'       => $adminUser->role,
+                'last_name' => $adminUser->last_name,
+                'email' => $adminUser->email,
+                'role' => $adminUser->role,
             ],
         ]);
     }
@@ -95,18 +95,18 @@ class PlatformAuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        /** @var \App\Models\AdminUser $adminUser */
+        /** @var AdminUser $adminUser */
         $adminUser = $request->user('platform_admin');
 
         return response()->json([
-            'id'              => $adminUser->id,
-            'first_name'      => $adminUser->first_name,
-            'last_name'       => $adminUser->last_name,
-            'email'           => $adminUser->email,
-            'role'            => $adminUser->role,
-            'is_active'       => $adminUser->is_active,
+            'id' => $adminUser->id,
+            'first_name' => $adminUser->first_name,
+            'last_name' => $adminUser->last_name,
+            'email' => $adminUser->email,
+            'role' => $adminUser->role,
+            'is_active' => $adminUser->is_active,
             'can_impersonate' => $adminUser->can_impersonate,
-            'last_login_at'   => $adminUser->last_login_at,
+            'last_login_at' => $adminUser->last_login_at,
         ]);
     }
 
@@ -128,16 +128,16 @@ class PlatformAuthController extends Controller
 
         if ($recentFailures >= $threshold) {
             SecurityEvent::create([
-                'event_type'      => 'brute_force_attempt',
-                'severity'        => 'high',
-                'ip_address'      => $ip,
-                'description'     => "Platform admin brute-force detected: {$recentFailures} failed attempts in 15 minutes from IP {$ip}.",
-                'metadata_json'   => [
+                'event_type' => 'brute_force_attempt',
+                'severity' => 'high',
+                'ip_address' => $ip,
+                'description' => "Platform admin brute-force detected: {$recentFailures} failed attempts in 15 minutes from IP {$ip}.",
+                'metadata_json' => [
                     'failure_count' => $recentFailures,
                     'window_minutes' => 15,
-                    'threshold'     => $threshold,
+                    'threshold' => $threshold,
                 ],
-                'is_resolved'     => false,
+                'is_resolved' => false,
             ]);
         }
     }

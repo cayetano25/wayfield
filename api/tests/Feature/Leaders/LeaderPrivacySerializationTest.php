@@ -1,14 +1,16 @@
 <?php
 
 use App\Models\Leader;
+use App\Models\LeaderInvitation;
 use App\Models\Organization;
 use App\Models\OrganizationLeader;
 use App\Models\OrganizationUser;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopLeader;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Explicit private-field exclusion regression test ────────────────────────
 //
@@ -26,32 +28,32 @@ test('public leader resource never exposes private fields', function () {
     // Populate every private field with a non-null, non-empty value so the
     // test cannot pass by accident because the field was null and omitted.
     $leader = Leader::factory()->withUser($user->id)->create([
-        'first_name'        => 'Jane',
-        'last_name'         => 'Doe',
-        'display_name'      => 'Jane Doe Photography',
-        'bio'               => 'Landscape and portrait photographer.',
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'display_name' => 'Jane Doe Photography',
+        'bio' => 'Landscape and portrait photographer.',
         'profile_image_url' => 'https://cdn.example.com/jane.jpg',
-        'website_url'       => 'https://janedoe.com',
-        'city'              => 'Austin',
-        'state_or_region'   => 'TX',
+        'website_url' => 'https://janedoe.com',
+        'city' => 'Austin',
+        'state_or_region' => 'TX',
         // Private — must never appear in public response
-        'email'             => 'jane@private.com',
-        'phone_number'      => '555-0001',
-        'address_line_1'    => '123 Private St',
-        'address_line_2'    => 'Apt 4B',
-        'postal_code'       => '78701',
-        'country'           => 'US',
+        'email' => 'jane@private.com',
+        'phone_number' => '555-0001',
+        'address_line_1' => '123 Private St',
+        'address_line_2' => 'Apt 4B',
+        'postal_code' => '78701',
+        'country' => 'US',
     ]);
 
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'privacy-regression-workshop',
+        'public_slug' => 'privacy-regression-workshop',
     ]);
 
     WorkshopLeader::factory()->confirmed()->create([
         'workshop_id' => $workshop->id,
-        'leader_id'   => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $leaderData = $this->getJson('/api/v1/public/workshops/privacy-regression-workshop')
@@ -106,30 +108,30 @@ test('public leader resource never exposes private fields', function () {
 // ─── Public workshop endpoint — confirmed/unconfirmed gate ────────────────────
 
 test('public workshop endpoint shows confirmed leaders with only safe public fields', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'test-workshop',
+        'public_slug' => 'test-workshop',
     ]);
 
     $leader = Leader::factory()->create([
-        'first_name'      => 'Jane',
-        'last_name'       => 'Doe',
-        'email'           => 'jane@private.com',
-        'phone_number'    => '555-1234',
-        'address_line_1'  => '123 Private St',
-        'address_line_2'  => 'Suite 5',
-        'postal_code'     => '78701',
-        'country'         => 'US',
-        'city'            => 'Austin',
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@private.com',
+        'phone_number' => '555-1234',
+        'address_line_1' => '123 Private St',
+        'address_line_2' => 'Suite 5',
+        'postal_code' => '78701',
+        'country' => 'US',
+        'city' => 'Austin',
         'state_or_region' => 'TX',
-        'bio'             => 'Landscape photographer.',
-        'website_url'     => 'https://janedoe.com',
+        'bio' => 'Landscape photographer.',
+        'website_url' => 'https://janedoe.com',
     ]);
 
     WorkshopLeader::factory()->confirmed()->create([
         'workshop_id' => $workshop->id,
-        'leader_id'   => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $leaderData = $this->getJson('/api/v1/public/workshops/test-workshop')
@@ -163,24 +165,24 @@ test('public workshop endpoint shows confirmed leaders with only safe public fie
 // The existing test below covers (b). The test here covers (a).
 
 test('leader with a pending invitation is not shown on public workshop page', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'pending-inv-workshop',
+        'public_slug' => 'pending-inv-workshop',
     ]);
 
     // A leader record exists (organizer created a placeholder) but the invitation
     // is still pending — the leader has NOT accepted. No workshop_leaders row exists.
-    $admin  = User::factory()->create();
+    $admin = User::factory()->create();
     $leader = Leader::factory()->create(['first_name' => 'Unaccepted']);
 
     // Invitation is pending — no acceptance, no workshop_leaders row
-    \App\Models\LeaderInvitation::factory()
+    LeaderInvitation::factory()
         ->forOrganization($org->id)
         ->forWorkshop($workshop->id)
         ->create([
             'leader_id' => null, // null until accepted
-            'status'    => 'pending',
+            'status' => 'pending',
         ]);
 
     $response = $this->getJson('/api/v1/public/workshops/pending-inv-workshop')
@@ -191,46 +193,46 @@ test('leader with a pending invitation is not shown on public workshop page', fu
 });
 
 test('public workshop endpoint does not show unconfirmed leaders', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'test-workshop-2',
+        'public_slug' => 'test-workshop-2',
     ]);
 
     $leader = Leader::factory()->create(['first_name' => 'Hidden']);
 
     // Not confirmed (is_confirmed = false)
     WorkshopLeader::factory()->create([
-        'workshop_id'  => $workshop->id,
-        'leader_id'    => $leader->id,
+        'workshop_id' => $workshop->id,
+        'leader_id' => $leader->id,
         'is_confirmed' => false,
     ]);
 
-    $response = $this->getJson("/api/v1/public/workshops/test-workshop-2")
+    $response = $this->getJson('/api/v1/public/workshops/test-workshop-2')
         ->assertStatus(200);
 
     expect($response->json('leaders'))->toBeEmpty();
 });
 
 test('organizer leader resource includes private fields', function () {
-    $org    = Organization::factory()->create();
-    $admin  = User::factory()->create();
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     $leader = Leader::factory()->create([
-        'email'          => 'private@example.com',
-        'phone_number'   => '555-9999',
+        'email' => 'private@example.com',
+        'phone_number' => '555-9999',
         'address_line_1' => '1 Confidential Ave',
     ]);
 
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $response = $this->actingAs($admin, 'sanctum')
@@ -246,12 +248,12 @@ test('organizer leader resource includes private fields', function () {
 });
 
 test('leader self-profile resource includes private address fields', function () {
-    $user   = User::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create([
-        'address_line_1'  => '1 Private Rd',
-        'postal_code'     => '78701',
-        'country'         => 'US',
-        'phone_number'    => '555-0000',
+        'address_line_1' => '1 Private Rd',
+        'postal_code' => '78701',
+        'country' => 'US',
+        'phone_number' => '555-0000',
     ]);
 
     $response = $this->actingAs($user, 'sanctum')

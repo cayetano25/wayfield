@@ -1,9 +1,16 @@
 <?php
 
+use App\Domain\Notifications\Services\ResolveNotificationRecipientsService;
+use App\Models\Notification;
 use App\Models\NotificationPreference;
+use App\Models\Organization;
+use App\Models\OrganizationUser;
+use App\Models\Registration;
 use App\Models\User;
+use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Get preferences (default) ────────────────────────────────────────────────
 
@@ -39,24 +46,24 @@ test('user can update notification preferences', function () {
 
     $this->actingAs($user, 'sanctum')
         ->putJson('/api/v1/me/notification-preferences', [
-            'email_enabled'            => false,
-            'push_enabled'             => true,
+            'email_enabled' => false,
+            'push_enabled' => true,
             'workshop_updates_enabled' => false,
-            'reminder_enabled'         => true,
-            'marketing_enabled'        => false,
+            'reminder_enabled' => true,
+            'marketing_enabled' => false,
         ])
         ->assertStatus(200)
         ->assertJson([
-            'email_enabled'            => false,
-            'push_enabled'             => true,
+            'email_enabled' => false,
+            'push_enabled' => true,
             'workshop_updates_enabled' => false,
-            'reminder_enabled'         => true,
-            'marketing_enabled'        => false,
+            'reminder_enabled' => true,
+            'marketing_enabled' => false,
         ]);
 
     $this->assertDatabaseHas('notification_preferences', [
-        'user_id'                  => $user->id,
-        'email_enabled'            => false,
+        'user_id' => $user->id,
+        'email_enabled' => false,
         'workshop_updates_enabled' => false,
     ]);
 });
@@ -68,7 +75,7 @@ test('user can partially update notification preferences', function () {
 
     // Set initial preferences
     NotificationPreference::factory()->forUser($user->id)->create([
-        'email_enabled'   => true,
+        'email_enabled' => true,
         'reminder_enabled' => true,
     ]);
 
@@ -80,8 +87,8 @@ test('user can partially update notification preferences', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('notification_preferences', [
-        'user_id'          => $user->id,
-        'email_enabled'    => true,  // unchanged
+        'user_id' => $user->id,
+        'email_enabled' => true,  // unchanged
         'reminder_enabled' => false, // updated
     ]);
 });
@@ -92,29 +99,29 @@ test('preferences are applied to informational notifications but urgent always d
     // This test verifies ResolveNotificationRecipientsService behavior directly
     $user = User::factory()->create();
     NotificationPreference::factory()->forUser($user->id)->create([
-        'email_enabled'            => false, // email disabled
-        'push_enabled'             => false, // push disabled
+        'email_enabled' => false, // email disabled
+        'push_enabled' => false, // push disabled
         'workshop_updates_enabled' => false,
     ]);
 
-    $org = \App\Models\Organization::factory()->create();
+    $org = Organization::factory()->create();
     $owner = User::factory()->create();
-    \App\Models\OrganizationUser::factory()->create([
+    OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
-    $workshop = \App\Models\Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
-    \App\Models\Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $workshop = Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
+    Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     // Urgent notification — should NOT be skipped regardless of preferences
-    $urgentNotification = \App\Models\Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create([
+    $urgentNotification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create([
         'notification_type' => 'urgent',
-        'delivery_scope'    => 'all_participants',
+        'delivery_scope' => 'all_participants',
     ]);
 
-    $service = app(\App\Domain\Notifications\Services\ResolveNotificationRecipientsService::class);
+    $service = app(ResolveNotificationRecipientsService::class);
     $recipients = $service->resolve($urgentNotification);
 
     $recipient = $recipients->first();
@@ -128,23 +135,23 @@ test('informational notifications respect email_enabled preference', function ()
         'email_enabled' => false,
     ]);
 
-    $org = \App\Models\Organization::factory()->create();
+    $org = Organization::factory()->create();
     $owner = User::factory()->create();
-    \App\Models\OrganizationUser::factory()->create([
+    OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
-    $workshop = \App\Models\Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
-    \App\Models\Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $workshop = Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
+    Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
-    $notification = \App\Models\Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create([
+    $notification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create([
         'notification_type' => 'informational',
-        'delivery_scope'    => 'all_participants',
+        'delivery_scope' => 'all_participants',
     ]);
 
-    $service = app(\App\Domain\Notifications\Services\ResolveNotificationRecipientsService::class);
+    $service = app(ResolveNotificationRecipientsService::class);
     $recipients = $service->resolve($notification);
 
     $recipient = $recipients->first();

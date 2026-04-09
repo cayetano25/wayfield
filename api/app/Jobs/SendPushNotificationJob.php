@@ -19,6 +19,7 @@ class SendPushNotificationJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 60;
 
     public function __construct(
@@ -38,6 +39,7 @@ class SendPushNotificationJob implements ShouldQueue
 
         if (! $notification) {
             $recipient->update(['push_status' => 'failed']);
+
             return;
         }
 
@@ -50,6 +52,7 @@ class SendPushNotificationJob implements ShouldQueue
         if (empty($tokens)) {
             // No active tokens — skip gracefully
             $recipient->update(['push_status' => 'skipped']);
+
             return;
         }
 
@@ -60,8 +63,8 @@ class SendPushNotificationJob implements ShouldQueue
             $recipient->update(['push_status' => 'failed']);
             Log::error('Push notification delivery failed', [
                 'notification_id' => $this->notificationId,
-                'recipient_id'    => $this->recipientId,
-                'error'           => $e->getMessage(),
+                'recipient_id' => $this->recipientId,
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -76,13 +79,13 @@ class SendPushNotificationJob implements ShouldQueue
     private function sendToExpoPush(array $tokens, Notification $notification): void
     {
         $messages = array_map(fn (string $token) => [
-            'to'    => $token,
+            'to' => $token,
             'title' => $notification->title,
-            'body'  => $notification->message,
-            'data'  => [
+            'body' => $notification->message,
+            'data' => [
                 'notification_id' => $notification->id,
-                'workshop_id'     => $notification->workshop_id,
-                'type'            => $notification->notification_type,
+                'workshop_id' => $notification->workshop_id,
+                'type' => $notification->notification_type,
             ],
             'priority' => $notification->notification_type === 'urgent' ? 'high' : 'default',
         ], $tokens);
@@ -92,10 +95,11 @@ class SendPushNotificationJob implements ShouldQueue
         // Skip actual HTTP call in local/testing environments
         if (app()->environment(['local', 'testing'])) {
             Log::channel('single')->info('[Expo Push] Simulated delivery', [
-                'tokens'   => $tokens,
-                'title'    => $notification->title,
-                'body'     => $notification->message,
+                'tokens' => $tokens,
+                'title' => $notification->title,
+                'body' => $notification->message,
             ]);
+
             return;
         }
 
@@ -103,7 +107,7 @@ class SendPushNotificationJob implements ShouldQueue
             ->post($pushEndpoint, $messages);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Expo push delivery failed: ' . $response->body());
+            throw new \RuntimeException('Expo push delivery failed: '.$response->body());
         }
     }
 

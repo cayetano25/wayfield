@@ -4,28 +4,30 @@ use App\Models\Leader;
 use App\Models\Organization;
 use App\Models\OrganizationLeader;
 use App\Models\OrganizationUser;
+use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionLeader;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeSessionWithOrg(): array
 {
-    $org     = Organization::factory()->create();
-    $admin   = User::factory()->create();
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
-        'status'          => 'published',
+        'status' => 'published',
     ]);
     $session = Session::factory()->create(['workshop_id' => $workshop->id]);
 
@@ -34,12 +36,12 @@ function makeSessionWithOrg(): array
 
 function makeOrgLeader(Organization $org): array
 {
-    $user   = User::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->create(['user_id' => $user->id]);
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'active',
+        'leader_id' => $leader->id,
+        'status' => 'active',
     ]);
 
     return compact('user', 'leader');
@@ -52,7 +54,7 @@ test('organizer can assign a leader with a specific role_in_session', function (
     ['leader' => $leader] = makeOrgLeader($org);
 
     $response = $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'       => $leader->id,
+        'leader_id' => $leader->id,
         'role_in_session' => 'panelist',
     ]);
 
@@ -60,8 +62,8 @@ test('organizer can assign a leader with a specific role_in_session', function (
         ->assertJsonFragment(['role_in_session' => 'panelist']);
 
     $this->assertDatabaseHas('session_leaders', [
-        'session_id'      => $session->id,
-        'leader_id'       => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'role_in_session' => 'panelist',
     ]);
 });
@@ -83,7 +85,7 @@ test('invalid role_in_session value is rejected with 422', function () {
     ['leader' => $leader] = makeOrgLeader($org);
 
     $response = $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'       => $leader->id,
+        'leader_id' => $leader->id,
         'role_in_session' => 'guest_star', // invalid
     ]);
 
@@ -97,7 +99,7 @@ test('organizer can assign a primary leader and it sets is_primary=true', functi
     ['leader' => $leader] = makeOrgLeader($org);
 
     $response = $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
         'is_primary' => true,
     ]);
 
@@ -112,7 +114,7 @@ test('assigning a new primary leader clears the previous primary flag', function
 
     // Assign leader1 as primary
     $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'  => $leader1->id,
+        'leader_id' => $leader1->id,
         'is_primary' => true,
     ])->assertStatus(201);
 
@@ -120,7 +122,7 @@ test('assigning a new primary leader clears the previous primary flag', function
 
     // Assign leader2 as primary — should clear leader1
     $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'  => $leader2->id,
+        'leader_id' => $leader2->id,
         'is_primary' => true,
     ])->assertStatus(201);
 
@@ -147,7 +149,7 @@ test('organizer can assign a leader with pending status', function () {
     ['leader' => $leader] = makeOrgLeader($org);
 
     $response = $this->actingAs($admin)->postJson("/api/v1/sessions/{$session->id}/leaders", [
-        'leader_id'         => $leader->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'pending',
     ]);
 
@@ -162,11 +164,11 @@ test('organizer can update assignment_status to accepted', function () {
     ['leader' => $leader] = makeOrgLeader($org);
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'pending',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $response = $this->actingAs($admin)->patchJson(
@@ -178,8 +180,8 @@ test('organizer can update assignment_status to accepted', function () {
         ->assertJsonFragment(['assignment_status' => 'accepted']);
 
     $this->assertDatabaseHas('session_leaders', [
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'accepted',
     ]);
 });
@@ -189,11 +191,11 @@ test('updating assignment_status to removed is logged to audit_logs', function (
     ['leader' => $leader] = makeOrgLeader($org);
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'accepted',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $this->actingAs($admin)->patchJson(
@@ -202,7 +204,7 @@ test('updating assignment_status to removed is logged to audit_logs', function (
     )->assertStatus(200);
 
     $this->assertDatabaseHas('audit_logs', [
-        'action'      => 'leader_assignment_status_updated',
+        'action' => 'leader_assignment_status_updated',
         'entity_type' => 'session_leader',
     ]);
 });
@@ -212,11 +214,11 @@ test('invalid assignment_status in PATCH returns 422', function () {
     ['leader' => $leader] = makeOrgLeader($org);
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'accepted',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $this->actingAs($admin)->patchJson(
@@ -233,11 +235,11 @@ test('leader with pending assignment cannot access roster — returns 403', func
 
     // Assign with pending (not accepted)
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'pending',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $this->actingAs($leaderUser)
@@ -252,11 +254,11 @@ test('leader with pending assignment cannot leader-check-in — returns 403', fu
     $participant = User::factory()->create();
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'pending',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $this->actingAs($leaderUser)
@@ -269,18 +271,18 @@ test('leader with accepted assignment can still check in', function () {
     ['user' => $leaderUser, 'leader' => $leader] = makeOrgLeader($org);
 
     $participant = User::factory()->create();
-    \App\Models\Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $participant->id,
+    Registration::factory()->create([
+        'workshop_id' => $workshop->id,
+        'user_id' => $participant->id,
         'registration_status' => 'registered',
     ]);
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
-        'role_in_session'   => 'co_leader',
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'role_in_session' => 'co_leader',
         'assignment_status' => 'accepted',
-        'is_primary'        => false,
+        'is_primary' => false,
     ]);
 
     $this->actingAs($leaderUser)

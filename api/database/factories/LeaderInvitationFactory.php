@@ -12,16 +12,16 @@ class LeaderInvitationFactory extends Factory
     public function definition(): array
     {
         return [
-            'organization_id'    => Organization::factory(),
-            'workshop_id'        => null,
-            'leader_id'          => null,
-            'invited_email'      => $this->faker->safeEmail(),
+            'organization_id' => Organization::factory(),
+            'workshop_id' => null,
+            'leader_id' => null,
+            'invited_email' => $this->faker->safeEmail(),
             'invited_first_name' => $this->faker->firstName(),
-            'invited_last_name'  => $this->faker->lastName(),
-            'status'             => 'pending',
+            'invited_last_name' => $this->faker->lastName(),
+            'status' => 'pending',
             'invitation_token_hash' => hash('sha256', Str::random(40)),
-            'expires_at'         => now()->addDays(7),
-            'responded_at'       => null,
+            'expires_at' => now()->addDays(7),
+            'responded_at' => null,
             'created_by_user_id' => User::factory(),
         ];
     }
@@ -39,7 +39,7 @@ class LeaderInvitationFactory extends Factory
     public function accepted(): static
     {
         return $this->state([
-            'status'       => 'accepted',
+            'status' => 'accepted',
             'responded_at' => now(),
         ]);
     }
@@ -47,7 +47,7 @@ class LeaderInvitationFactory extends Factory
     public function declined(): static
     {
         return $this->state([
-            'status'       => 'declined',
+            'status' => 'declined',
             'responded_at' => now(),
         ]);
     }
@@ -55,7 +55,7 @@ class LeaderInvitationFactory extends Factory
     public function expired(): static
     {
         return $this->state([
-            'status'     => 'expired',
+            'status' => 'expired',
             'expires_at' => now()->subDay(),
         ]);
     }

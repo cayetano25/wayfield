@@ -41,22 +41,22 @@ class ParticipantController extends Controller
                 $selectedSessions = $registration->selections
                     ->where('selection_status', 'selected')
                     ->map(fn ($s) => [
-                        'id'       => $s->session->id,
-                        'title'    => $s->session->title,
+                        'id' => $s->session->id,
+                        'title' => $s->session->title,
                         'start_at' => $s->session->start_at,
                     ])
                     ->values();
 
                 $data = [
-                    'user_id'             => $user->id,
-                    'registration_id'     => $registration->id,
-                    'first_name'          => $user->first_name,
-                    'last_name'           => $user->last_name,
-                    'email'               => $user->email,
+                    'user_id' => $user->id,
+                    'registration_id' => $registration->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
                     'registration_status' => $registration->registration_status,
-                    'registered_at'       => $registration->registered_at,
-                    'sessions_count'      => $selectedSessions->count(),
-                    'sessions'            => $selectedSessions,
+                    'registered_at' => $registration->registered_at,
+                    'sessions_count' => $selectedSessions->count(),
+                    'sessions' => $selectedSessions,
                 ];
 
                 if ($showPhone) {
@@ -101,21 +101,21 @@ class ParticipantController extends Controller
             ->pluck('id');
 
         $results = User::whereIn('id', function ($query) use ($workshopIds) {
-                $query->select('user_id')
-                    ->from('registrations')
-                    ->whereIn('workshop_id', $workshopIds)
-                    ->where('registration_status', 'registered');
-            })
-            ->where('email', 'like', '%' . $emailTerm . '%')
+            $query->select('user_id')
+                ->from('registrations')
+                ->whereIn('workshop_id', $workshopIds)
+                ->where('registration_status', 'registered');
+        })
+            ->where('email', 'like', '%'.$emailTerm.'%')
             ->select('id', 'first_name', 'last_name', 'email')
             ->limit(10)
             ->get()
             ->map(fn (User $u) => [
-                'user_id'    => $u->id,
-                'first_name' => $u->first_name,
-                'last_name'  => $u->last_name,
-                'email'      => $u->email,
-            ]);
+            'user_id' => $u->id,
+            'first_name' => $u->first_name,
+            'last_name' => $u->last_name,
+            'email' => $u->email,
+        ]);
 
         return response()->json($results);
     }

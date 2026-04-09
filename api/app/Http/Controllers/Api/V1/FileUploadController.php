@@ -11,7 +11,6 @@ use App\Models\Workshop;
 use App\Services\Files\FileUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class FileUploadController extends Controller
@@ -25,13 +24,13 @@ class FileUploadController extends Controller
     public function presignedUrl(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'entity_type'  => ['required', 'string', Rule::in(['workshop', 'session', 'organization', 'user', 'leader'])],
-            'entity_id'    => ['required'],
-            'filename'     => ['required', 'string', 'max:255'],
+            'entity_type' => ['required', 'string', Rule::in(['workshop', 'session', 'organization', 'user', 'leader'])],
+            'entity_id' => ['required'],
+            'filename' => ['required', 'string', 'max:255'],
             'content_type' => ['required', 'string', Rule::in(['image/jpeg', 'image/png', 'image/webp'])],
         ]);
 
-        if (!$this->fileUploadService->extensionMatchesContentType(
+        if (! $this->fileUploadService->extensionMatchesContentType(
             $validated['filename'],
             $validated['content_type']
         )) {
@@ -51,7 +50,7 @@ class FileUploadController extends Controller
 
         return response()->json([
             'upload_url' => $presigned['upload_url'],
-            'key'        => $presigned['key'],
+            'key' => $presigned['key'],
             'public_url' => $this->fileUploadService->getPublicUrl($presigned['key']),
             'expires_at' => $presigned['expires_at'],
         ]);
@@ -64,10 +63,10 @@ class FileUploadController extends Controller
     public function confirm(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'key'         => ['required', 'string', 'max:500'],
+            'key' => ['required', 'string', 'max:500'],
             'entity_type' => ['required', 'string', Rule::in(['workshop', 'session', 'organization', 'user', 'leader'])],
-            'entity_id'   => ['required'],
-            'field_name'  => ['required', 'string'],
+            'entity_id' => ['required'],
+            'field_name' => ['required', 'string'],
         ]);
 
         $user = $request->user();
@@ -75,10 +74,10 @@ class FileUploadController extends Controller
 
         match ($validated['entity_type']) {
             'workshop' => $this->confirmWorkshop($user, $validated, $publicUrl),
-            'session'  => $this->confirmSession($user, $validated, $publicUrl),
+            'session' => $this->confirmSession($user, $validated, $publicUrl),
             'organization' => $this->confirmOrganization($user, $validated, $publicUrl),
-            'user'     => $this->confirmUser($user, $validated, $publicUrl),
-            'leader'   => $this->confirmLeader($user, $validated, $publicUrl),
+            'user' => $this->confirmUser($user, $validated, $publicUrl),
+            'leader' => $this->confirmLeader($user, $validated, $publicUrl),
         };
 
         return response()->json(['public_url' => $publicUrl]);
@@ -97,12 +96,12 @@ class FileUploadController extends Controller
         ]);
 
         $key = $request->query('key');
-        if (!$key) {
+        if (! $key) {
             return response()->json(['message' => 'Missing key query parameter.'], 422);
         }
 
         $request->file('file')->storeAs(
-            'public/uploads/' . dirname($key),
+            'public/uploads/'.dirname($key),
             basename($key)
         );
 
@@ -166,8 +165,8 @@ class FileUploadController extends Controller
         return $leader->organizationLeaders()
             ->whereHas('organization.organizationUsers', function ($q) use ($user) {
                 $q->where('user_id', $user->id)
-                  ->whereIn('role', ['owner', 'admin'])
-                  ->where('is_active', true);
+                    ->whereIn('role', ['owner', 'admin'])
+                    ->where('is_active', true);
             })
             ->exists();
     }

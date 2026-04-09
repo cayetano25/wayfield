@@ -26,15 +26,15 @@ class CheckFeatureAccess
 
         if (! $organization instanceof Organization) {
             return response()->json([
-                'error'   => 'feature_not_available',
+                'error' => 'feature_not_available',
                 'message' => 'Organization context is required to check feature access.',
             ], 403);
         }
 
         if (! $this->gateService->isFeatureEnabled($organization, $featureKey)) {
             return response()->json([
-                'error'         => 'feature_not_available',
-                'message'       => 'Your current plan does not support this action.',
+                'error' => 'feature_not_available',
+                'message' => 'Your current plan does not support this action.',
                 'required_plan' => $this->gateService->requiredPlanFor($featureKey),
             ], 403);
         }

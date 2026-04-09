@@ -19,8 +19,8 @@ class PushToken extends Model
     ];
 
     protected $casts = [
-        'is_active'           => 'boolean',
-        'last_registered_at'  => 'datetime',
+        'is_active' => 'boolean',
+        'last_registered_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

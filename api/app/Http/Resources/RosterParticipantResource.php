@@ -25,7 +25,7 @@ class RosterParticipantResource extends JsonResource
     {
         // The $this->resource is a stdClass with: user, registration, attendance_record
         $entry = $this->resource;
-        $user  = $entry->user;
+        $user = $entry->user;
         $attendance = $entry->attendance_record;
 
         // Show phone only when explicitly authorized by the controller
@@ -33,21 +33,21 @@ class RosterParticipantResource extends JsonResource
 
         return [
             'user' => [
-                'id'         => $user->id,
+                'id' => $user->id,
                 'first_name' => $user->first_name,
-                'last_name'  => $user->last_name,
-                'email'      => $user->email,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
                 'phone_number' => $showPhone ? $user->phone_number : null,
             ],
             'registration_status' => $entry->registration->registration_status,
             'attendance' => $attendance ? [
-                'status'          => $attendance->status,
+                'status' => $attendance->status,
                 'check_in_method' => $attendance->check_in_method,
-                'checked_in_at'   => $attendance->checked_in_at,
+                'checked_in_at' => $attendance->checked_in_at,
             ] : [
-                'status'          => 'not_checked_in',
+                'status' => 'not_checked_in',
                 'check_in_method' => null,
-                'checked_in_at'   => null,
+                'checked_in_at' => null,
             ],
         ];
     }

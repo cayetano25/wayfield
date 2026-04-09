@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ApiKey extends Model
 {
     // Valid scope constants
-    public const SCOPE_WORKSHOPS_READ    = 'workshops:read';
-    public const SCOPE_SESSIONS_READ     = 'sessions:read';
-    public const SCOPE_LEADERS_READ      = 'leaders:read';
+    public const SCOPE_WORKSHOPS_READ = 'workshops:read';
+
+    public const SCOPE_SESSIONS_READ = 'sessions:read';
+
+    public const SCOPE_LEADERS_READ = 'leaders:read';
+
     public const SCOPE_PARTICIPANTS_READ = 'participants:read';
 
     public const ALL_SCOPES = [
@@ -33,10 +36,10 @@ class ApiKey extends Model
     ];
 
     protected $casts = [
-        'scopes'       => 'array',
-        'is_active'    => 'boolean',
+        'scopes' => 'array',
+        'is_active' => 'boolean',
         'last_used_at' => 'datetime',
-        'expires_at'   => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     protected $hidden = [

@@ -20,11 +20,11 @@ class NotificationPreference extends Model
     ];
 
     protected $casts = [
-        'email_enabled'            => 'boolean',
-        'push_enabled'             => 'boolean',
+        'email_enabled' => 'boolean',
+        'push_enabled' => 'boolean',
         'workshop_updates_enabled' => 'boolean',
-        'reminder_enabled'         => 'boolean',
-        'marketing_enabled'        => 'boolean',
+        'reminder_enabled' => 'boolean',
+        'marketing_enabled' => 'boolean',
     ];
 
     public function user(): BelongsTo

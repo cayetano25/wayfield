@@ -30,8 +30,8 @@ class Workshop extends Model
     ];
 
     protected $casts = [
-        'start_date'          => 'date',
-        'end_date'            => 'date',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'public_page_enabled' => 'boolean',
     ];
 
@@ -75,14 +75,14 @@ class Workshop extends Model
         return $this->hasMany(WorkshopLeader::class);
     }
 
-    public function leaders(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function leaders(): BelongsToMany
     {
         return $this->belongsToMany(Leader::class, 'workshop_leaders')
             ->withPivot(['is_confirmed', 'invitation_id'])
             ->withTimestamps();
     }
 
-    public function confirmedLeaders(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function confirmedLeaders(): BelongsToMany
     {
         return $this->belongsToMany(Leader::class, 'workshop_leaders')
             ->wherePivot('is_confirmed', true)

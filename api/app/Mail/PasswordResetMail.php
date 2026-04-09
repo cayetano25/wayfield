@@ -39,7 +39,7 @@ class PasswordResetMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.password-reset',
             with: [
-                'user'     => $this->user,
+                'user' => $this->user,
                 'resetUrl' => $this->resetUrl,
             ],
         );

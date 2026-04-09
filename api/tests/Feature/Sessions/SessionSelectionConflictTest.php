@@ -6,15 +6,17 @@ use App\Models\Session;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function setupConflictTest(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+
     return [$org, $workshop, $user, $reg];
 }
 
@@ -24,21 +26,21 @@ test('overlapping session selection is rejected', function () {
     // Session 1: 09:00–11:00
     $session1 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     // Session 2: 10:00–12:00 (overlaps with session 1)
     $session2 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 10:00:00',
-        'end_at'        => '2026-09-01 12:00:00',
+        'start_at' => '2026-09-01 10:00:00',
+        'end_at' => '2026-09-01 12:00:00',
     ]);
 
     // Pre-select session 1.
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session1->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session1->id,
         'selection_status' => 'selected',
     ]);
 
@@ -57,15 +59,15 @@ test('non-overlapping sessions can both be selected', function () {
     // Session 1: 09:00–11:00
     $session1 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     // Session 2: 13:00–15:00 (no overlap)
     $session2 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 13:00:00',
-        'end_at'        => '2026-09-01 15:00:00',
+        'start_at' => '2026-09-01 13:00:00',
+        'end_at' => '2026-09-01 15:00:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -83,15 +85,15 @@ test('back-to-back sessions (touching boundary) can both be selected', function 
     // Session 1: 09:00–11:00
     $session1 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     // Session 2: 11:00–13:00 (starts exactly when session 1 ends — not overlapping)
     $session2 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 11:00:00',
-        'end_at'        => '2026-09-01 13:00:00',
+        'start_at' => '2026-09-01 11:00:00',
+        'end_at' => '2026-09-01 13:00:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -111,8 +113,8 @@ test('participant can deselect a session', function () {
     ]);
 
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -121,8 +123,8 @@ test('participant can deselect a session', function () {
         ->assertStatus(204);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 });
@@ -133,15 +135,15 @@ test('after deselecting a session, the slot can be selected again', function () 
     // Session 1: 09:00–11:00
     $session1 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     // Session 2: 10:00–12:00 (overlaps)
     $session2 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 10:00:00',
-        'end_at'        => '2026-09-01 12:00:00',
+        'start_at' => '2026-09-01 10:00:00',
+        'end_at' => '2026-09-01 12:00:00',
     ]);
 
     // Select session 1.
@@ -166,9 +168,9 @@ test('after deselecting a session, the slot can be selected again', function () 
 });
 
 test('unregistered participant cannot select sessions', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
     $outsider = User::factory()->create(); // not registered
 
     $this->actingAs($outsider, 'sanctum')

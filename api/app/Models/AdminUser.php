@@ -42,9 +42,9 @@ class AdminUser extends Authenticatable
     ];
 
     protected $casts = [
-        'is_active'       => 'boolean',
+        'is_active' => 'boolean',
         'can_impersonate' => 'boolean',
-        'last_login_at'   => 'datetime',
+        'last_login_at' => 'datetime',
     ];
 
     // ─── Role constants ────────────────────────────────────────────────────────

@@ -6,8 +6,9 @@ use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,9 +20,9 @@ function makeOrgWithRole(string $role): array
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];
@@ -35,7 +36,7 @@ test('admin cannot set a manual override — must be owner', function () {
     $this->actingAs($admin, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertStatus(403)
         ->assertJsonFragment(['error' => 'forbidden']);
@@ -47,7 +48,7 @@ test('staff cannot set a manual override', function () {
     $this->actingAs($staff, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertStatus(403);
 });
@@ -60,7 +61,7 @@ test('owner can set a manual override and audit log is created', function () {
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertOk()
         ->assertJsonFragment(['feature_key' => 'reporting'])
@@ -70,9 +71,9 @@ test('owner can set a manual override and audit log is created', function () {
     // Verify feature_flags row exists
     $this->assertDatabaseHas('feature_flags', [
         'organization_id' => $org->id,
-        'feature_key'     => 'reporting',
-        'is_enabled'      => true,
-        'source'          => 'manual_override',
+        'feature_key' => 'reporting',
+        'is_enabled' => true,
+        'source' => 'manual_override',
     ]);
 
     // Verify audit_logs record created with correct metadata
@@ -94,15 +95,15 @@ test('audit log captures previous_value when updating an existing flag', functio
     // Pre-create the flag as disabled
     $existingFlag = FeatureFlag::create([
         'organization_id' => $org->id,
-        'feature_key'     => 'analytics',
-        'is_enabled'      => false,
-        'source'          => 'manual_override',
+        'feature_key' => 'analytics',
+        'is_enabled' => false,
+        'source' => 'manual_override',
     ]);
 
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'analytics',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertOk();
 
@@ -122,7 +123,7 @@ test('audit log records previous_value as null when flag did not previously exis
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'waitlists',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertOk();
 
@@ -147,7 +148,7 @@ test('manual override enabling reporting makes it available on free plan', funct
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertOk();
 
@@ -164,9 +165,9 @@ test('manual override disabling reporting blocks starter plan access', function 
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     // Starter can access reporting normally
@@ -178,7 +179,7 @@ test('manual override disabling reporting blocks starter plan access', function 
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$org->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => false,
+            'is_enabled' => false,
         ])
         ->assertOk();
 
@@ -208,7 +209,7 @@ test('owner cannot set override for another organization', function () {
     $this->actingAs($owner, 'sanctum')
         ->putJson("/api/v1/organizations/{$otherOrg->id}/feature-flags", [
             'feature_key' => 'reporting',
-            'is_enabled'  => true,
+            'is_enabled' => true,
         ])
         ->assertStatus(403);
 });

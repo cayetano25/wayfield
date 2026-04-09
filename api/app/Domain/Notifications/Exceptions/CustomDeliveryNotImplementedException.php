@@ -10,6 +10,4 @@ use RuntimeException;
  * 'custom' delivery scope is reserved for future implementation.
  * See README.md Open Issues — no data model exists for this yet.
  */
-class CustomDeliveryNotImplementedException extends RuntimeException
-{
-}
+class CustomDeliveryNotImplementedException extends RuntimeException {}

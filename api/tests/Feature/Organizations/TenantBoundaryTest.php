@@ -3,8 +3,9 @@
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('user cannot view organization they do not belong to', function () {
     $user = User::factory()->create();
@@ -32,7 +33,7 @@ test('user cannot add members to organization they do not belong to', function (
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$otherOrg->id}/users", [
             'user_id' => $targetUser->id,
-            'role'    => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(403);
 });
@@ -44,9 +45,9 @@ test('index only returns organizations the authenticated user belongs to', funct
 
     OrganizationUser::factory()->create([
         'organization_id' => $myOrg->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -65,17 +66,17 @@ test('members endpoint only returns members of the requested organization', func
 
     OrganizationUser::factory()->create([
         'organization_id' => $myOrg->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $otherMember = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $otherOrg->id,
-        'user_id'         => $otherMember->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $otherMember->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')

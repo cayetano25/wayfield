@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
 use App\Domain\Workshops\Actions\ArchiveWorkshopAction;
 use App\Domain\Workshops\Actions\CreateWorkshopAction;
 use App\Domain\Workshops\Actions\PublishWorkshopAction;
 use App\Domain\Workshops\Actions\UpdateWorkshopAction;
-use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
 use App\Domain\Workshops\Exceptions\WorkshopPublishException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreateWorkshopRequest;
@@ -17,7 +17,6 @@ use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 class WorkshopController extends Controller
 {
@@ -60,11 +59,11 @@ class WorkshopController extends Controller
             $workshop = $action->execute($organization, $request->validated());
         } catch (PlanLimitExceededException $e) {
             return response()->json([
-                'error'         => 'plan_limit_exceeded',
-                'message'       => $e->getMessage(),
-                'limit_key'     => $e->limitKey,
-                'current'       => $e->current,
-                'max'           => $e->max,
+                'error' => 'plan_limit_exceeded',
+                'message' => $e->getMessage(),
+                'limit_key' => $e->limitKey,
+                'current' => $e->current,
+                'max' => $e->max,
                 'required_plan' => $e->requiredPlan,
             ], 403);
         }
@@ -88,7 +87,7 @@ class WorkshopController extends Controller
         UpdateWorkshopRequest $request,
         Workshop $workshop,
         UpdateWorkshopAction $action,
-    ): OrganizerWorkshopResource|\Illuminate\Http\JsonResponse {
+    ): OrganizerWorkshopResource|JsonResponse {
         $this->authorize('update', $workshop);
 
         try {
@@ -111,7 +110,7 @@ class WorkshopController extends Controller
         } catch (WorkshopPublishException $e) {
             return response()->json([
                 'message' => 'Workshop cannot be published.',
-                'errors'  => $e->getErrors(),
+                'errors' => $e->getErrors(),
             ], 422);
         }
 

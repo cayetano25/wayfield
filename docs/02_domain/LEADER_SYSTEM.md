@@ -1,165 +1,195 @@
 # Leader System Specification
+## docs/02_domain/LEADER_SYSTEM.md
 
-## Source Authority
-Constitutional authority: `MASTER_PROMPT.md`
-Canonical schema: `DATA_SCHEMA_FULL.md` Tables 14–19
+**Source authority:** Constitutional rules in `MASTER_PROMPT.md` govern.
+Canonical schema: `DATA_SCHEMA_FULL.md` Tables 14–19.
 This file is the domain spec source of truth for the leader lifecycle.
 
 ---
 
 ## Leader Entity
 
-Table: leaders (see DATA_SCHEMA_FULL.md Table 14)
+**Table: `leaders`** — see `DATA_SCHEMA_FULL.md` Table 14.
 
-Fields:
-- id
-- user_id (nullable FK — null until invitation is accepted and account is linked)
-- first_name (required)
-- last_name (required)
-- display_name (optional)
-- bio (optional)
-- profile_image_url (optional)
-- website_url (optional)
-- email (optional)
-- phone_number (optional — private)
-- address_line_1 (optional — private)
-- address_line_2 (optional — private)
-- city (optional)
-- state_or_region (optional)
-- postal_code (optional — private)
-- country (optional — private)
-- created_at
-- updated_at
+| Field | Type | Notes |
+|---|---|---|
+| `id` | BIGINT PK | |
+| `user_id` | BIGINT FK nullable | null until invitation is accepted and account is linked |
+| `first_name` | VARCHAR | required |
+| `last_name` | VARCHAR | required |
+| `display_name` | VARCHAR nullable | optional; does not replace first/last name |
+| `bio` | TEXT nullable | |
+| `profile_image_url` | VARCHAR nullable | |
+| `website_url` | VARCHAR nullable | |
+| `email` | VARCHAR nullable | |
+| `phone_number` | VARCHAR nullable | private |
+| `address_line_1` | VARCHAR nullable | private |
+| `address_line_2` | VARCHAR nullable | private |
+| `city` | VARCHAR nullable | public-safe |
+| `state_or_region` | VARCHAR nullable | public-safe |
+| `postal_code` | VARCHAR nullable | private |
+| `country` | VARCHAR nullable | private |
+| `created_at`, `updated_at` | DATETIME | |
 
 ---
 
 ## Core Rules
 
-- Leaders are global entities, not scoped to a single organization
-- Leaders may belong to multiple organizations (via organization_leaders table)
-- Leader profile is owned and maintained by the leader, not the inviting organizer
-- A leader record may exist before the leader has created a user account
-- Organizers may create placeholder leader records if needed
+- Leaders are **global entities** — not scoped to a single organisation.
+- A leader profile may be associated with multiple organisations via the
+  `organization_leaders` junction table.
+- The leader profile is **owned and maintained by the leader**, not by the
+  inviting organisation. Organisers may not be required to fill in personal details.
+- A `leaders` record may exist before it is linked to a `users` account.
+  `leaders.user_id` is nullable until the leader accepts their invitation.
+- A leader with a linked user account may also be a participant in other workshops
+  or a member of an organisation simultaneously. See
+  `docs/02_domain/UNIFIED_USER_ACCOUNT.md`.
 
 ---
 
 ## Leader Invitations
 
-Table: leader_invitations (see DATA_SCHEMA_FULL.md Table 16)
+**Table: `leader_invitations`** — see `DATA_SCHEMA_FULL.md` Table 16.
 
-Fields:
-- id
-- organization_id (FK)
-- workshop_id (nullable FK) — optional; invitation may be to an organization generally
-- leader_id (nullable FK) — null until accepted and leader record is created/linked
-- invited_email (required)
-- invited_first_name (optional — organizer placeholder only)
-- invited_last_name (optional — organizer placeholder only)
-- status (enum: pending, accepted, declined, expired, removed)
-- invitation_token_hash (hashed; raw token sent in email link only)
-- expires_at
-- responded_at (nullable)
-- created_by_user_id (FK)
-- created_at
-- updated_at
+| Field | Type | Notes |
+|---|---|---|
+| `id` | BIGINT PK | |
+| `organization_id` | BIGINT FK | required |
+| `workshop_id` | BIGINT FK nullable | optional; invitation may be to org generally |
+| `leader_id` | BIGINT FK nullable | null until accepted and leader record is created/linked |
+| `invited_email` | VARCHAR | required |
+| `invited_first_name` | VARCHAR nullable | organiser placeholder only |
+| `invited_last_name` | VARCHAR nullable | organiser placeholder only |
+| `status` | ENUM | `pending`, `accepted`, `declined`, `expired`, `removed` |
+| `invitation_token_hash` | VARCHAR | hashed; raw token sent in email link only — see DEC-013 |
+| `expires_at` | DATETIME | |
+| `responded_at` | DATETIME nullable | |
+| `created_by_user_id` | BIGINT FK | |
+| `created_at`, `updated_at` | DATETIME | |
 
-Note: `session_id` is NOT a field on leader_invitations. Invitations are scoped to
-an organization and optionally a workshop. Session assignment is handled after
-acceptance via the `session_leaders` junction table — see Session Assignment below.
+**DEC-014 — No `session_id` on `leader_invitations`:** Invitations are scoped to an
+organisation and optionally a workshop. Session assignment is a separate action taken
+after acceptance (see Session Assignment below). Conflating invitation with session
+assignment creates workflow rigidity. The `session_id` field does not exist and must
+not be added to this table.
 
 ---
 
 ## Invitation Flow
 
-1. Organizer sends invitation (specifying organization_id and optionally workshop_id)
-2. System creates leader_invitations row with status = 'pending'
-3. System sends invitation email with tokenized acceptance link
-4. Leader clicks link → token validated against invitation_token_hash
-5. Leader accepts or declines:
-   - Accept: leader completes/confirms profile, user account is created or linked,
-     leader_invitations.status = 'accepted', organization_leaders row created
-   - Decline: leader_invitations.status = 'declined'
-6. Organizer may then assign leader to specific sessions via session_leaders
+1. Organisation `owner` or `admin` sends an invitation (email address, optional
+   `workshop_id`).
+2. System creates a `leader_invitations` row with `status = 'pending'` and a
+   hashed invitation token.
+3. System dispatches `LeaderInvitationMail` (queued) with a tokenised acceptance link.
+   The raw token is never stored.
+4. Leader clicks the link. Token is hashed and compared to `invitation_token_hash`.
+5. Leader **accepts** or **declines**:
+   - **Accept**: `AcceptLeaderInvitationAction` runs:
+     - Creates or links a `leaders` record to the leader's `users` account
+       (a new account is created if the invited email has no existing account)
+     - Creates an `organization_leaders` row
+     - If `workshop_id` was set, creates a `workshop_leaders` row
+     - Sets `leader_invitations.status = 'accepted'` and `responded_at`
+     - Writes `audit_logs` entry
+   - **Decline**: Sets `status = 'declined'` and `responded_at`. Writes `audit_logs`.
+6. After acceptance, the organiser assigns the leader to specific sessions (see below).
 
 ---
 
 ## Session Assignment (Post-Acceptance)
 
-After a leader has accepted an invitation, organizers assign them to sessions:
+Session assignment is a **separate, explicit action** taken after invitation
+acceptance. It is not part of the invitation flow.
 
-Table: session_leaders (DATA_SCHEMA_FULL.md Table 19)
-- session_id (FK)
-- leader_id (FK)
-- role_label (optional — e.g., "Lead Instructor", "Assistant")
+**Table: `session_leaders`** — `DATA_SCHEMA_FULL.md` Table 19.
 
-Rules:
-- A session supports multiple leaders
-- A leader may be assigned to multiple sessions
-- Roster access, phone number visibility, and messaging scope are all derived
-  from session-level assignment, not workshop-level association
-- Leaders must NOT access sessions they are not assigned to
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | BIGINT FK | |
+| `leader_id` | BIGINT FK | |
+| `role_label` | VARCHAR nullable | e.g. "Lead Instructor", "Assistant" |
+| `assignment_status` | ENUM | `pending`, `accepted`, `declined` |
+| `created_at`, `updated_at` | DATETIME | |
 
-Table: workshop_leaders (DATA_SCHEMA_FULL.md Table 17)
-- workshop_id (FK)
-- leader_id (FK)
-- is_confirmed (boolean)
+**Rules:**
+- A session may have multiple leaders.
+- A leader may be assigned to multiple sessions.
+- `assignment_status` must be `accepted` for the leader to have operational
+  access (roster viewing, check-in, attendance override, messaging). A leader
+  with `assignment_status = 'pending'` or `'declined'` is not yet active for
+  that session.
+- Roster access, participant phone number visibility, and messaging scope are all
+  derived from `session_leaders` assignment — not from `workshop_leaders` or
+  `organization_leaders`.
+- Leaders must not access sessions they are not assigned to.
 
-Workshop-level association controls public listing on the workshop page only.
-It does NOT grant operational access (roster, attendance, messaging).
+**Workshop-level association (`workshop_leaders`):**
+Controls public listing on the workshop page only. A `workshop_leaders` row with
+`is_confirmed = true` makes the leader appear publicly as a confirmed presenter.
+It does **not** grant operational access (roster, attendance, messaging).
 
 ---
 
 ## Profile Ownership Rules
 
-- Organizers may create a placeholder record (first_name, last_name, email)
-- Organizers must NOT be required or forced to fill in leader bio or personal details
-- After accepting an invitation, the leader owns and controls:
-  - first_name, last_name
-  - bio
-  - website_url
-  - phone_number
-  - city, state_or_region
-  - mailing/street address (stored privately)
-  - profile_image_url
-- Profile data is reusable across organizations and workshops
+- Organisers may create a placeholder `leaders` record with `first_name`,
+  `last_name`, and `email` before the leader has registered.
+- After accepting their invitation, the leader owns and controls their profile:
+  `first_name`, `last_name`, `bio`, `website_url`, `phone_number`, `city`,
+  `state_or_region`, address fields, `profile_image_url`.
+- Organisation `owner`/`admin` staff must not be required to fill in a leader's
+  personal details.
+- Leader profile data is reusable across organisations and workshops.
+  The same `leaders` record may be linked to multiple organisations.
 
 ---
 
 ## Public Visibility Rules
 
-Only show on public/participant-facing surfaces:
-- first_name, last_name
-- display_name (if present)
-- profile_image_url
-- bio (snippet or full)
-- website_url
-- city
-- state_or_region
+Only these fields may appear on public-facing and participant-facing surfaces:
 
-Never expose publicly:
-- email
-- phone_number
-- address_line_1, address_line_2, postal_code, country
+- `first_name`, `last_name`
+- `display_name` (if present)
+- `profile_image_url`
+- `bio` (snippet or full — both acceptable)
+- `website_url`
+- `city`, `state_or_region`
 
-Only accepted (invitation status = 'accepted') and confirmed (is_confirmed = true)
-leaders should appear publicly on workshop pages.
+**Never expose publicly:**
+- `email`
+- `phone_number`
+- `address_line_1`, `address_line_2`, `postal_code`, `country`
+
+Only leaders with `leader_invitations.status = 'accepted'` and
+`workshop_leaders.is_confirmed = true` appear publicly on workshop pages.
 
 ---
 
 ## Validation Rules
 
-- A leader must accept their invitation before:
-  - appearing publicly as a confirmed leader on any workshop page
-  - being assigned to sessions in a confirmed capacity
-  - accessing any roster or participant data
+A leader must have accepted their invitation before:
+- Appearing publicly as a confirmed leader on any workshop page
+- Being assigned to sessions in a confirmed operational capacity
+- Accessing any roster or participant data
+
+---
+
+## Invitation Token Security
+
+Invitation tokens are stored hashed in `invitation_token_hash`. The raw token is
+generated at invitation creation time, placed in the email link, and never stored.
+Token verification hashes the incoming token and compares it to the stored hash.
+See DEC-013.
 
 ---
 
 ## Audit Requirements
 
-Log to audit_logs:
-- invitation sent
-- invitation accepted (including which leader and organization)
+Log to `audit_logs`:
+- invitation sent (includes `organization_id`, `invited_email`, `workshop_id` if set)
+- invitation accepted (includes which leader and organisation)
 - invitation declined
 - leader profile completed (first meaningful profile update post-acceptance)
 - leader assigned to session

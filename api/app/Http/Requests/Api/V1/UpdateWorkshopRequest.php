@@ -12,14 +12,14 @@ class UpdateWorkshopRequest extends FormRequest
         $workshopId = $this->route('workshop')?->id;
 
         return [
-            'title'               => ['sometimes', 'required', 'string', 'max:255'],
-            'description'         => ['sometimes', 'required', 'string'],
-            'timezone'            => ['sometimes', 'required', 'string', 'timezone'],
-            'start_date'          => ['sometimes', 'required', 'date'],
-            'end_date'            => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'required', 'string'],
+            'timezone' => ['sometimes', 'required', 'string', 'timezone'],
+            'start_date' => ['sometimes', 'required', 'date'],
+            'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
             'default_location_id' => ['sometimes', 'nullable', 'integer', 'exists:locations,id'],
             'public_page_enabled' => ['sometimes', 'boolean'],
-            'public_slug'         => [
+            'public_slug' => [
                 'sometimes',
                 'nullable',
                 'string',

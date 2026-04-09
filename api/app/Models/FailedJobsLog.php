@@ -22,8 +22,8 @@ class FailedJobsLog extends Model
     ];
 
     protected $casts = [
-        'failed_at'   => 'datetime',
-        'retried_at'  => 'datetime',
+        'failed_at' => 'datetime',
+        'retried_at' => 'datetime',
         'resolved_at' => 'datetime',
     ];
 

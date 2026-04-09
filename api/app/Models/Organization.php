@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -23,7 +24,13 @@ class Organization extends Model
         'primary_contact_phone',
         'status',
         'logo_url',
+        'address_id',
     ];
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
+    }
 
     public function organizationUsers(): HasMany
     {

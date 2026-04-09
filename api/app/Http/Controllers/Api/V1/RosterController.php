@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 class RosterController extends Controller
 {
     public function __construct(
-        private readonly BuildSessionRosterService             $rosterService,
+        private readonly BuildSessionRosterService $rosterService,
         private readonly BuildWorkshopAttendanceSummaryService $summaryService,
     ) {}
 

@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Models\LeaderInvitation;
 use App\Models\Organization;
 use App\Models\User;
 

@@ -33,7 +33,7 @@ class AuthenticateApiKey
             return response()->json(['error' => 'invalid_api_key'], 401);
         }
 
-        $rawKey  = substr($authHeader, strlen('ApiKey '));
+        $rawKey = substr($authHeader, strlen('ApiKey '));
         $keyHash = hash('sha256', $rawKey);
 
         $apiKey = ApiKey::with('organization')
@@ -54,11 +54,12 @@ class AuthenticateApiKey
 
         // Rate limiting — configurable per environment.
         // Uses Redis when available; falls back to cache driver in local dev.
-        $limit     = (int) config('wayfield.api_key_rate_limit', 1000);
-        $rateLimiterKey = 'api_key:' . $apiKey->id;
+        $limit = (int) config('wayfield.api_key_rate_limit', 1000);
+        $rateLimiterKey = 'api_key:'.$apiKey->id;
 
         if (RateLimiter::tooManyAttempts($rateLimiterKey, $limit)) {
             $retryAfter = RateLimiter::availableIn($rateLimiterKey);
+
             return response()->json(['error' => 'rate_limit_exceeded'], 429)
                 ->header('Retry-After', $retryAfter);
         }
@@ -72,7 +73,7 @@ class AuthenticateApiKey
         // Attach resolved context to request for controllers
         $request->merge([]);
         $request->apiKeyOrganization = $apiKey->organization;
-        $request->apiKeyScopes       = $apiKey->scopes ?? [];
+        $request->apiKeyScopes = $apiKey->scopes ?? [];
 
         return $next($request);
     }

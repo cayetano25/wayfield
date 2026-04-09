@@ -53,12 +53,12 @@ class SessionSelectionController extends Controller
                 : max(0, $session->capacity - $confirmedCount);
 
             return [
-                'session'         => new ParticipantSessionResource($session),
-                'is_selected'     => in_array($session->id, $selectedIds),
-                'capacity'        => $session->capacity,
+                'session' => new ParticipantSessionResource($session),
+                'is_selected' => in_array($session->id, $selectedIds),
+                'capacity' => $session->capacity,
                 'confirmed_count' => $confirmedCount,
                 'available_slots' => $available,
-                'is_full'         => ! $session->hasUnlimitedCapacity() && $available === 0,
+                'is_full' => ! $session->hasUnlimitedCapacity() && $available === 0,
             ];
         });
 

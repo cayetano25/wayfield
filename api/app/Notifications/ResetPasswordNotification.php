@@ -11,9 +11,7 @@ class ResetPasswordNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly string $token)
-    {
-    }
+    public function __construct(private readonly string $token) {}
 
     public function via(object $notifiable): array
     {
@@ -30,7 +28,7 @@ class ResetPasswordNotification extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Reset Your Password')
-            ->greeting('Hello ' . $notifiable->first_name . ',')
+            ->greeting('Hello '.$notifiable->first_name.',')
             ->line('You are receiving this email because we received a password reset request for your account.')
             ->action('Reset Password', $resetUrl)
             ->line('This password reset link will expire in 60 minutes.')

@@ -10,12 +10,12 @@ class NotificationPreferenceFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id'                  => User::factory(),
-            'email_enabled'            => true,
-            'push_enabled'             => true,
+            'user_id' => User::factory(),
+            'email_enabled' => true,
+            'push_enabled' => true,
             'workshop_updates_enabled' => true,
-            'reminder_enabled'         => true,
-            'marketing_enabled'        => false,
+            'reminder_enabled' => true,
+            'marketing_enabled' => false,
         ];
     }
 

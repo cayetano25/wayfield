@@ -15,9 +15,9 @@ class SubscriptionController extends Controller
     ) {}
 
     private const PLAN_NAMES = [
-        'free'       => 'Free',
-        'starter'    => 'Starter',
-        'pro'        => 'Pro',
+        'free' => 'Free',
+        'starter' => 'Starter',
+        'pro' => 'Pro',
         'enterprise' => 'Enterprise',
     ];
 
@@ -39,21 +39,21 @@ class SubscriptionController extends Controller
         $planCode = $resolved['plan'];
 
         return response()->json([
-            'plan_code'            => $planCode,
-            'plan_name'            => self::PLAN_NAMES[$planCode] ?? ucfirst($planCode),
-            'status'               => $resolved['subscription_status'],
+            'plan_code' => $planCode,
+            'plan_name' => self::PLAN_NAMES[$planCode] ?? ucfirst($planCode),
+            'status' => $resolved['subscription_status'],
             'current_period_start' => $subscription?->starts_at,
-            'current_period_end'   => $subscription?->ends_at,
-            'renewal_date'         => $subscription?->ends_at,
+            'current_period_end' => $subscription?->ends_at,
+            'renewal_date' => $subscription?->ends_at,
             'limits' => [
-                'max_workshops'                => $resolved['limits']['max_active_workshops'],
+                'max_workshops' => $resolved['limits']['max_active_workshops'],
                 'max_participants_per_workshop' => $resolved['limits']['max_participants_per_workshop'],
-                'max_managers'                 => $resolved['limits']['max_managers'],
+                'max_managers' => $resolved['limits']['max_managers'],
             ],
             'usage' => [
-                'active_workshops'   => $resolved['usage']['active_workshop_count'],
+                'active_workshops' => $resolved['usage']['active_workshop_count'],
                 'total_participants' => 0,
-                'managers'           => $resolved['usage']['active_manager_count'],
+                'managers' => $resolved['usage']['active_manager_count'],
             ],
             'invoices' => [],
         ]);

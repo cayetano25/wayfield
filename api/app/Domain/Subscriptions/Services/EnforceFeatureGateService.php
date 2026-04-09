@@ -55,7 +55,7 @@ class EnforceFeatureGateService
     public function assertCanCreateWorkshop(Organization $organization): void
     {
         $entitlements = $this->entitlementsService->resolve($organization);
-        $max          = $entitlements['limits']['max_active_workshops'];
+        $max = $entitlements['limits']['max_active_workshops'];
 
         if ($max === null) {
             return; // unlimited
@@ -81,7 +81,7 @@ class EnforceFeatureGateService
     public function assertCanAddParticipant(Organization $organization, Workshop $workshop): void
     {
         $entitlements = $this->entitlementsService->resolve($organization);
-        $max          = $entitlements['limits']['max_participants_per_workshop'];
+        $max = $entitlements['limits']['max_participants_per_workshop'];
 
         if ($max === null) {
             return; // unlimited
@@ -109,7 +109,7 @@ class EnforceFeatureGateService
     public function assertCanAddManager(Organization $organization): void
     {
         $entitlements = $this->entitlementsService->resolve($organization);
-        $max          = $entitlements['limits']['max_managers'];
+        $max = $entitlements['limits']['max_managers'];
 
         if ($max === null) {
             return; // unlimited
@@ -130,9 +130,9 @@ class EnforceFeatureGateService
     private function nextPlanUp(string $currentPlan): string
     {
         return match ($currentPlan) {
-            'free'    => 'starter',
+            'free' => 'starter',
             'starter' => 'pro',
-            default   => 'enterprise',
+            default => 'enterprise',
         };
     }
 }

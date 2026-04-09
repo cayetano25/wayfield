@@ -19,15 +19,15 @@ class WorkshopAnalyticsController extends Controller
     {
         $this->authorize('view', $workshop);
 
-        $org     = $workshop->organization;
+        $org = $workshop->organization;
         $service = new DashboardMetricsService($org, $workshop->id);
 
         return response()->json([
-            'core'      => $service->getCoreMetrics(),
+            'core' => $service->getCoreMetrics(),
             'analytics' => [
                 'attendance_metrics' => $service->getAttendanceMetrics(),
-                'capacity_metrics'   => $service->getCapacityMetrics(),
-                'session_breakdown'  => $service->getSessionBreakdown(),
+                'capacity_metrics' => $service->getCapacityMetrics(),
+                'session_breakdown' => $service->getSessionBreakdown(),
                 'registration_trend' => $service->getRegistrationTrend(),
             ],
             'stubs' => $service->getStubMetrics(),

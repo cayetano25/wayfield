@@ -20,7 +20,7 @@ class UserSession extends Model
     {
         return [
             'last_seen_at' => 'datetime',
-            'expires_at'   => 'datetime',
+            'expires_at' => 'datetime',
         ];
     }
 

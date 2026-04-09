@@ -5,6 +5,7 @@ namespace App\Domain\Workshops\Actions;
 use App\Domain\Webhooks\WebhookDispatcher;
 use App\Domain\Workshops\Exceptions\WorkshopPublishException;
 use App\Models\Workshop;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -37,19 +38,19 @@ class PublishWorkshopAction
         // Dispatch webhook event — failure must NOT fail the primary action.
         try {
             $this->webhookDispatcher->dispatch('workshop.published', $workshop->organization_id, [
-                'workshop_id'        => $fresh->id,
-                'title'              => $fresh->title,
-                'workshop_type'      => $fresh->workshop_type,
-                'start_date'         => $fresh->start_date?->toDateString(),
-                'end_date'           => $fresh->end_date?->toDateString(),
-                'timezone'           => $fresh->timezone,
+                'workshop_id' => $fresh->id,
+                'title' => $fresh->title,
+                'workshop_type' => $fresh->workshop_type,
+                'start_date' => $fresh->start_date?->toDateString(),
+                'end_date' => $fresh->end_date?->toDateString(),
+                'timezone' => $fresh->timezone,
                 'public_page_enabled' => $fresh->public_page_enabled,
-                'join_code'          => $fresh->join_code,
+                'join_code' => $fresh->join_code,
             ]);
         } catch (\Throwable $e) {
             Log::warning('PublishWorkshopAction: webhook dispatch failed', [
                 'workshop_id' => $fresh->id,
-                'error'       => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -81,7 +82,7 @@ class PublishWorkshopAction
         // Runs automatically once Phase 3 migrations are applied.
         if (Schema::hasTable('sessions')) {
             if ($workshop->isSessionBased()) {
-                $sessionCount = \Illuminate\Support\Facades\DB::table('sessions')
+                $sessionCount = DB::table('sessions')
                     ->where('workshop_id', $workshop->id)
                     ->count();
 
@@ -91,7 +92,7 @@ class PublishWorkshopAction
             }
 
             // Applies to all workshop types — virtual/hybrid sessions always require a meeting URL.
-            $virtualWithoutUrl = \Illuminate\Support\Facades\DB::table('sessions')
+            $virtualWithoutUrl = DB::table('sessions')
                 ->where('workshop_id', $workshop->id)
                 ->whereIn('delivery_type', ['virtual', 'hybrid'])
                 ->whereNull('meeting_url')

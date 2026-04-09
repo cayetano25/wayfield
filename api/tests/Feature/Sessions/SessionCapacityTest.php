@@ -1,20 +1,20 @@
 <?php
 
 use App\Models\Organization;
-use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function setupCapacityTest(int $capacity = 2): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()
+    $session = Session::factory()
         ->forWorkshop($workshop->id)
         ->withCapacity($capacity)
         ->published()
@@ -27,7 +27,7 @@ test('participant can select a session with available capacity', function () {
     [$org, $workshop, $session] = setupCapacityTest(2);
 
     $user = User::factory()->create();
-    $reg  = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/selections", [
@@ -36,8 +36,8 @@ test('participant can select a session with available capacity', function () {
         ->assertStatus(201);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 });
@@ -47,10 +47,10 @@ test('selection is rejected when session is at full capacity', function () {
 
     // Fill the one available slot.
     $otherUser = User::factory()->create();
-    $otherReg  = Registration::factory()->forWorkshop($workshop->id)->forUser($otherUser->id)->create();
+    $otherReg = Registration::factory()->forWorkshop($workshop->id)->forUser($otherUser->id)->create();
     SessionSelection::factory()->create([
-        'registration_id'  => $otherReg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $otherReg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -67,14 +67,14 @@ test('selection is rejected when session is at full capacity', function () {
 });
 
 test('null capacity behaves as unlimited — never treats null as zero', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
 
     $unlimitedSession = Session::factory()
         ->forWorkshop($workshop->id)
         ->published()
         ->create([
-            'capacity'      => null,
+            'capacity' => null,
             'delivery_type' => 'in_person',
         ]);
 
@@ -83,8 +83,8 @@ test('null capacity behaves as unlimited — never treats null as zero', functio
         $u = User::factory()->create();
         $r = Registration::factory()->forWorkshop($workshop->id)->forUser($u->id)->create();
         SessionSelection::factory()->create([
-            'registration_id'  => $r->id,
-            'session_id'       => $unlimitedSession->id,
+            'registration_id' => $r->id,
+            'session_id' => $unlimitedSession->id,
             'selection_status' => 'selected',
         ]);
     }

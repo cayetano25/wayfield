@@ -55,13 +55,13 @@ class GenerateSyncVersionService
     public function generateAndPersist(Workshop $workshop): OfflineSyncSnapshot
     {
         $hash = $this->generate($workshop);
-        $now  = now();
+        $now = now();
 
         return OfflineSyncSnapshot::create([
-            'workshop_id'  => $workshop->id,
+            'workshop_id' => $workshop->id,
             'version_hash' => $hash,
             'generated_at' => $now,
-            'created_at'   => $now,
+            'created_at' => $now,
         ]);
     }
 

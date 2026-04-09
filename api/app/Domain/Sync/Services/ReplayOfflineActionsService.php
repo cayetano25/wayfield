@@ -29,23 +29,23 @@ use Throwable;
 class ReplayOfflineActionsService
 {
     public function __construct(
-        private readonly SelfCheckInAction   $selfCheckIn,
+        private readonly SelfCheckInAction $selfCheckIn,
         private readonly LeaderCheckInAction $leaderCheckIn,
-        private readonly MarkNoShowAction    $markNoShow,
+        private readonly MarkNoShowAction $markNoShow,
     ) {}
 
     /**
      * @param  array<array{client_action_uuid: string, action_type: string, payload: array}>  $actions
-     * @return array<string, array{status: string, message: string}>  Keyed by client_action_uuid
+     * @return array<string, array{status: string, message: string}> Keyed by client_action_uuid
      */
     public function replay(User $user, Workshop $workshop, array $actions): array
     {
         $results = [];
 
         foreach ($actions as $action) {
-            $uuid       = $action['client_action_uuid'] ?? null;
+            $uuid = $action['client_action_uuid'] ?? null;
             $actionType = $action['action_type'] ?? null;
-            $payload    = $action['payload'] ?? [];
+            $payload = $action['payload'] ?? [];
 
             if (! $uuid) {
                 continue;
@@ -58,11 +58,11 @@ class ReplayOfflineActionsService
     }
 
     private function replayOne(
-        User     $user,
+        User $user,
         Workshop $workshop,
-        string   $uuid,
-        ?string  $actionType,
-        array    $payload,
+        string $uuid,
+        ?string $actionType,
+        array $payload,
     ): array {
         // Step 1: check for existing record
         $queued = OfflineActionQueue::where('client_action_uuid', $uuid)->first();
@@ -77,14 +77,14 @@ class ReplayOfflineActionsService
             if (! $queued) {
                 // Use insertOrIgnore in case a race on the same UUID slips through
                 DB::table('offline_action_queue')->insertOrIgnore([
-                    'user_id'            => $user->id,
-                    'workshop_id'        => $workshop->id,
-                    'action_type'        => $actionType,
+                    'user_id' => $user->id,
+                    'workshop_id' => $workshop->id,
+                    'action_type' => $actionType,
                     'client_action_uuid' => $uuid,
-                    'payload_json'       => json_encode($payload),
-                    'processed_at'       => null,
-                    'created_at'         => now(),
-                    'updated_at'         => now(),
+                    'payload_json' => json_encode($payload),
+                    'processed_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
 
                 // Re-fetch to get the lock
@@ -103,7 +103,7 @@ class ReplayOfflineActionsService
             // Step 4: dispatch the action
             try {
                 $this->dispatchAction($user, $actionType, $payload);
-            } catch (AttendanceEligibilityException | InvalidOfflineActionException $e) {
+            } catch (AttendanceEligibilityException|InvalidOfflineActionException $e) {
                 return ['status' => 'rejected', 'message' => $e->getMessage()];
             } catch (AuthorizationException $e) {
                 return ['status' => 'unauthorized', 'message' => $e->getMessage()];
@@ -138,25 +138,27 @@ class ReplayOfflineActionsService
 
     private function dispatchLeaderCheckIn(User $user, array $payload): void
     {
-        $session     = $this->resolveSession($payload);
+        $session = $this->resolveSession($payload);
         $participant = $this->resolveParticipant($payload);
         $this->leaderCheckIn->execute($user, $session, $participant);
     }
 
     private function dispatchAttendanceOverride(User $user, array $payload): void
     {
-        $session     = $this->resolveSession($payload);
+        $session = $this->resolveSession($payload);
         $participant = $this->resolveParticipant($payload);
 
         $overrideTo = $payload['status'] ?? null;
 
         if ($overrideTo === 'no_show') {
             $this->markNoShow->execute($user, $session, $participant);
+
             return;
         }
 
         if ($overrideTo === 'checked_in') {
             $this->leaderCheckIn->execute($user, $session, $participant);
+
             return;
         }
 

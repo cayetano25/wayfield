@@ -16,6 +16,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { AddressForm } from '@/components/ui/AddressForm';
+import { FormattedAddress } from '@/components/ui/FormattedAddress';
+import type { AddressFormData } from '@/lib/types/address';
 
 interface Leader {
   id: number;
@@ -34,7 +37,7 @@ interface Session {
 
 interface WorkshopLogistics {
   hotel_name: string | null;
-  hotel_address: string | null;
+  hotel_address: AddressFormData | null;
   hotel_phone: string | null;
   hotel_notes: string | null;
   parking_details: string | null;
@@ -212,7 +215,10 @@ export default function WorkshopOverviewPage() {
     }
   }
 
-  function setLF(field: keyof WorkshopLogistics, value: string) {
+  function setLF(
+    field: Exclude<keyof WorkshopLogistics, 'hotel_address'>,
+    value: string,
+  ) {
     setLogisticsForm((prev) => ({ ...prev, [field]: value || null }));
   }
 
@@ -452,7 +458,14 @@ export default function WorkshopOverviewPage() {
                     <div>
                       <p className="font-medium text-dark">{workshop.logistics!.hotel_name}</p>
                       {workshop.logistics!.hotel_address && (
-                        <p className="text-xs text-medium-gray">{workshop.logistics!.hotel_address}</p>
+                        <div className="mt-1">
+                          <FormattedAddress
+                            address={workshop.logistics!.hotel_address}
+                            compact={false}
+                            showCountry={true}
+                            className="text-xs text-medium-gray"
+                          />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -606,10 +619,13 @@ export default function WorkshopOverviewPage() {
               onChange={(e) => setLF('hotel_phone', e.target.value)}
             />
           </div>
-          <Input
+          <AddressForm
             label="Hotel Address"
-            value={logisticsForm.hotel_address ?? ''}
-            onChange={(e) => setLF('hotel_address', e.target.value)}
+            value={logisticsForm.hotel_address ?? null}
+            onChange={(addr) =>
+              setLogisticsForm((prev) => ({ ...prev, hotel_address: addr }))
+            }
+            workshopTimezone={workshop?.timezone}
           />
           <Textarea
             label="Hotel Notes"

@@ -25,8 +25,8 @@ class SecurityEvent extends Model
 
     protected $casts = [
         'metadata_json' => 'array',
-        'is_resolved'   => 'boolean',
-        'resolved_at'   => 'datetime',
+        'is_resolved' => 'boolean',
+        'resolved_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

@@ -3,9 +3,10 @@
 use App\Models\AdminUser;
 use App\Models\SystemAnnouncement;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -15,12 +16,12 @@ function makeAnnouncementAdmin(string $role = 'super_admin'): AdminUser
     $seq++;
 
     return AdminUser::create([
-        'first_name'    => 'Announce',
-        'last_name'     => "Admin{$seq}",
-        'email'         => "announce{$seq}@wayfield.internal",
+        'first_name' => 'Announce',
+        'last_name' => "Admin{$seq}",
+        'email' => "announce{$seq}@wayfield.internal",
         'password_hash' => Hash::make('password'),
-        'role'          => $role,
-        'is_active'     => true,
+        'role' => $role,
+        'is_active' => true,
     ]);
 }
 
@@ -29,15 +30,15 @@ function makeAnnouncement(array $overrides = []): SystemAnnouncement
     $admin = makeAnnouncementAdmin();
 
     return SystemAnnouncement::create(array_merge([
-        'title'               => 'Test Announcement',
-        'message'             => 'This is a test message.',
-        'announcement_type'   => 'info',
-        'severity'            => 'low',
-        'target_audience'     => 'all',
-        'is_active'           => true,
-        'is_dismissable'      => true,
-        'starts_at'           => now()->subHour(),
-        'ends_at'             => null,
+        'title' => 'Test Announcement',
+        'message' => 'This is a test message.',
+        'announcement_type' => 'info',
+        'severity' => 'low',
+        'target_audience' => 'all',
+        'is_active' => true,
+        'is_dismissable' => true,
+        'starts_at' => now()->subHour(),
+        'ends_at' => null,
         'created_by_admin_id' => $admin->id,
     ], $overrides));
 }
@@ -49,7 +50,7 @@ test('test_active_announcement_appears_in_tenant_endpoint', function () {
     $announcement = makeAnnouncement([
         'is_active' => true,
         'starts_at' => now()->subHour(),
-        'ends_at'   => null,
+        'ends_at' => null,
     ]);
 
     $response = $this->actingAs($user)
@@ -95,7 +96,7 @@ test('test_expired_announcement_not_returned', function () {
     makeAnnouncement([
         'is_active' => true,
         'starts_at' => now()->subHours(3),
-        'ends_at'   => now()->subHour(),
+        'ends_at' => now()->subHour(),
     ]);
 
     $this->actingAs($user)
@@ -115,11 +116,11 @@ test('test_platform_admin_can_create_announcement', function () {
     $admin = makeAnnouncementAdmin('super_admin');
 
     $payload = [
-        'title'             => 'Scheduled Maintenance',
-        'message'           => 'We will be down for maintenance.',
+        'title' => 'Scheduled Maintenance',
+        'message' => 'We will be down for maintenance.',
         'announcement_type' => 'maintenance',
-        'severity'          => 'high',
-        'starts_at'         => now()->addHour()->toIso8601String(),
+        'severity' => 'high',
+        'starts_at' => now()->addHour()->toIso8601String(),
     ];
 
     $this->actingAs($admin, 'platform_admin')
@@ -127,12 +128,12 @@ test('test_platform_admin_can_create_announcement', function () {
         ->assertStatus(201);
 
     $this->assertDatabaseHas('system_announcements', [
-        'title'               => 'Scheduled Maintenance',
+        'title' => 'Scheduled Maintenance',
         'created_by_admin_id' => $admin->id,
     ]);
 
     $this->assertDatabaseHas('platform_audit_logs', [
-        'action'        => 'system_announcement_created',
+        'action' => 'system_announcement_created',
         'admin_user_id' => $admin->id,
     ]);
 });
@@ -142,10 +143,10 @@ test('test_super_admin_can_create_announcement', function () {
 
     $this->actingAs($admin, 'platform_admin')
         ->postJson('/api/v1/platform/system-announcements', [
-            'title'             => 'Test',
-            'message'           => 'Test message',
+            'title' => 'Test',
+            'message' => 'Test message',
             'announcement_type' => 'info',
-            'starts_at'         => now()->toIso8601String(),
+            'starts_at' => now()->toIso8601String(),
         ])
         ->assertStatus(201);
 });
@@ -155,10 +156,10 @@ test('test_support_role_cannot_create_announcement', function () {
 
     $this->actingAs($admin, 'platform_admin')
         ->postJson('/api/v1/platform/system-announcements', [
-            'title'             => 'Test',
-            'message'           => 'Test message',
+            'title' => 'Test',
+            'message' => 'Test message',
             'announcement_type' => 'info',
-            'starts_at'         => now()->toIso8601String(),
+            'starts_at' => now()->toIso8601String(),
         ])
         ->assertStatus(403);
 });
@@ -169,10 +170,10 @@ test('ops_role_cannot_create_announcement', function () {
 
     $this->actingAs($admin, 'platform_admin')
         ->postJson('/api/v1/platform/system-announcements', [
-            'title'             => 'Test',
-            'message'           => 'Test message',
+            'title' => 'Test',
+            'message' => 'Test message',
             'announcement_type' => 'info',
-            'starts_at'         => now()->toIso8601String(),
+            'starts_at' => now()->toIso8601String(),
         ])
         ->assertStatus(403);
 });
@@ -189,7 +190,7 @@ test('super_admin_can_update_announcement', function () {
         ->assertJsonFragment(['is_active' => false]);
 
     $this->assertDatabaseHas('platform_audit_logs', [
-        'action'        => 'system_announcement_updated',
+        'action' => 'system_announcement_updated',
         'admin_user_id' => $admin->id,
     ]);
 });
@@ -216,7 +217,7 @@ test('super_admin_can_delete_announcement', function () {
     $this->assertDatabaseMissing('system_announcements', ['id' => $announcement->id]);
 
     $this->assertDatabaseHas('platform_audit_logs', [
-        'action'        => 'system_announcement_deleted',
+        'action' => 'system_announcement_deleted',
         'admin_user_id' => $admin->id,
     ]);
 });

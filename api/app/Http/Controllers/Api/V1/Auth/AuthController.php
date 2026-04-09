@@ -27,7 +27,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registration successful. Please verify your email.',
-            'user'    => new UserResource($user),
+            'user' => new UserResource($user),
         ], 201);
     }
 
@@ -47,16 +47,16 @@ class AuthController extends Controller
             ->where('is_active', true)
             ->get()
             ->map(fn ($ou) => [
-                'organization_id'   => $ou->organization_id,
+                'organization_id' => $ou->organization_id,
                 'organization_name' => $ou->organization->name,
                 'organization_slug' => $ou->organization->slug,
-                'role'              => $ou->role,
+                'role' => $ou->role,
             ]);
 
         return response()->json([
-            'token'       => $result['token'],
-            'token_type'  => 'Bearer',
-            'user'        => new UserResource($user),
+            'token' => $result['token'],
+            'token_type' => 'Bearer',
+            'user' => new UserResource($user),
             'memberships' => $memberships,
         ]);
     }
@@ -101,7 +101,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email is already verified.'], 422);
         }
 
-        $user->notify(new VerifyEmailNotification());
+        $user->notify(new VerifyEmailNotification);
 
         return response()->json(['message' => 'Verification email sent.']);
     }

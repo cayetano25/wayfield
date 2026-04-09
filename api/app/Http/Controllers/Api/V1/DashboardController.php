@@ -22,11 +22,11 @@ class DashboardController extends Controller
         $service = new DashboardMetricsService($organization);
 
         return response()->json([
-            'core'      => $service->getCoreMetrics(),
+            'core' => $service->getCoreMetrics(),
             'analytics' => [
                 'attendance_metrics' => $service->getAttendanceMetrics(),
-                'capacity_metrics'   => $service->getCapacityMetrics(),
-                'session_breakdown'  => $service->getSessionBreakdown(),
+                'capacity_metrics' => $service->getCapacityMetrics(),
+                'session_breakdown' => $service->getSessionBreakdown(),
                 'registration_trend' => $service->getRegistrationTrend(),
             ],
             'stubs' => $service->getStubMetrics(),

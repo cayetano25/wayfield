@@ -23,6 +23,7 @@ class LocationPolicy
         if ($location->organization_id === null) {
             return false;
         }
+
         return $this->isOrganizerOrAbove($user, $location->organization_id);
     }
 
@@ -31,6 +32,7 @@ class LocationPolicy
         if ($location->organization_id === null) {
             return false;
         }
+
         return $this->isOrganizerOrAbove($user, $location->organization_id);
     }
 

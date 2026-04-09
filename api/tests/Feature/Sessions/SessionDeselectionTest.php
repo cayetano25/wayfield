@@ -7,15 +7,16 @@ use App\Models\Session;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function makeDeselectionFixture(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     return [$org, $workshop, $user, $reg];
 }
@@ -28,8 +29,8 @@ test('participant can deselect a selected session', function () {
     ]);
 
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -39,8 +40,8 @@ test('participant can deselect a selected session', function () {
         ->assertStatus(204);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'canceled',
     ]);
 });
@@ -53,8 +54,8 @@ test('participant cannot deselect after checking in', function () {
     ]);
 
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -68,7 +69,7 @@ test('participant cannot deselect after checking in', function () {
 });
 
 test('deselecting frees a capacity slot for another participant', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
 
     // Session with capacity 1.
@@ -80,10 +81,10 @@ test('deselecting frees a capacity slot for another participant', function () {
 
     // Participant A selects and fills the slot.
     $userA = User::factory()->create();
-    $regA  = Registration::factory()->forWorkshop($workshop->id)->forUser($userA->id)->create();
+    $regA = Registration::factory()->forWorkshop($workshop->id)->forUser($userA->id)->create();
     SessionSelection::factory()->create([
-        'registration_id'  => $regA->id,
-        'session_id'       => $session->id,
+        'registration_id' => $regA->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -107,8 +108,8 @@ test('canceled selection does not block re-selection of the same session', funct
 
     $session = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     // Select.
@@ -141,14 +142,14 @@ test('participant can replace a selection with a different non-overlapping sessi
 
     $sessionA = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 13:00:00',
-        'end_at'        => '2026-09-01 15:00:00',
+        'start_at' => '2026-09-01 13:00:00',
+        'end_at' => '2026-09-01 15:00:00',
     ]);
 
     // Select Session A.
@@ -167,14 +168,14 @@ test('participant can replace a selection with a different non-overlapping sessi
         ->assertStatus(201);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $sessionA->id,
+        'registration_id' => $reg->id,
+        'session_id' => $sessionA->id,
         'selection_status' => 'canceled',
     ]);
 
     $this->assertDatabaseHas('session_selections', [
-        'registration_id'  => $reg->id,
-        'session_id'       => $sessionB->id,
+        'registration_id' => $reg->id,
+        'session_id' => $sessionB->id,
         'selection_status' => 'selected',
     ]);
 });

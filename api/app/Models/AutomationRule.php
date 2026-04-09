@@ -24,10 +24,10 @@ class AutomationRule extends Model
     ];
 
     protected $casts = [
-        'conditions_json'    => 'array',
+        'conditions_json' => 'array',
         'action_config_json' => 'array',
-        'is_active'          => 'boolean',
-        'last_evaluated_at'  => 'datetime',
+        'is_active' => 'boolean',
+        'last_evaluated_at' => 'datetime',
     ];
 
     public function organization(): BelongsTo

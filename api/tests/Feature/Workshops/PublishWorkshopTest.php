@@ -4,19 +4,21 @@ use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function makeOwnerWithOrg(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
+
     return [$user, $org];
 }
 
@@ -24,12 +26,12 @@ test('owner can publish an event_based workshop', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'     => 'draft',
-        'title'      => 'Harvest Light',
+        'status' => 'draft',
+        'title' => 'Harvest Light',
         'description' => 'An outdoor event.',
-        'timezone'   => 'America/Chicago',
+        'timezone' => 'America/Chicago',
         'start_date' => '2026-09-01',
-        'end_date'   => '2026-09-03',
+        'end_date' => '2026-09-03',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -38,7 +40,7 @@ test('owner can publish an event_based workshop', function () {
         ->assertJsonPath('status', 'published');
 
     $this->assertDatabaseHas('workshops', [
-        'id'     => $workshop->id,
+        'id' => $workshop->id,
         'status' => 'published',
     ]);
 });
@@ -47,10 +49,10 @@ test('publish fails when title is missing', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => '',
+        'status' => 'draft',
+        'title' => '',
         'description' => 'A description.',
-        'timezone'    => 'UTC',
+        'timezone' => 'UTC',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -64,10 +66,10 @@ test('publish fails when description is missing', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => 'A Title',
+        'status' => 'draft',
+        'title' => 'A Title',
         'description' => '',
-        'timezone'    => 'UTC',
+        'timezone' => 'UTC',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -80,10 +82,10 @@ test('publish fails when timezone is missing', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => 'A Title',
+        'status' => 'draft',
+        'title' => 'A Title',
         'description' => 'A description.',
-        'timezone'    => '',
+        'timezone' => '',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -96,10 +98,10 @@ test('publish fails with multiple errors and each is keyed', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => '',
+        'status' => 'draft',
+        'title' => '',
         'description' => '',
-        'timezone'    => '',
+        'timezone' => '',
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -116,9 +118,9 @@ test('publish fails when start_date is after end_date', function () {
     [$user, $org] = makeOwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'     => 'draft',
+        'status' => 'draft',
         'start_date' => '2026-09-05',
-        'end_date'   => '2026-09-01',
+        'end_date' => '2026-09-01',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -140,12 +142,12 @@ test('archived workshop cannot be published', function () {
 
 test('staff cannot publish a workshop', function () {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create();
 

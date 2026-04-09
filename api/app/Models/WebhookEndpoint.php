@@ -21,9 +21,9 @@ class WebhookEndpoint extends Model
     ];
 
     protected $casts = [
-        'is_active'       => 'boolean',
-        'event_types'     => 'array',
-        'failure_count'   => 'integer',
+        'is_active' => 'boolean',
+        'event_types' => 'array',
+        'failure_count' => 'integer',
         'last_success_at' => 'datetime',
         'last_failure_at' => 'datetime',
     ];

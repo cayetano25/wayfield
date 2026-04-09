@@ -23,7 +23,6 @@ class QueueNotificationDeliveryAction
     {
         foreach ($recipients as $recipient) {
             /** @var NotificationRecipient $recipient */
-
             if ($recipient->email_status === 'pending') {
                 SendEmailNotificationJob::dispatch($notification->id, $recipient->id);
             }

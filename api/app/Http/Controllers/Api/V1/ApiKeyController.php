@@ -54,31 +54,31 @@ class ApiKeyController extends Controller
         $this->authorizeOwner($organization);
 
         $validated = $request->validate([
-            'name'       => ['required', 'string', 'max:255'],
-            'scopes'     => ['required', 'array', 'min:1'],
-            'scopes.*'   => ['required', 'string', 'in:' . implode(',', ApiKey::ALL_SCOPES)],
+            'name' => ['required', 'string', 'max:255'],
+            'scopes' => ['required', 'array', 'min:1'],
+            'scopes.*' => ['required', 'string', 'in:'.implode(',', ApiKey::ALL_SCOPES)],
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
-        $prefix  = app()->isProduction() ? 'wf_live_' : 'wf_test_';
-        $rawKey  = $prefix . Str::random(48);
+        $prefix = app()->isProduction() ? 'wf_live_' : 'wf_test_';
+        $rawKey = $prefix.Str::random(48);
         $keyHash = hash('sha256', $rawKey);
 
         $key = ApiKey::create([
-            'organization_id'    => $organization->id,
-            'name'               => $validated['name'],
-            'key_prefix'         => substr($rawKey, 0, 10),
-            'key_hash'           => $keyHash,
-            'scopes'             => $validated['scopes'],
-            'is_active'          => true,
-            'expires_at'         => $validated['expires_at'] ?? null,
+            'organization_id' => $organization->id,
+            'name' => $validated['name'],
+            'key_prefix' => substr($rawKey, 0, 10),
+            'key_hash' => $keyHash,
+            'scopes' => $validated['scopes'],
+            'is_active' => true,
+            'expires_at' => $validated['expires_at'] ?? null,
             'created_by_user_id' => Auth::id(),
         ]);
 
         return response()->json([
-            'data'    => $this->serialize($key),
+            'data' => $this->serialize($key),
             'raw_key' => $rawKey,
-            'notice'  => 'Store this key securely. It will not be shown again.',
+            'notice' => 'Store this key securely. It will not be shown again.',
         ], 201);
     }
 
@@ -100,11 +100,11 @@ class ApiKeyController extends Controller
 
         AuditLogService::record([
             'organization_id' => $organization->id,
-            'actor_user_id'   => Auth::id(),
-            'entity_type'     => 'api_key',
-            'entity_id'       => $apiKey->id,
-            'action'          => 'api_key_revoked',
-            'metadata'        => ['key_name' => $apiKey->name, 'key_prefix' => $apiKey->key_prefix],
+            'actor_user_id' => Auth::id(),
+            'entity_type' => 'api_key',
+            'entity_id' => $apiKey->id,
+            'action' => 'api_key_revoked',
+            'metadata' => ['key_name' => $apiKey->name, 'key_prefix' => $apiKey->key_prefix],
         ]);
 
         return response()->json(['message' => 'API key revoked.']);
@@ -113,20 +113,20 @@ class ApiKeyController extends Controller
     private function serialize(ApiKey $key): array
     {
         return [
-            'id'           => $key->id,
-            'name'         => $key->name,
-            'key_prefix'   => $key->key_prefix,
-            'scopes'       => $key->scopes,
-            'is_active'    => $key->is_active,
+            'id' => $key->id,
+            'name' => $key->name,
+            'key_prefix' => $key->key_prefix,
+            'scopes' => $key->scopes,
+            'is_active' => $key->is_active,
             'last_used_at' => $key->last_used_at?->toIso8601String(),
-            'expires_at'   => $key->expires_at?->toIso8601String(),
-            'created_at'   => $key->created_at?->toIso8601String(),
+            'expires_at' => $key->expires_at?->toIso8601String(),
+            'created_at' => $key->created_at?->toIso8601String(),
         ];
     }
 
     private function authorizeOwnerOrAdmin(Organization $organization): void
     {
-        $user     = Auth::user();
+        $user = Auth::user();
         $isMember = $organization->organizationUsers()
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'admin'])
@@ -140,7 +140,7 @@ class ApiKeyController extends Controller
 
     private function authorizeOwner(Organization $organization): void
     {
-        $user    = Auth::user();
+        $user = Auth::user();
         $isOwner = $organization->organizationUsers()
             ->where('user_id', $user->id)
             ->where('role', 'owner')

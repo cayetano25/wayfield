@@ -2,6 +2,7 @@
 
 namespace App\Domain\Notifications\Services;
 
+use App\Domain\Notifications\Exceptions\CustomDeliveryNotImplementedException;
 use App\Models\Leader;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
@@ -27,10 +28,10 @@ class ResolveNotificationRecipientsService
     public function resolve(Notification $notification): Collection
     {
         $userIds = match ($notification->delivery_scope) {
-            'all_participants'   => $this->resolveAllParticipants($notification),
-            'leaders'            => $this->resolveLeaders($notification),
+            'all_participants' => $this->resolveAllParticipants($notification),
+            'leaders' => $this->resolveLeaders($notification),
             'session_participants' => $this->resolveSessionParticipants($notification),
-            'custom'             => throw new \App\Domain\Notifications\Exceptions\CustomDeliveryNotImplementedException(
+            'custom' => throw new CustomDeliveryNotImplementedException(
                 // 'custom' delivery scope is reserved for future implementation
                 // See README.md Open Issues — no data model exists for this yet
                 'The custom delivery scope is not yet implemented.'
@@ -43,13 +44,13 @@ class ResolveNotificationRecipientsService
             $prefs = $this->getPreferences($userId);
 
             $emailStatus = $this->resolveEmailStatus($notification, $prefs);
-            $pushStatus  = $this->resolvePushStatus($notification, $prefs);
+            $pushStatus = $this->resolvePushStatus($notification, $prefs);
 
             $recipient = NotificationRecipient::firstOrCreate(
                 ['notification_id' => $notification->id, 'user_id' => $userId],
                 [
-                    'email_status'  => $emailStatus,
-                    'push_status'   => $pushStatus,
+                    'email_status' => $emailStatus,
+                    'push_status' => $pushStatus,
                     'in_app_status' => 'pending',
                 ]
             );
@@ -125,11 +126,11 @@ class ResolveNotificationRecipientsService
         return NotificationPreference::firstOrNew(
             ['user_id' => $userId],
             [
-                'email_enabled'            => true,
-                'push_enabled'             => true,
+                'email_enabled' => true,
+                'push_enabled' => true,
                 'workshop_updates_enabled' => true,
-                'reminder_enabled'         => true,
-                'marketing_enabled'        => false,
+                'reminder_enabled' => true,
+                'marketing_enabled' => false,
             ]
         );
     }

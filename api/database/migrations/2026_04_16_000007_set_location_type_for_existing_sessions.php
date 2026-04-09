@@ -17,7 +17,7 @@ return new class extends Migration
                 WHERE location_id IS NOT NULL
                   AND location_type IS NULL
             ');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('set_location_type_for_existing_sessions backfill failed', [
                 'error' => $e->getMessage(),
             ]);

@@ -47,9 +47,9 @@ class BuildSessionRosterService
                 ->first();
 
             return (object) [
-                'user'               => $user,
-                'registration'       => $selection->registration,
-                'attendance_record'  => $attendance,
+                'user' => $user,
+                'registration' => $selection->registration,
+                'attendance_record' => $attendance,
             ];
         });
     }
@@ -69,9 +69,9 @@ class BuildSessionRosterService
                 ->first();
 
             return (object) [
-                'user'               => $user,
-                'registration'       => $registration,
-                'attendance_record'  => $attendance,
+                'user' => $user,
+                'registration' => $registration,
+                'attendance_record' => $attendance,
             ];
         });
     }

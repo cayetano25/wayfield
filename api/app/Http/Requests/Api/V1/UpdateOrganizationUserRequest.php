@@ -14,7 +14,7 @@ class UpdateOrganizationUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role'      => ['sometimes', 'required', 'string', 'in:owner,admin,staff,billing_admin'],
+            'role' => ['sometimes', 'required', 'string', 'in:owner,admin,staff,billing_admin'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

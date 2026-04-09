@@ -1,39 +1,11 @@
 <?php
 
 use App\Models\Organization;
-use App\Models\OrganizationUser;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function makeOwner(): array
-{
-    $user = User::factory()->create();
-    $org  = Organization::factory()->create();
-    OrganizationUser::factory()->create([
-        'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
-    ]);
-    return [$user, $org];
-}
-
-function makeStaff(): array
-{
-    $user = User::factory()->create();
-    $org  = Organization::factory()->create();
-    OrganizationUser::factory()->create([
-        'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'staff',
-        'is_active'       => true,
-    ]);
-    return [$user, $org];
-}
+uses(RefreshDatabase::class);
 
 // ─── Create ────────────────────────────────────────────────────────────────────
 
@@ -43,11 +15,11 @@ test('owner can create a workshop', function () {
     $response = $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", [
             'workshop_type' => 'event_based',
-            'title'         => 'Mountain Light Workshop',
-            'description'   => 'A photography workshop in the mountains.',
-            'timezone'      => 'America/Denver',
-            'start_date'    => '2026-07-01',
-            'end_date'      => '2026-07-03',
+            'title' => 'Mountain Light Workshop',
+            'description' => 'A photography workshop in the mountains.',
+            'timezone' => 'America/Denver',
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-03',
         ]);
 
     $response->assertStatus(201)
@@ -61,8 +33,8 @@ test('owner can create a workshop', function () {
 
     $this->assertDatabaseHas('workshops', [
         'organization_id' => $org->id,
-        'title'           => 'Mountain Light Workshop',
-        'status'          => 'draft',
+        'title' => 'Mountain Light Workshop',
+        'status' => 'draft',
     ]);
 });
 
@@ -71,11 +43,11 @@ test('workshop creation generates a unique join_code', function () {
 
     $payload = [
         'workshop_type' => 'event_based',
-        'title'         => 'Workshop',
-        'description'   => 'Desc',
-        'timezone'      => 'UTC',
-        'start_date'    => '2026-08-01',
-        'end_date'      => '2026-08-02',
+        'title' => 'Workshop',
+        'description' => 'Desc',
+        'timezone' => 'UTC',
+        'start_date' => '2026-08-01',
+        'end_date' => '2026-08-02',
     ];
 
     $r1 = $this->actingAs($user, 'sanctum')->postJson("/api/v1/organizations/{$org->id}/workshops", $payload);
@@ -92,11 +64,11 @@ test('join_code is 8 uppercase characters with no confusable characters', functi
 
     $response = $this->actingAs($user, 'sanctum')->postJson("/api/v1/organizations/{$org->id}/workshops", [
         'workshop_type' => 'event_based',
-        'title'         => 'Charset Test Workshop',
-        'description'   => 'Desc',
-        'timezone'      => 'UTC',
-        'start_date'    => '2026-09-01',
-        'end_date'      => '2026-09-02',
+        'title' => 'Charset Test Workshop',
+        'description' => 'Desc',
+        'timezone' => 'UTC',
+        'start_date' => '2026-09-01',
+        'end_date' => '2026-09-02',
     ]);
 
     $response->assertStatus(201);
@@ -113,10 +85,10 @@ test('workshop requires timezone', function () {
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", [
             'workshop_type' => 'event_based',
-            'title'         => 'Workshop',
-            'description'   => 'Desc',
-            'start_date'    => '2026-08-01',
-            'end_date'      => '2026-08-02',
+            'title' => 'Workshop',
+            'description' => 'Desc',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-02',
         ])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['timezone']);
@@ -128,11 +100,11 @@ test('workshop end_date must not be before start_date', function () {
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", [
             'workshop_type' => 'event_based',
-            'title'         => 'Workshop',
-            'description'   => 'Desc',
-            'timezone'      => 'UTC',
-            'start_date'    => '2026-08-05',
-            'end_date'      => '2026-08-01',
+            'title' => 'Workshop',
+            'description' => 'Desc',
+            'timezone' => 'UTC',
+            'start_date' => '2026-08-05',
+            'end_date' => '2026-08-01',
         ])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['end_date']);
@@ -144,27 +116,27 @@ test('staff cannot create a workshop', function () {
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", [
             'workshop_type' => 'event_based',
-            'title'         => 'Workshop',
-            'description'   => 'Desc',
-            'timezone'      => 'UTC',
-            'start_date'    => '2026-08-01',
-            'end_date'      => '2026-08-02',
+            'title' => 'Workshop',
+            'description' => 'Desc',
+            'timezone' => 'UTC',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-02',
         ])
         ->assertStatus(403);
 });
 
 test('non-member cannot create a workshop', function () {
     $outsider = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
 
     $this->actingAs($outsider, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", [
             'workshop_type' => 'event_based',
-            'title'         => 'Workshop',
-            'description'   => 'Desc',
-            'timezone'      => 'UTC',
-            'start_date'    => '2026-08-01',
-            'end_date'      => '2026-08-02',
+            'title' => 'Workshop',
+            'description' => 'Desc',
+            'timezone' => 'UTC',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-02',
         ])
         ->assertStatus(403);
 });
@@ -174,7 +146,7 @@ test('non-member cannot create a workshop', function () {
 test('owner can list workshops scoped to their organization', function () {
     [$user, $org] = makeOwner();
 
-    $ownWorkshop  = Workshop::factory()->forOrganization($org->id)->create();
+    $ownWorkshop = Workshop::factory()->forOrganization($org->id)->create();
     $otherWorkshop = Workshop::factory()->create(); // different org
 
     $response = $this->actingAs($user, 'sanctum')
@@ -260,8 +232,8 @@ test('owner of org A cannot view workshop belonging to org B', function () {
 });
 
 test('workshop list is tenant-scoped and cannot return other org workshops', function () {
-    [$user, $org]  = makeOwner();
-    $other         = Workshop::factory()->create();
+    [$user, $org] = makeOwner();
+    $other = Workshop::factory()->create();
 
     $response = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/workshops");

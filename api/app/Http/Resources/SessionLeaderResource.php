@@ -10,14 +10,14 @@ class SessionLeaderResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                => $this->id,
-            'session_id'        => $this->session_id,
-            'leader'            => $this->whenLoaded('leader', fn () => new OrganizerLeaderResource($this->leader)),
-            'role_label'        => $this->role_label,
-            'role_in_session'   => $this->role_in_session,
+            'id' => $this->id,
+            'session_id' => $this->session_id,
+            'leader' => $this->whenLoaded('leader', fn () => new OrganizerLeaderResource($this->leader)),
+            'role_label' => $this->role_label,
+            'role_in_session' => $this->role_in_session,
             'assignment_status' => $this->assignment_status,
-            'is_primary'        => (bool) $this->is_primary,
-            'created_at'        => $this->created_at?->toIso8601String(),
+            'is_primary' => (bool) $this->is_primary,
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 }

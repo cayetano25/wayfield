@@ -46,33 +46,33 @@ class WebhookController extends Controller
         $this->authorizeOrgAccess($organization);
 
         $validated = $request->validate([
-            'url'         => ['required', 'string', 'url', 'max:1000',
+            'url' => ['required', 'string', 'url', 'max:1000',
                 function ($attribute, $value, $fail) {
                     if (app()->isProduction() && ! str_starts_with($value, 'https://')) {
                         $fail('Webhook URL must use HTTPS in production.');
                     }
                 },
             ],
-            'secret'      => ['required', 'string', 'min:16', 'max:255'],
+            'secret' => ['required', 'string', 'min:16', 'max:255'],
             'description' => ['nullable', 'string', 'max:255'],
             'event_types' => ['required', 'array', 'min:1'],
             'event_types.*' => ['required', 'string'],
         ]);
 
         $endpoint = WebhookEndpoint::create([
-            'organization_id'   => $organization->id,
-            'url'               => $validated['url'],
-            'secret_encrypted'  => encrypt($validated['secret']),
-            'description'       => $validated['description'] ?? null,
-            'is_active'         => true,
-            'event_types'       => $validated['event_types'],
+            'organization_id' => $organization->id,
+            'url' => $validated['url'],
+            'secret_encrypted' => encrypt($validated['secret']),
+            'description' => $validated['description'] ?? null,
+            'is_active' => true,
+            'event_types' => $validated['event_types'],
         ]);
 
         return response()->json([
-            'data'                 => $this->serialize($endpoint),
+            'data' => $this->serialize($endpoint),
             'signing_instructions' => 'To verify webhook authenticity, compute '
-                . 'hash_hmac("sha256", $rawPayload, $secret) and compare with the '
-                . 'X-Wayfield-Signature header using hash_equals().',
+                .'hash_hmac("sha256", $rawPayload, $secret) and compare with the '
+                .'X-Wayfield-Signature header using hash_equals().',
         ], 201);
     }
 
@@ -112,13 +112,13 @@ class WebhookController extends Controller
             ->limit(50)
             ->get()
             ->map(fn (WebhookDelivery $d) => [
-                'id'              => $d->id,
-                'event_type'      => $d->event_type,
+                'id' => $d->id,
+                'event_type' => $d->event_type,
                 'response_status' => $d->response_status,
-                'attempt_count'   => $d->attempt_count,
-                'delivered_at'    => $d->delivered_at?->toIso8601String(),
-                'next_retry_at'   => $d->next_retry_at?->toIso8601String(),
-                'created_at'      => $d->created_at?->toIso8601String(),
+                'attempt_count' => $d->attempt_count,
+                'delivered_at' => $d->delivered_at?->toIso8601String(),
+                'next_retry_at' => $d->next_retry_at?->toIso8601String(),
+                'created_at' => $d->created_at?->toIso8601String(),
             ]);
 
         return response()->json(['data' => $deliveries]);
@@ -127,15 +127,15 @@ class WebhookController extends Controller
     private function serialize(WebhookEndpoint $endpoint): array
     {
         return [
-            'id'              => $endpoint->id,
-            'url'             => $endpoint->url,
-            'description'     => $endpoint->description,
-            'is_active'       => $endpoint->is_active,
-            'event_types'     => $endpoint->event_types,
-            'failure_count'   => $endpoint->failure_count,
+            'id' => $endpoint->id,
+            'url' => $endpoint->url,
+            'description' => $endpoint->description,
+            'is_active' => $endpoint->is_active,
+            'event_types' => $endpoint->event_types,
+            'failure_count' => $endpoint->failure_count,
             'last_success_at' => $endpoint->last_success_at?->toIso8601String(),
             'last_failure_at' => $endpoint->last_failure_at?->toIso8601String(),
-            'created_at'      => $endpoint->created_at?->toIso8601String(),
+            'created_at' => $endpoint->created_at?->toIso8601String(),
         ];
     }
 

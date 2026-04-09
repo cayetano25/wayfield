@@ -26,10 +26,10 @@ class StripeInvoice extends Model
     ];
 
     protected $casts = [
-        'period_start'         => 'datetime',
-        'period_end'           => 'datetime',
-        'paid_at'              => 'datetime',
-        'due_date'             => 'datetime',
+        'period_start' => 'datetime',
+        'period_end' => 'datetime',
+        'paid_at' => 'datetime',
+        'due_date' => 'datetime',
         'next_payment_attempt' => 'datetime',
     ];
 

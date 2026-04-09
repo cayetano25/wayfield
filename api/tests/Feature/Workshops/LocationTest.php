@@ -4,19 +4,21 @@ use App\Models\Location;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function locationOwner(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
+
     return [$user, $org];
 }
 
@@ -25,12 +27,12 @@ test('owner can create a location for their organization', function () {
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/locations", [
-            'name'            => 'Studio A',
-            'address_line_1'  => '456 Canyon Blvd',
-            'city'            => 'Denver',
+            'name' => 'Studio A',
+            'address_line_1' => '456 Canyon Blvd',
+            'city' => 'Denver',
             'state_or_region' => 'CO',
-            'postal_code'     => '80202',
-            'country'         => 'US',
+            'postal_code' => '80202',
+            'country' => 'US',
         ])
         ->assertStatus(201)
         ->assertJsonPath('name', 'Studio A')
@@ -38,7 +40,7 @@ test('owner can create a location for their organization', function () {
 
     $this->assertDatabaseHas('locations', [
         'organization_id' => $org->id,
-        'name'            => 'Studio A',
+        'name' => 'Studio A',
     ]);
 });
 
@@ -81,7 +83,7 @@ test('owner can delete a location', function () {
 
 test('non-member cannot list locations for an organization', function () {
     $outsider = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
 
     $this->actingAs($outsider, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/locations")
@@ -89,8 +91,8 @@ test('non-member cannot list locations for an organization', function () {
 });
 
 test('owner cannot update location belonging to another organization', function () {
-    [$user, $org]   = locationOwner();
-    $otherLocation  = Location::factory()->create(); // different org
+    [$user, $org] = locationOwner();
+    $otherLocation = Location::factory()->create(); // different org
 
     $this->actingAs($user, 'sanctum')
         ->patchJson("/api/v1/locations/{$otherLocation->id}", ['name' => 'Hack'])

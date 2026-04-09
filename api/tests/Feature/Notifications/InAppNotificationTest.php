@@ -7,8 +7,9 @@ use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,9 +20,9 @@ function makeInAppFixture(): array
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $workshop = Workshop::factory()
@@ -45,8 +46,8 @@ test('in-app notifications are retrievable via GET /me/notifications', function 
     $notification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create();
     NotificationRecipient::factory()->create([
         'notification_id' => $notification->id,
-        'user_id'         => $participant->id,
-        'in_app_status'   => 'pending',
+        'user_id' => $participant->id,
+        'in_app_status' => 'pending',
     ]);
 
     $response = $this->actingAs($participant, 'sanctum')
@@ -68,8 +69,8 @@ test('user can only see their own in-app notifications', function () {
     $notification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create();
     NotificationRecipient::factory()->create([
         'notification_id' => $notification->id,
-        'user_id'         => $otherUser->id,
-        'in_app_status'   => 'pending',
+        'user_id' => $otherUser->id,
+        'in_app_status' => 'pending',
     ]);
 
     $response = $this->actingAs($participant, 'sanctum')
@@ -87,8 +88,8 @@ test('user can mark an in-app notification as read', function () {
     $notification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create();
     $recipient = NotificationRecipient::factory()->create([
         'notification_id' => $notification->id,
-        'user_id'         => $participant->id,
-        'in_app_status'   => 'delivered',
+        'user_id' => $participant->id,
+        'in_app_status' => 'delivered',
     ]);
 
     $this->actingAs($participant, 'sanctum')
@@ -96,7 +97,7 @@ test('user can mark an in-app notification as read', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('notification_recipients', [
-        'id'            => $recipient->id,
+        'id' => $recipient->id,
         'in_app_status' => 'read',
     ]);
 
@@ -112,8 +113,8 @@ test('user cannot mark another users notification as read', function () {
     $notification = Notification::factory()->forWorkshop($workshop->id, $org->id, $owner->id)->create();
     $recipient = NotificationRecipient::factory()->create([
         'notification_id' => $notification->id,
-        'user_id'         => $otherUser->id,
-        'in_app_status'   => 'delivered',
+        'user_id' => $otherUser->id,
+        'in_app_status' => 'delivered',
     ]);
 
     $this->actingAs($participant, 'sanctum')

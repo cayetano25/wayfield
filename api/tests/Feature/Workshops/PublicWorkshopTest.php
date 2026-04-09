@@ -2,17 +2,19 @@
 
 use App\Models\Organization;
 use App\Models\OrganizationUser;
+use App\Models\PublicPage;
 use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopLogistics;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('published workshop with public page enabled is accessible publicly', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'mountain-light-2026',
+        'public_slug' => 'mountain-light-2026',
     ]);
 
     $this->getJson('/api/v1/public/workshops/mountain-light-2026')
@@ -23,7 +25,7 @@ test('published workshop with public page enabled is accessible publicly', funct
 test('draft workshop is not accessible on public endpoint', function () {
     Workshop::factory()->draft()->create([
         'public_page_enabled' => false,
-        'public_slug'         => 'hidden-workshop',
+        'public_slug' => 'hidden-workshop',
     ]);
 
     $this->getJson('/api/v1/public/workshops/hidden-workshop')
@@ -33,7 +35,7 @@ test('draft workshop is not accessible on public endpoint', function () {
 test('published workshop with public_page_enabled=false is not accessible publicly', function () {
     Workshop::factory()->published()->create([
         'public_page_enabled' => false,
-        'public_slug'         => 'no-public-page',
+        'public_slug' => 'no-public-page',
     ]);
 
     $this->getJson('/api/v1/public/workshops/no-public-page')
@@ -43,7 +45,7 @@ test('published workshop with public_page_enabled=false is not accessible public
 test('archived workshop is not accessible on public endpoint', function () {
     Workshop::factory()->archived()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'archived-workshop',
+        'public_slug' => 'archived-workshop',
     ]);
 
     $this->getJson('/api/v1/public/workshops/archived-workshop')
@@ -53,7 +55,7 @@ test('archived workshop is not accessible on public endpoint', function () {
 test('public workshop response does not expose join_code', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'no-join-code',
+        'public_slug' => 'no-join-code',
     ]);
 
     $response = $this->getJson('/api/v1/public/workshops/no-join-code');
@@ -65,7 +67,7 @@ test('public workshop response does not expose join_code', function () {
 test('public workshop response does not expose organization_id', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'no-org-id',
+        'public_slug' => 'no-org-id',
     ]);
 
     $response = $this->getJson('/api/v1/public/workshops/no-org-id');
@@ -77,12 +79,12 @@ test('public workshop response does not expose organization_id', function () {
 test('public workshop response includes logistics hotel and parking fields', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'with-logistics',
+        'public_slug' => 'with-logistics',
     ]);
 
     WorkshopLogistics::factory()->create([
-        'workshop_id'     => $workshop->id,
-        'hotel_name'      => 'Grand Vista Hotel',
+        'workshop_id' => $workshop->id,
+        'hotel_name' => 'Grand Vista Hotel',
         'parking_details' => 'Lot B behind the building',
     ]);
 
@@ -96,7 +98,7 @@ test('public workshop response includes logistics hotel and parking fields', fun
 test('public endpoint is accessible without authentication', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'open-access',
+        'public_slug' => 'open-access',
     ]);
 
     // No actingAs — unauthenticated request
@@ -107,7 +109,7 @@ test('public endpoint is accessible without authentication', function () {
 test('public workshop response never exposes forbidden fields', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'forbidden-fields-check',
+        'public_slug' => 'forbidden-fields-check',
     ]);
 
     $response = $this->getJson('/api/v1/public/workshops/forbidden-fields-check');
@@ -134,7 +136,7 @@ test('public workshop response never exposes forbidden fields', function () {
 test('public logistics response never exposes metadata fields', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'logistics-metadata-check',
+        'public_slug' => 'logistics-metadata-check',
     ]);
 
     WorkshopLogistics::factory()->create(['workshop_id' => $workshop->id]);
@@ -168,15 +170,15 @@ test('organizer workshop detail includes public_page fields', function () {
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'page-fields-check',
+        'public_slug' => 'page-fields-check',
     ]);
 
-    \App\Models\PublicPage::factory()->create([
-        'workshop_id'   => $workshop->id,
-        'hero_title'    => 'Join Us in the Wild',
+    PublicPage::factory()->create([
+        'workshop_id' => $workshop->id,
+        'hero_title' => 'Join Us in the Wild',
         'hero_subtitle' => 'A week of landscape photography',
-        'body_content'  => '<p>Full details here.</p>',
-        'is_visible'    => true,
+        'body_content' => '<p>Full details here.</p>',
+        'is_visible' => true,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -190,15 +192,15 @@ test('organizer workshop detail includes public_page fields', function () {
 test('public page response exposes content fields but not is_visible or timestamps', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'public-page-fields',
+        'public_slug' => 'public-page-fields',
     ]);
 
-    \App\Models\PublicPage::factory()->create([
-        'workshop_id'   => $workshop->id,
-        'hero_title'    => 'Capture the Light',
+    PublicPage::factory()->create([
+        'workshop_id' => $workshop->id,
+        'hero_title' => 'Capture the Light',
         'hero_subtitle' => 'Desert edition',
-        'body_content'  => '<p>Details.</p>',
-        'is_visible'    => true,
+        'body_content' => '<p>Details.</p>',
+        'is_visible' => true,
     ]);
 
     $response = $this->getJson('/api/v1/public/workshops/public-page-fields');
@@ -218,17 +220,17 @@ test('public page response exposes content fields but not is_visible or timestam
 
 test('organizer workshop detail shows join_code but public endpoint does not', function () {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $workshop = Workshop::factory()->published()->forOrganization($org->id)->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'dual-check',
+        'public_slug' => 'dual-check',
     ]);
 
     // Organizer sees join_code
@@ -244,13 +246,13 @@ test('organizer workshop detail shows join_code but public endpoint does not', f
 });
 
 test('test_meeting_url_never_appears_in_public_response', function () {
-    $org     = Organization::factory()->create();
-    $owner   = User::factory()->create();
+    $org = Organization::factory()->create();
+    $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $workshop = Workshop::factory()
@@ -258,7 +260,7 @@ test('test_meeting_url_never_appears_in_public_response', function () {
         ->published()
         ->create([
             'public_page_enabled' => true,
-            'public_slug'         => 'virtual-privacy-check',
+            'public_slug' => 'virtual-privacy-check',
         ]);
 
     // 1. Create a virtual session with explicit meeting credentials.
@@ -266,9 +268,9 @@ test('test_meeting_url_never_appears_in_public_response', function () {
         ->forWorkshop($workshop->id)
         ->virtualWithoutUrl()
         ->create([
-            'title'            => 'Golden Hour Virtual Shoot',
-            'meeting_url'      => 'https://zoom.us/j/secret-meeting-link',
-            'meeting_id'       => 'SECRET-ID-123',
+            'title' => 'Golden Hour Virtual Shoot',
+            'meeting_url' => 'https://zoom.us/j/secret-meeting-link',
+            'meeting_id' => 'SECRET-ID-123',
             'meeting_passcode' => 'secret-passcode',
             'meeting_platform' => 'Zoom',
         ]);

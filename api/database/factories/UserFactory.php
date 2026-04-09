@@ -16,13 +16,13 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'first_name'        => fake()->firstName(),
-            'last_name'         => fake()->lastName(),
-            'email'             => fake()->unique()->safeEmail(),
-            'password_hash'     => static::$password ??= Hash::make('password'),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            'email' => fake()->unique()->safeEmail(),
+            'password_hash' => static::$password ??= Hash::make('password'),
             'email_verified_at' => now(),
-            'is_active'         => true,
-            'last_login_at'     => null,
+            'is_active' => true,
+            'last_login_at' => null,
         ];
     }
 

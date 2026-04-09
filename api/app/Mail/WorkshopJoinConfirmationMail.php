@@ -25,7 +25,7 @@ class WorkshopJoinConfirmationMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'You\'ve joined ' . $this->workshop->title,
+            subject: 'You\'ve joined '.$this->workshop->title,
         );
     }
 
@@ -34,8 +34,8 @@ class WorkshopJoinConfirmationMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.workshop-join-confirmation',
             with: [
-                'user'         => $this->user,
-                'workshop'     => $this->workshop,
+                'user' => $this->user,
+                'workshop' => $this->workshop,
                 'registration' => $this->registration,
             ],
         );

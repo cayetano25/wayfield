@@ -3,9 +3,7 @@
 use App\Models\AuditLog;
 use App\Models\Leader;
 use App\Models\Notification;
-use App\Models\NotificationRecipient;
 use App\Models\Organization;
-use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionLeader;
@@ -13,8 +11,9 @@ use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 /**
  * IMPORTANT: All time-window tests use America/Chicago (UTC-5/UTC-6).
@@ -40,7 +39,7 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
  */
 function makeMessagingFixture(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
@@ -54,24 +53,24 @@ function makeMessagingFixture(): array
         ->published()
         ->create([
             'delivery_type' => 'in_person',
-            'start_at'      => '2026-01-15 16:00:00', // 10:00 CST
-            'end_at'        => '2026-01-15 18:00:00', // 12:00 CST
+            'start_at' => '2026-01-15 16:00:00', // 10:00 CST
+            'end_at' => '2026-01-15 18:00:00', // 12:00 CST
         ]);
 
     // Assigned leader
     $leaderUser = User::factory()->create();
-    $leader     = Leader::factory()->create(['user_id' => $leaderUser->id]);
+    $leader = Leader::factory()->create(['user_id' => $leaderUser->id]);
     SessionLeader::factory()->create([
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     // Participant
     $participant = User::factory()->create();
-    $reg         = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -95,8 +94,8 @@ test('leader notification without session_id is rejected with 422', function () 
 
     $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'             => 'Heads up',
-            'message'           => 'See you soon!',
+            'title' => 'Heads up',
+            'message' => 'See you soon!',
             'notification_type' => 'informational',
             // session_id intentionally omitted
         ])
@@ -120,9 +119,9 @@ test('leader NOT assigned to session is rejected with 403', function () {
 
     $this->actingAs($unrelatedLeaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Hi',
-            'message'           => 'Test',
+            'session_id' => $session->id,
+            'title' => 'Hi',
+            'message' => 'Test',
             'notification_type' => 'informational',
         ])
         ->assertStatus(403);
@@ -141,9 +140,9 @@ test('leader notification is rejected when sent before the 4-hour window', funct
 
     $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Too early',
-            'message'           => 'Message',
+            'session_id' => $session->id,
+            'title' => 'Too early',
+            'message' => 'Message',
             'notification_type' => 'informational',
         ])
         ->assertStatus(422)
@@ -161,9 +160,9 @@ test('leader notification is rejected when sent after the 2-hour post-session wi
 
     $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Too late',
-            'message'           => 'Message',
+            'session_id' => $session->id,
+            'title' => 'Too late',
+            'message' => 'Message',
             'notification_type' => 'informational',
         ])
         ->assertStatus(422)
@@ -182,9 +181,9 @@ test('leader notification within window is accepted and produces audit_log recor
 
     $response = $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'See you soon',
-            'message'           => 'Just a reminder about today\'s session.',
+            'session_id' => $session->id,
+            'title' => 'See you soon',
+            'message' => 'Just a reminder about today\'s session.',
             'notification_type' => 'informational',
         ])
         ->assertStatus(201)
@@ -194,8 +193,8 @@ test('leader notification within window is accepted and produces audit_log recor
 
     // Notification record must exist
     $this->assertDatabaseHas('notifications', [
-        'id'           => $notificationId,
-        'session_id'   => $session->id,
+        'id' => $notificationId,
+        'session_id' => $session->id,
         'sender_scope' => 'leader',
         'delivery_scope' => 'session_participants',
     ]);
@@ -203,14 +202,14 @@ test('leader notification within window is accepted and produces audit_log recor
     // Recipient must be the session participant
     $this->assertDatabaseHas('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $participant->id,
+        'user_id' => $participant->id,
     ]);
 
     // Audit log MUST exist — this is non-negotiable
     $this->assertDatabaseHas('audit_logs', [
-        'entity_type'   => 'notification',
-        'entity_id'     => $notificationId,
-        'action'        => 'leader_notification_sent',
+        'entity_type' => 'notification',
+        'entity_id' => $notificationId,
+        'action' => 'leader_notification_sent',
         'actor_user_id' => $leaderUser->id,
     ]);
 
@@ -235,9 +234,9 @@ test('notification sent exactly at window start (06:00 CST) is accepted', functi
 
     $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Boundary test',
-            'message'           => 'At window start.',
+            'session_id' => $session->id,
+            'title' => 'Boundary test',
+            'message' => 'At window start.',
             'notification_type' => 'informational',
         ])
         ->assertStatus(201);
@@ -253,9 +252,9 @@ test('notification sent exactly at window end (14:00 CST) is accepted', function
 
     $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Boundary test',
-            'message'           => 'At window end.',
+            'session_id' => $session->id,
+            'title' => 'Boundary test',
+            'message' => 'At window end.',
             'notification_type' => 'informational',
         ])
         ->assertStatus(201);
@@ -277,9 +276,9 @@ test('leader notification recipients are scoped to session participants only', f
 
     $response = $this->actingAs($leaderUser, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Session only',
-            'message'           => 'For session participants.',
+            'session_id' => $session->id,
+            'title' => 'Session only',
+            'message' => 'For session participants.',
             'notification_type' => 'informational',
         ])
         ->assertStatus(201);
@@ -289,13 +288,13 @@ test('leader notification recipients are scoped to session participants only', f
     // Only the session participant should be a recipient
     $this->assertDatabaseHas('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $sessionParticipant->id,
+        'user_id' => $sessionParticipant->id,
     ]);
 
     // The workshop-only registrant must NOT be a recipient
     $this->assertDatabaseMissing('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $otherParticipant->id,
+        'user_id' => $otherParticipant->id,
     ]);
 
     Carbon::setTestNow();
@@ -313,9 +312,9 @@ test('plain participant cannot create a notification', function () {
 
     $this->actingAs($participant, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'session_id'        => $session->id,
-            'title'             => 'Not allowed',
-            'message'           => 'I am not a leader.',
+            'session_id' => $session->id,
+            'title' => 'Not allowed',
+            'message' => 'I am not a leader.',
             'notification_type' => 'informational',
         ])
         ->assertStatus(403);

@@ -32,8 +32,8 @@ class OrganizationUserController extends Controller
         $member = OrganizationUser::firstOrCreate(
             [
                 'organization_id' => $organization->id,
-                'user_id'         => $request->input('user_id'),
-                'role'            => $request->input('role'),
+                'user_id' => $request->input('user_id'),
+                'role' => $request->input('role'),
             ],
             ['is_active' => true]
         );

@@ -8,7 +8,6 @@ use App\Models\Organization;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class FeatureFlagController extends Controller
 {
@@ -27,27 +26,27 @@ class FeatureFlagController extends Controller
 
         $data = $request->validate([
             'feature_key' => ['required', 'string', 'max:100'],
-            'is_enabled'  => ['required', 'boolean'],
+            'is_enabled' => ['required', 'boolean'],
         ]);
 
         try {
             $flag = $this->action->execute(
                 organization: $organization,
-                actor:        $request->user(),
-                featureKey:   $data['feature_key'],
-                isEnabled:    $data['is_enabled'],
+                actor: $request->user(),
+                featureKey: $data['feature_key'],
+                isEnabled: $data['is_enabled'],
             );
         } catch (AuthorizationException $e) {
             return response()->json([
-                'error'   => 'forbidden',
+                'error' => 'forbidden',
                 'message' => $e->getMessage(),
             ], 403);
         }
 
         return response()->json([
             'feature_key' => $flag->feature_key,
-            'is_enabled'  => $flag->is_enabled,
-            'source'      => $flag->source,
+            'is_enabled' => $flag->is_enabled,
+            'source' => $flag->source,
         ]);
     }
 }

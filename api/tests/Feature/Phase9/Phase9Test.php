@@ -1,8 +1,8 @@
 <?php
 
+use App\Jobs\DeliverWebhookJob;
 use App\Models\ApiKey;
 use App\Models\AuthMethod;
-use App\Models\Location;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\Registration;
@@ -10,9 +10,9 @@ use App\Models\Session;
 use App\Models\User;
 use App\Models\WebhookEndpoint;
 use App\Models\Workshop;
-use App\Jobs\DeliverWebhookJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -21,42 +21,43 @@ uses(RefreshDatabase::class);
 function p9OwnerWithOrg(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
+
     return [$user, $org];
 }
 
 function p9PublishedWorkshopWithSlug(Organization $org, string $slug): Workshop
 {
     return Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'             => 'published',
+        'status' => 'published',
         'public_page_enabled' => true,
-        'public_slug'        => $slug,
-        'title'              => 'Discovery Test Workshop',
-        'description'        => str_repeat('A workshop about photography. ', 10),
-        'timezone'           => 'America/New_York',
-        'start_date'         => now()->addDays(10)->toDateString(),
-        'end_date'           => now()->addDays(12)->toDateString(),
+        'public_slug' => $slug,
+        'title' => 'Discovery Test Workshop',
+        'description' => str_repeat('A workshop about photography. ', 10),
+        'timezone' => 'America/New_York',
+        'start_date' => now()->addDays(10)->toDateString(),
+        'end_date' => now()->addDays(12)->toDateString(),
     ]);
 }
 
 function p9CreateApiKey(Organization $org, User $createdBy, array $scopes): array
 {
-    $rawKey  = 'wf_test_' . \Illuminate\Support\Str::random(48);
+    $rawKey = 'wf_test_'.Str::random(48);
     $keyHash = hash('sha256', $rawKey);
 
     $key = ApiKey::create([
-        'organization_id'    => $org->id,
-        'name'               => 'Test Key',
-        'key_prefix'         => substr($rawKey, 0, 10),
-        'key_hash'           => $keyHash,
-        'scopes'             => $scopes,
-        'is_active'          => true,
+        'organization_id' => $org->id,
+        'name' => 'Test Key',
+        'key_prefix' => substr($rawKey, 0, 10),
+        'key_hash' => $keyHash,
+        'scopes' => $scopes,
+        'is_active' => true,
         'created_by_user_id' => $createdBy->id,
     ]);
 
@@ -70,24 +71,24 @@ test('auth_methods enum accepts saml and oidc values', function () {
 
     // email provider still works (regression check)
     $email = AuthMethod::create([
-        'user_id'          => $user->id,
-        'provider'         => 'email',
+        'user_id' => $user->id,
+        'provider' => 'email',
         'provider_user_id' => null,
     ]);
     expect($email->provider)->toBe('email');
 
     // saml provider accepted
     $saml = AuthMethod::create([
-        'user_id'          => $user->id,
-        'provider'         => 'saml',
+        'user_id' => $user->id,
+        'provider' => 'saml',
         'provider_user_id' => 'saml-uid-001',
     ]);
     expect($saml->provider)->toBe('saml');
 
     // oidc provider accepted
     $oidc = AuthMethod::create([
-        'user_id'          => $user->id,
-        'provider'         => 'oidc',
+        'user_id' => $user->id,
+        'provider' => 'oidc',
         'provider_user_id' => 'oidc-uid-001',
     ]);
     expect($oidc->provider)->toBe('oidc');
@@ -111,20 +112,20 @@ test('webhook dispatch queues job on workshop publish', function () {
 
     // Register a webhook endpoint for this org subscribed to workshop.published
     WebhookEndpoint::create([
-        'organization_id'  => $org->id,
-        'url'              => 'https://example.com/webhook',
+        'organization_id' => $org->id,
+        'url' => 'https://example.com/webhook',
         'secret_encrypted' => encrypt('test-secret-abc'),
-        'is_active'        => true,
-        'event_types'      => ['workshop.published'],
+        'is_active' => true,
+        'event_types' => ['workshop.published'],
     ]);
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => 'Webhook Test Workshop',
+        'status' => 'draft',
+        'title' => 'Webhook Test Workshop',
         'description' => 'A test.',
-        'timezone'    => 'America/New_York',
-        'start_date'  => now()->addDays(5)->toDateString(),
-        'end_date'    => now()->addDays(7)->toDateString(),
+        'timezone' => 'America/New_York',
+        'start_date' => now()->addDays(5)->toDateString(),
+        'end_date' => now()->addDays(7)->toDateString(),
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -140,12 +141,12 @@ test('webhook dispatch failure does not fail primary action', function () {
     [$user, $org] = p9OwnerWithOrg();
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'draft',
-        'title'       => 'Resilient Workshop',
+        'status' => 'draft',
+        'title' => 'Resilient Workshop',
         'description' => 'Must publish even if webhooks fail.',
-        'timezone'    => 'America/Chicago',
-        'start_date'  => now()->addDays(5)->toDateString(),
-        'end_date'    => now()->addDays(7)->toDateString(),
+        'timezone' => 'America/Chicago',
+        'start_date' => now()->addDays(5)->toDateString(),
+        'end_date' => now()->addDays(7)->toDateString(),
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -153,7 +154,7 @@ test('webhook dispatch failure does not fail primary action', function () {
         ->assertStatus(200);
 
     $this->assertDatabaseHas('workshops', [
-        'id'     => $workshop->id,
+        'id' => $workshop->id,
         'status' => 'published',
     ]);
 });
@@ -166,12 +167,12 @@ test('api key authenticates and allows scoped request', function () {
     [$key, $rawKey] = p9CreateApiKey($org, $user, [ApiKey::SCOPE_WORKSHOPS_READ]);
 
     Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'published',
-        'title'       => 'External API Workshop',
+        'status' => 'published',
+        'title' => 'External API Workshop',
         'description' => 'Visible via API.',
-        'timezone'    => 'UTC',
-        'start_date'  => now()->addDays(1)->toDateString(),
-        'end_date'    => now()->addDays(2)->toDateString(),
+        'timezone' => 'UTC',
+        'start_date' => now()->addDays(1)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     $this->withHeaders(['Authorization' => "ApiKey {$rawKey}"])
@@ -188,11 +189,11 @@ test('api key rejects wrong scope', function () {
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
         'status' => 'published',
-        'title'  => 'Scope Test',
+        'title' => 'Scope Test',
         'description' => 'Test',
         'timezone' => 'UTC',
         'start_date' => now()->addDays(1)->toDateString(),
-        'end_date'   => now()->addDays(2)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     $this->withHeaders(['Authorization' => "ApiKey {$rawKey}"])
@@ -245,26 +246,26 @@ test('discovery returns only published public workshops', function () {
 
     // Draft workshop — should NOT appear
     Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'             => 'draft',
+        'status' => 'draft',
         'public_page_enabled' => true,
-        'public_slug'        => 'draft-workshop',
-        'title'              => 'Draft',
-        'description'        => 'Not visible',
-        'timezone'           => 'UTC',
-        'start_date'         => now()->addDays(1)->toDateString(),
-        'end_date'           => now()->addDays(2)->toDateString(),
+        'public_slug' => 'draft-workshop',
+        'title' => 'Draft',
+        'description' => 'Not visible',
+        'timezone' => 'UTC',
+        'start_date' => now()->addDays(1)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     // Published but public_page_enabled=false — should NOT appear
     Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'             => 'published',
+        'status' => 'published',
         'public_page_enabled' => false,
-        'public_slug'        => 'hidden-workshop',
-        'title'              => 'Hidden',
-        'description'        => 'Not visible',
-        'timezone'           => 'UTC',
-        'start_date'         => now()->addDays(1)->toDateString(),
-        'end_date'           => now()->addDays(2)->toDateString(),
+        'public_slug' => 'hidden-workshop',
+        'title' => 'Hidden',
+        'description' => 'Not visible',
+        'timezone' => 'UTC',
+        'start_date' => now()->addDays(1)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     $response = $this->getJson('/api/v1/discover/workshops')
@@ -288,19 +289,19 @@ test('discovery never exposes join_code', function () {
 });
 
 test('discovery never exposes meeting url', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = p9PublishedWorkshopWithSlug($org, 'virtual-test');
 
     // Add a virtual session with a meeting_url
     Session::factory()->create([
-        'workshop_id'   => $workshop->id,
+        'workshop_id' => $workshop->id,
         'delivery_type' => 'virtual',
-        'meeting_url'   => 'https://zoom.us/j/secret-meeting',
-        'is_published'  => true,
-        'title'         => 'Virtual Session',
-        'description'   => 'Test',
-        'start_at'      => now()->addDays(10),
-        'end_at'        => now()->addDays(10)->addHours(2),
+        'meeting_url' => 'https://zoom.us/j/secret-meeting',
+        'is_published' => true,
+        'title' => 'Virtual Session',
+        'description' => 'Test',
+        'start_at' => now()->addDays(10),
+        'end_at' => now()->addDays(10)->addHours(2),
     ]);
 
     $response = $this->getJson('/api/v1/discover/workshops/virtual-test');
@@ -311,14 +312,14 @@ test('discovery never exposes meeting url', function () {
 test('discovery returns 404 for draft workshop', function () {
     $org = Organization::factory()->create();
     Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'             => 'draft',
+        'status' => 'draft',
         'public_page_enabled' => true,
-        'public_slug'        => 'draft-slug',
-        'title'              => 'Draft',
-        'description'        => 'Draft workshop',
-        'timezone'           => 'UTC',
-        'start_date'         => now()->addDays(1)->toDateString(),
-        'end_date'           => now()->addDays(2)->toDateString(),
+        'public_slug' => 'draft-slug',
+        'title' => 'Draft',
+        'description' => 'Draft workshop',
+        'timezone' => 'UTC',
+        'start_date' => now()->addDays(1)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     $this->getJson('/api/v1/discover/workshops/draft-slug')
@@ -330,21 +331,21 @@ test('external participants count never returns individual records', function ()
     [$key, $rawKey] = p9CreateApiKey($org, $user, [ApiKey::SCOPE_PARTICIPANTS_READ]);
 
     $workshop = Workshop::factory()->eventBased()->forOrganization($org->id)->create([
-        'status'      => 'published',
-        'title'       => 'Count Test',
+        'status' => 'published',
+        'title' => 'Count Test',
         'description' => 'Test',
-        'timezone'    => 'UTC',
-        'start_date'  => now()->addDays(1)->toDateString(),
-        'end_date'    => now()->addDays(2)->toDateString(),
+        'timezone' => 'UTC',
+        'start_date' => now()->addDays(1)->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
     ]);
 
     // Register a participant
     $participant = User::factory()->create();
     Registration::create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $participant->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $participant->id,
         'registration_status' => 'registered',
-        'registered_at'       => now(),
+        'registered_at' => now(),
     ]);
 
     $response = $this->withHeaders(['Authorization' => "ApiKey {$rawKey}"])

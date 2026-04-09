@@ -20,7 +20,7 @@ class UserTwoFactorMethod extends Model
     protected function casts(): array
     {
         return [
-            'is_enabled'   => 'boolean',
+            'is_enabled' => 'boolean',
             'last_used_at' => 'datetime',
         ];
     }

@@ -7,7 +7,6 @@ use App\Http\Resources\PublicWorkshopDiscoveryResource;
 use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Public Workshop Discovery — no authentication required.
@@ -32,12 +31,12 @@ class DiscoveryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'q'         => ['nullable', 'string', 'min:2', 'max:200'],
-            'location'  => ['nullable', 'string', 'max:200'],
-            'type'      => ['nullable', 'string', 'in:session_based,event_based'],
+            'q' => ['nullable', 'string', 'min:2', 'max:200'],
+            'location' => ['nullable', 'string', 'max:200'],
+            'type' => ['nullable', 'string', 'in:session_based,event_based'],
             'from_date' => ['nullable', 'date_format:Y-m-d'],
-            'to_date'   => ['nullable', 'date_format:Y-m-d'],
-            'page'      => ['nullable', 'integer', 'min:1'],
+            'to_date' => ['nullable', 'date_format:Y-m-d'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $query = Workshop::query()
@@ -47,23 +46,22 @@ class DiscoveryController extends Controller
             ->with(['defaultLocation'])
             ->withCount([
                 'confirmedLeaders as confirmed_leaders_count',
-                'sessions as published_sessions_count' => fn ($q) =>
-                    $q->where('is_published', true),
+                'sessions as published_sessions_count' => fn ($q) => $q->where('is_published', true),
             ]);
 
         if (! empty($validated['q'])) {
-            $term = '%' . $validated['q'] . '%';
+            $term = '%'.$validated['q'].'%';
             $query->where(function ($q) use ($term) {
                 $q->where('title', 'like', $term)
-                  ->orWhere('description', 'like', $term);
+                    ->orWhere('description', 'like', $term);
             });
         }
 
         if (! empty($validated['location'])) {
-            $loc = '%' . $validated['location'] . '%';
+            $loc = '%'.$validated['location'].'%';
             $query->whereHas('defaultLocation', function ($q) use ($loc) {
                 $q->where('city', 'like', $loc)
-                  ->orWhere('state_or_region', 'like', $loc);
+                    ->orWhere('state_or_region', 'like', $loc);
             });
         }
 
@@ -87,9 +85,9 @@ class DiscoveryController extends Controller
                 : PublicWorkshopDiscoveryResource::collection($paginated->items()),
             'meta' => [
                 'current_page' => $paginated->currentPage(),
-                'last_page'    => $paginated->lastPage(),
-                'total'        => $paginated->total(),
-                'per_page'     => $paginated->perPage(),
+                'last_page' => $paginated->lastPage(),
+                'total' => $paginated->total(),
+                'per_page' => $paginated->perPage(),
             ],
         ]);
     }
@@ -118,7 +116,7 @@ class DiscoveryController extends Controller
             return response()->json(['message' => 'Workshop not found.'], 404);
         }
 
-        $resource              = new PublicWorkshopDiscoveryResource($workshop);
+        $resource = new PublicWorkshopDiscoveryResource($workshop);
         $resource->includeDetail = true;
 
         return response()->json(['data' => $resource]);

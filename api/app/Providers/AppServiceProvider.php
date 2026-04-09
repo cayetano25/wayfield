@@ -16,7 +16,6 @@ use App\Policies\LeaderPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\NotificationPolicy;
 use App\Policies\OrganizationPolicy;
-use App\Policies\OrganizationUserPolicy;
 use App\Policies\RegistrationPolicy;
 use App\Policies\RosterPolicy;
 use App\Policies\SessionPolicy;
@@ -30,13 +29,13 @@ use Illuminate\Support\Facades\Gate;
 class AppServiceProvider extends AuthServiceProvider
 {
     protected $policies = [
-        Organization::class     => OrganizationPolicy::class,
-        Workshop::class         => WorkshopPolicy::class,
-        Location::class         => LocationPolicy::class,
-        Session::class          => SessionPolicy::class,
-        Track::class            => TrackPolicy::class,
-        Registration::class     => RegistrationPolicy::class,
-        Leader::class           => LeaderPolicy::class,
+        Organization::class => OrganizationPolicy::class,
+        Workshop::class => WorkshopPolicy::class,
+        Location::class => LocationPolicy::class,
+        Session::class => SessionPolicy::class,
+        Track::class => TrackPolicy::class,
+        Registration::class => RegistrationPolicy::class,
+        Leader::class => LeaderPolicy::class,
         LeaderInvitation::class => LeaderInvitationPolicy::class,
     ];
 

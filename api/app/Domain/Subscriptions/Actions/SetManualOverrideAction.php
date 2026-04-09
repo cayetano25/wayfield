@@ -20,9 +20,9 @@ class SetManualOverrideAction
      */
     public function execute(
         Organization $organization,
-        User         $actor,
-        string       $featureKey,
-        bool         $isEnabled,
+        User $actor,
+        string $featureKey,
+        bool $isEnabled,
     ): FeatureFlag {
         $isOwner = $organization->organizationUsers()
             ->where('user_id', $actor->id)
@@ -37,7 +37,7 @@ class SetManualOverrideAction
         }
 
         // Capture previous value for audit metadata
-        $existing      = FeatureFlag::where('organization_id', $organization->id)
+        $existing = FeatureFlag::where('organization_id', $organization->id)
             ->where('feature_key', $featureKey)
             ->first();
         $previousValue = $existing?->is_enabled;
@@ -45,23 +45,23 @@ class SetManualOverrideAction
         $flag = FeatureFlag::updateOrCreate(
             [
                 'organization_id' => $organization->id,
-                'feature_key'     => $featureKey,
+                'feature_key' => $featureKey,
             ],
             [
                 'is_enabled' => $isEnabled,
-                'source'     => 'manual_override',
+                'source' => 'manual_override',
             ]
         );
 
         AuditLogService::record([
             'organization_id' => $organization->id,
-            'actor_user_id'   => $actor->id,
-            'entity_type'     => 'feature_flag',
-            'entity_id'       => $flag->id,
-            'action'          => 'manual_override_set',
-            'metadata'        => [
-                'feature_key'    => $featureKey,
-                'is_enabled'     => $isEnabled,
+            'actor_user_id' => $actor->id,
+            'entity_type' => 'feature_flag',
+            'entity_id' => $flag->id,
+            'action' => 'manual_override_set',
+            'metadata' => [
+                'feature_key' => $featureKey,
+                'is_enabled' => $isEnabled,
                 'organization_id' => $organization->id,
                 'previous_value' => $previousValue,
             ],

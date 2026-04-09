@@ -16,9 +16,9 @@ class OrganizationUserFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'user_id'         => User::factory(),
-            'role'            => fake()->randomElement(['owner', 'admin', 'staff', 'billing_admin']),
-            'is_active'       => true,
+            'user_id' => User::factory(),
+            'role' => fake()->randomElement(['owner', 'admin', 'staff', 'billing_admin']),
+            'is_active' => true,
         ];
     }
 

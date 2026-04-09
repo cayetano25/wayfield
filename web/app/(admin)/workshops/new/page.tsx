@@ -38,14 +38,17 @@ export default function NewWorkshopPage() {
 
       // Create location first if location fields are filled
       if (values.location_name.trim()) {
+        const addr = values.location_address_data;
         const locationRes = await apiPost<{ id: number }>(
           `/organizations/${currentOrg.id}/locations`,
           {
             name: values.location_name,
-            address_line_1: values.location_address || null,
-            city: values.location_city || null,
-            state_or_region: values.location_state || null,
-            country: values.location_country || null,
+            address_line_1: addr?.address_line_1 || null,
+            address_line_2: addr?.address_line_2 || null,
+            city: addr?.locality || null,
+            state_or_region: addr?.administrative_area || null,
+            postal_code: addr?.postal_code || null,
+            country: addr?.country_code || null,
           },
         );
         defaultLocationId = locationRes.id;

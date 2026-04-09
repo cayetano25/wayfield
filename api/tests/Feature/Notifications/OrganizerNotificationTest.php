@@ -1,21 +1,21 @@
 <?php
 
-use App\Mail\WorkshopNotificationMail;
-use App\Models\AuditLog;
-use App\Models\Leader;
+use App\Jobs\SendEmailNotificationJob;
+use App\Jobs\SendPushNotificationJob;
 use App\Models\Notification;
-use App\Models\NotificationRecipient;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
+use App\Models\PushToken;
 use App\Models\Registration;
 use App\Models\Session;
-use App\Models\SessionLeader;
+use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,9 +26,9 @@ function makeOrganizerFixture(): array
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $workshop = Workshop::factory()
@@ -54,10 +54,10 @@ test('organizer can create an all_participants notification', function () {
 
     $response = $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'             => 'Workshop update',
-            'message'           => 'Important information for all participants.',
+            'title' => 'Workshop update',
+            'message' => 'Important information for all participants.',
             'notification_type' => 'informational',
-            'delivery_scope'    => 'all_participants',
+            'delivery_scope' => 'all_participants',
         ])
         ->assertStatus(201)
         ->assertJsonStructure(['notification_id', 'recipient_count']);
@@ -66,23 +66,23 @@ test('organizer can create an all_participants notification', function () {
 
     // Notification record
     $this->assertDatabaseHas('notifications', [
-        'id'             => $notificationId,
-        'workshop_id'    => $workshop->id,
-        'sender_scope'   => 'organizer',
+        'id' => $notificationId,
+        'workshop_id' => $workshop->id,
+        'sender_scope' => 'organizer',
         'delivery_scope' => 'all_participants',
     ]);
 
     // Recipient resolved
     $this->assertDatabaseHas('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $participant->id,
+        'user_id' => $participant->id,
     ]);
 
     // Audit log
     $this->assertDatabaseHas('audit_logs', [
-        'entity_type'   => 'notification',
-        'entity_id'     => $notificationId,
-        'action'        => 'organizer_notification_sent',
+        'entity_type' => 'notification',
+        'entity_id' => $notificationId,
+        'action' => 'organizer_notification_sent',
         'actor_user_id' => $owner->id,
     ]);
 });
@@ -98,12 +98,12 @@ test('organizer can create a session_participants notification', function () {
     $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     // Give the participant a session selection
-    $reg = \App\Models\Registration::where('workshop_id', $workshop->id)
+    $reg = Registration::where('workshop_id', $workshop->id)
         ->where('user_id', $sessionParticipant->id)
         ->first();
-    \App\Models\SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+    SessionSelection::factory()->create([
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -113,11 +113,11 @@ test('organizer can create a session_participants notification', function () {
 
     $response = $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'             => 'Session note',
-            'message'           => 'See you in session.',
+            'title' => 'Session note',
+            'message' => 'See you in session.',
             'notification_type' => 'informational',
-            'delivery_scope'    => 'session_participants',
-            'session_id'        => $session->id,
+            'delivery_scope' => 'session_participants',
+            'session_id' => $session->id,
         ])
         ->assertStatus(201);
 
@@ -126,12 +126,12 @@ test('organizer can create a session_participants notification', function () {
     // Only session participant is a recipient
     $this->assertDatabaseHas('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $sessionParticipant->id,
+        'user_id' => $sessionParticipant->id,
     ]);
 
     $this->assertDatabaseMissing('notification_recipients', [
         'notification_id' => $notificationId,
-        'user_id'         => $otherParticipant->id,
+        'user_id' => $otherParticipant->id,
     ]);
 });
 
@@ -142,8 +142,8 @@ test('session_participants delivery scope requires session_id', function () {
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'          => 'Missing session_id',
-            'message'        => 'Test.',
+            'title' => 'Missing session_id',
+            'message' => 'Test.',
             'delivery_scope' => 'session_participants',
             // session_id intentionally omitted
         ])
@@ -162,8 +162,8 @@ test('custom delivery scope is rejected with 501 not implemented', function () {
     // the validation layer rejects it first.
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'          => 'Custom scope',
-            'message'        => 'Test.',
+            'title' => 'Custom scope',
+            'message' => 'Test.',
             'delivery_scope' => 'custom',
         ])
         ->assertStatus(422) // rejected at validation layer (custom not in allowed values)
@@ -177,8 +177,8 @@ test('plain participant cannot create a notification', function () {
 
     $this->actingAs($participant, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'          => 'Not allowed',
-            'message'        => 'I am a participant.',
+            'title' => 'Not allowed',
+            'message' => 'I am a participant.',
             'delivery_scope' => 'all_participants',
         ])
         ->assertStatus(403);
@@ -194,8 +194,8 @@ test('email delivery is queued not sent synchronously', function () {
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'          => 'Update',
-            'message'        => 'Important.',
+            'title' => 'Update',
+            'message' => 'Important.',
             'delivery_scope' => 'all_participants',
         ])
         ->assertStatus(201);
@@ -204,7 +204,7 @@ test('email delivery is queued not sent synchronously', function () {
     Mail::assertNothingSent();
 
     // Delivery job was queued
-    Queue::assertPushed(\App\Jobs\SendEmailNotificationJob::class);
+    Queue::assertPushed(SendEmailNotificationJob::class);
 });
 
 // ─── Push token delivery is queued ───────────────────────────────────────────
@@ -215,17 +215,17 @@ test('push delivery is queued per active push token', function () {
     [$org, $owner, $workshop, $participant] = makeOrganizerFixture();
 
     // Register a push token for the participant
-    \App\Models\PushToken::factory()->forUser($participant->id)->create();
+    PushToken::factory()->forUser($participant->id)->create();
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/notifications", [
-            'title'          => 'Push test',
-            'message'        => 'Check your phone.',
+            'title' => 'Push test',
+            'message' => 'Check your phone.',
             'delivery_scope' => 'all_participants',
         ])
         ->assertStatus(201);
 
-    Queue::assertPushed(\App\Jobs\SendPushNotificationJob::class);
+    Queue::assertPushed(SendPushNotificationJob::class);
 });
 
 // ─── List notifications ────────────────────────────────────────────────────────

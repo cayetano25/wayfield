@@ -1,15 +1,27 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\Api\V1\ApiKeyController;
 use App\Http\Controllers\Api\V1\AttendanceController;
-use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\SystemAnnouncementController;
-use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
-use App\Http\Controllers\Api\V1\FeatureFlagController;
-use App\Http\Controllers\Api\V1\ReportingController;
-use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DiscoveryController;
+use App\Http\Controllers\Api\V1\ExternalApiController;
+use App\Http\Controllers\Api\V1\FeatureFlagController;
+use App\Http\Controllers\Api\V1\FileUploadController;
+use App\Http\Controllers\Api\V1\LeaderAdminController;
+use App\Http\Controllers\Api\V1\LeaderInvitationController;
+use App\Http\Controllers\Api\V1\LeaderSelfController;
+use App\Http\Controllers\Api\V1\LocationController;
+use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\OfflineSyncController;
+use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationUserController;
+use App\Http\Controllers\Api\V1\ParticipantController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
 use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
@@ -18,38 +30,27 @@ use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
-use App\Http\Controllers\Api\V1\PushTokenController;
-use App\Http\Controllers\Api\V1\UserNotificationController;
-use App\Http\Controllers\Api\V1\ApiKeyController;
-use App\Http\Controllers\Api\V1\DiscoveryController;
-use App\Http\Controllers\Api\V1\ExternalApiController;
-use App\Http\Controllers\Api\V1\LeaderAdminController;
-use App\Http\Controllers\Api\V1\LeaderInvitationController;
-use App\Http\Controllers\Api\V1\LeaderSelfController;
-use App\Http\Controllers\Api\V1\LocationController;
-use App\Http\Controllers\Api\V1\MyScheduleController;
-use App\Http\Controllers\Api\V1\OnboardingController;
-use App\Http\Controllers\Api\V1\OrganizationController;
-use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
+use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RegistrationController;
+use App\Http\Controllers\Api\V1\ReportingController;
 use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
 use App\Http\Controllers\Api\V1\SessionParticipantController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
 use App\Http\Controllers\Api\V1\SsoController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\SystemAnnouncementController;
 use App\Http\Controllers\Api\V1\TrackController;
+use App\Http\Controllers\Api\V1\UserNotificationController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WorkshopAnalyticsController;
 use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
 use App\Http\Controllers\Api\V1\WorkshopNotificationController;
-use App\Http\Controllers\Api\V1\OfflineSyncController;
-use App\Http\Controllers\Api\V1\FileUploadController;
-use App\Http\Controllers\Api\V1\ParticipantController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -95,6 +96,14 @@ Route::prefix('v1')->group(function () {
     // {id} is the non-secret lookup key; {token} is the raw secret verified with hash_equals().
     Route::get('leader-invitations/{id}/{token}', [LeaderInvitationController::class, 'show']);
     Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
+
+    // ─── Address / country config (authenticated) ─────────────────────────────
+    // Country config is static — safe to expose to any authenticated user.
+    Route::middleware(['auth:sanctum', 'tenant.user'])->group(function () {
+        Route::get('address/countries', [AddressController::class, 'countries']);
+        Route::get('address/countries/{code}', [AddressController::class, 'country']);
+        Route::get('address/infer-country', [AddressController::class, 'inferCountry']);
+    });
 
     // ─── Authenticated routes ─────────────────────────────────────────────────
     // tenant.user rejects platform AdminUser tokens — platform tokens must not work here
@@ -192,6 +201,7 @@ Route::prefix('v1')->group(function () {
 
         // ─── Leader admin (organizer) ─────────────────────────────────────────
         Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);
+        Route::get('organizations/{organization}/leaders/{leader}', [LeaderAdminController::class, 'show']);
         Route::post('organizations/{organization}/leaders/invitations', [LeaderAdminController::class, 'invite']);
 
         // ─── Leader self-service ──────────────────────────────────────────────

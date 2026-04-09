@@ -12,24 +12,24 @@ class NotificationFactory extends Factory
     public function definition(): array
     {
         return [
-            'organization_id'    => Organization::factory(),
-            'workshop_id'        => Workshop::factory(),
+            'organization_id' => Organization::factory(),
+            'workshop_id' => Workshop::factory(),
             'created_by_user_id' => User::factory(),
-            'title'              => $this->faker->sentence(4),
-            'message'            => $this->faker->paragraph(),
-            'notification_type'  => 'informational',
-            'sender_scope'       => 'organizer',
-            'delivery_scope'     => 'all_participants',
-            'session_id'         => null,
-            'sent_at'            => now(),
+            'title' => $this->faker->sentence(4),
+            'message' => $this->faker->paragraph(),
+            'notification_type' => 'informational',
+            'sender_scope' => 'organizer',
+            'delivery_scope' => 'all_participants',
+            'session_id' => null,
+            'sent_at' => now(),
         ];
     }
 
     public function forWorkshop(int $workshopId, int $organizationId, int $createdByUserId): static
     {
         return $this->state([
-            'workshop_id'        => $workshopId,
-            'organization_id'    => $organizationId,
+            'workshop_id' => $workshopId,
+            'organization_id' => $organizationId,
             'created_by_user_id' => $createdByUserId,
         ]);
     }

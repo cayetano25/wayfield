@@ -16,8 +16,9 @@ class AttachLeaderToSessionAction
      * assignment_status = 'accepted'.
      * The leader must have an accepted invitation for the organization before assignment.
      *
-     * @param string $roleInSession One of: primary_leader, co_leader, panelist, moderator, assistant
-     * @param bool   $isPrimary     Whether this leader is the primary/lead instructor
+     * @param  string  $roleInSession  One of: primary_leader, co_leader, panelist, moderator, assistant
+     * @param  bool  $isPrimary  Whether this leader is the primary/lead instructor
+     *
      * @throws \InvalidArgumentException if leader is not active in the organization
      */
     public function execute(
@@ -35,7 +36,7 @@ class AttachLeaderToSessionAction
         $validRoles = ['primary_leader', 'co_leader', 'panelist', 'moderator', 'assistant'];
         if (! in_array($roleInSession, $validRoles)) {
             throw new \InvalidArgumentException(
-                "Invalid role_in_session value '{$roleInSession}'. Must be one of: " . implode(', ', $validRoles)
+                "Invalid role_in_session value '{$roleInSession}'. Must be one of: ".implode(', ', $validRoles)
             );
         }
 
@@ -61,31 +62,31 @@ class AttachLeaderToSessionAction
         $sessionLeader = SessionLeader::updateOrCreate(
             [
                 'session_id' => $session->id,
-                'leader_id'  => $leader->id,
+                'leader_id' => $leader->id,
             ],
             [
-                'role_label'        => $roleLabel,
-                'role_in_session'   => $roleInSession,
+                'role_label' => $roleLabel,
+                'role_in_session' => $roleInSession,
                 'assignment_status' => $assignmentStatus,
-                'is_primary'        => $isPrimary,
+                'is_primary' => $isPrimary,
             ]
         );
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $actor->id,
-            'entity_type'     => 'session_leader',
-            'entity_id'       => $sessionLeader->id,
-            'action'          => $sessionLeader->wasRecentlyCreated
+            'actor_user_id' => $actor->id,
+            'entity_type' => 'session_leader',
+            'entity_id' => $sessionLeader->id,
+            'action' => $sessionLeader->wasRecentlyCreated
                 ? 'leader_assigned_to_session'
                 : 'leader_session_assignment_updated',
-            'metadata'        => [
-                'leader_id'         => $leader->id,
-                'session_id'        => $session->id,
-                'role_label'        => $roleLabel,
-                'role_in_session'   => $roleInSession,
+            'metadata' => [
+                'leader_id' => $leader->id,
+                'session_id' => $session->id,
+                'role_label' => $roleLabel,
+                'role_in_session' => $roleInSession,
                 'assignment_status' => $assignmentStatus,
-                'is_primary'        => $isPrimary,
+                'is_primary' => $isPrimary,
             ],
         ]);
 

@@ -26,15 +26,16 @@ class PlatformAuditService
      *       ]
      *   );
      *
-     * @param string        $action    Short action identifier, e.g. 'plan_changed'
-     * @param AdminUser|null $adminUser The authenticated platform admin (null for system-initiated)
-     * @param array          $options  {
-     *   @type string|null $entity_type
-     *   @type int|null    $entity_id
-     *   @type int|null    $organization_id
-     *   @type array|null  $metadata_json
-     *   @type string|null $ip_address
-     * }
+     * @param  string  $action  Short action identifier, e.g. 'plan_changed'
+     * @param  AdminUser|null  $adminUser  The authenticated platform admin (null for system-initiated)
+     * @param  array  $options  {
+     *
+     * @type string|null $entity_type
+     * @type int|null $entity_id
+     * @type int|null $organization_id
+     * @type array|null $metadata_json
+     * @type string|null $ip_address
+     *                   }
      */
     public function record(
         string $action,
@@ -42,13 +43,13 @@ class PlatformAuditService
         array $options = [],
     ): PlatformAuditLog {
         return PlatformAuditLog::create([
-            'admin_user_id'   => $adminUser?->id,
-            'action'          => $action,
-            'entity_type'     => $options['entity_type'] ?? null,
-            'entity_id'       => $options['entity_id'] ?? null,
+            'admin_user_id' => $adminUser?->id,
+            'action' => $action,
+            'entity_type' => $options['entity_type'] ?? null,
+            'entity_id' => $options['entity_id'] ?? null,
             'organization_id' => $options['organization_id'] ?? null,
-            'metadata_json'   => $options['metadata_json'] ?? null,
-            'ip_address'      => $options['ip_address'] ?? null,
+            'metadata_json' => $options['metadata_json'] ?? null,
+            'ip_address' => $options['ip_address'] ?? null,
         ]);
     }
 }

@@ -23,10 +23,23 @@ class LeaderAdminController extends Controller
         $this->authorize('viewAny', [Leader::class, $organization]);
 
         $leaders = $organization->leaders()
-            ->with('organizationLeaders')
+            ->with(['organizationLeaders', 'address'])
             ->get();
 
         return OrganizerLeaderResource::collection($leaders);
+    }
+
+    /**
+     * GET /api/v1/organizations/{organization}/leaders/{leader}
+     * Show full organizer view of a single leader including private address.
+     */
+    public function show(Organization $organization, Leader $leader): OrganizerLeaderResource
+    {
+        $this->authorize('viewAny', [Leader::class, $organization]);
+
+        $leader->load('address');
+
+        return new OrganizerLeaderResource($leader);
     }
 
     /**

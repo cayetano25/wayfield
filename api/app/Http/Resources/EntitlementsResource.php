@@ -12,16 +12,16 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class EntitlementsResource extends JsonResource
 {
     /**
-     * @param array{plan: string, subscription_status: string, limits: array, features: array, usage: array} $resource
+     * @param  array{plan: string, subscription_status: string, limits: array, features: array, usage: array}  $resource
      */
     public function toArray(Request $request): array
     {
         return [
-            'plan'                => $this->resource['plan'],
+            'plan' => $this->resource['plan'],
             'subscription_status' => $this->resource['subscription_status'],
-            'limits'              => $this->resource['limits'],
-            'features'            => $this->resource['features'],
-            'usage'               => $this->resource['usage'],
+            'limits' => $this->resource['limits'],
+            'features' => $this->resource['features'],
+            'usage' => $this->resource['usage'],
         ];
     }
 }

@@ -9,8 +9,9 @@ use App\Models\SessionSelection;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -20,21 +21,21 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
  */
 function makeDashboardScenario(string $plan): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
 
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     if ($plan !== 'none') {
         Subscription::factory()->create([
             'organization_id' => $org->id,
-            'plan_code'       => $plan,
-            'status'          => 'active',
+            'plan_code' => $plan,
+            'status' => 'active',
         ]);
     }
 
@@ -50,9 +51,9 @@ test('dashboard returns core metrics for free plan', function () {
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
         ->assertOk()
         ->assertJsonStructure([
-            'core'      => ['workshops', 'participants', 'sessions_this_month', 'attendance', 'plan'],
+            'core' => ['workshops', 'participants', 'sessions_this_month', 'attendance', 'plan'],
             'analytics' => ['attendance_metrics', 'capacity_metrics', 'session_breakdown', 'registration_trend'],
-            'stubs'     => ['revenue', 'satisfaction', 'engagement', 'learning_outcomes'],
+            'stubs' => ['revenue', 'satisfaction', 'engagement', 'learning_outcomes'],
         ]);
 });
 
@@ -75,11 +76,11 @@ test('dashboard core shows correct participant count', function () {
 
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
-        'status'          => 'published',
+        'status' => 'published',
     ]);
 
     Registration::factory()->count(3)->create([
-        'workshop_id'         => $workshop->id,
+        'workshop_id' => $workshop->id,
         'registration_status' => 'registered',
     ]);
 
@@ -108,10 +109,10 @@ test('attendance rate calculation is correct', function () {
     [$user, $org] = makeDashboardScenario('starter');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
 
     Registration::factory()->count(3)->create([
-        'workshop_id'         => $workshop->id,
+        'workshop_id' => $workshop->id,
         'registration_status' => 'registered',
     ]);
 
@@ -130,10 +131,10 @@ test('no show rate calculation is correct', function () {
     [$user, $org] = makeDashboardScenario('starter');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
 
     Registration::factory()->count(3)->create([
-        'workshop_id'         => $workshop->id,
+        'workshop_id' => $workshop->id,
         'registration_status' => 'registered',
     ]);
 
@@ -162,9 +163,9 @@ test('attendance rate is null when no registrations exist', function () {
 test('starter plan returns session breakdown ordered by enrollment desc', function () {
     [$user, $org] = makeDashboardScenario('starter');
 
-    $workshop  = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
-    $session1  = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
-    $session2  = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
+    $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
+    $session1 = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
+    $session2 = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
 
     // 2 enrollments in session1, 0 in session2
     $reg1 = Registration::factory()->create(['workshop_id' => $workshop->id, 'registration_status' => 'registered']);
@@ -187,10 +188,10 @@ test('starter plan returns capacity utilization', function () {
     [$user, $org] = makeDashboardScenario('starter');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
-    $session  = Session::factory()->create([
-        'workshop_id'  => $workshop->id,
+    $session = Session::factory()->create([
+        'workshop_id' => $workshop->id,
         'is_published' => true,
-        'capacity'     => 10,
+        'capacity' => 10,
     ]);
 
     $reg1 = Registration::factory()->create(['workshop_id' => $workshop->id, 'registration_status' => 'registered']);
@@ -215,9 +216,9 @@ test('capacity utilization is null when all sessions have unlimited capacity', f
 
     // Session with null capacity = unlimited
     Session::factory()->create([
-        'workshop_id'  => $workshop->id,
+        'workshop_id' => $workshop->id,
         'is_published' => true,
-        'capacity'     => null,
+        'capacity' => null,
     ]);
 
     $utilization = $this->actingAs($user, 'sanctum')
@@ -259,9 +260,9 @@ test('registration trend includes weeks with zero registrations', function () {
 
     // Only register in the most recent week — the other 11 weeks should have 0
     Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
+        'workshop_id' => $workshop->id,
         'registration_status' => 'registered',
-        'registered_at'       => now(),
+        'registered_at' => now(),
     ]);
 
     $trend = $this->actingAs($user, 'sanctum')
@@ -315,7 +316,7 @@ test('session breakdown returns at most 10 entries even when more sessions exist
 
     // Create 12 published sessions — breakdown must cap at 10
     Session::factory()->count(12)->create([
-        'workshop_id'  => $workshop->id,
+        'workshop_id' => $workshop->id,
         'is_published' => true,
     ]);
 
@@ -393,8 +394,8 @@ test('plan_code cannot be spoofed via request body to unlock analytics', functio
 // ─── Authorization ────────────────────────────────────────────────────────────
 
 test('dashboard is not accessible to user from different organization', function () {
-    [$user, $org]         = makeDashboardScenario('free');
-    [, $otherOrg]         = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('free');
+    [, $otherOrg] = makeDashboardScenario('free');
 
     // $user belongs to $org but not $otherOrg
     $this->actingAs($user, 'sanctum')
@@ -412,11 +413,11 @@ test('workshop analytics endpoint scopes data to single workshop', function () {
 
     // 3 registrations in workshop1, 1 in workshop2
     Registration::factory()->count(3)->create([
-        'workshop_id'         => $workshop1->id,
+        'workshop_id' => $workshop1->id,
         'registration_status' => 'registered',
     ]);
     Registration::factory()->count(1)->create([
-        'workshop_id'         => $workshop2->id,
+        'workshop_id' => $workshop2->id,
         'registration_status' => 'registered',
     ]);
 

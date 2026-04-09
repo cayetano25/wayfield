@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { ImageUploader } from '@/components/ui/ImageUploader';
+import { AddressForm } from '@/components/ui/AddressForm';
 import { apiPatch } from '@/lib/api/client';
+import type { AddressFormData } from '@/lib/types/address';
 
 const TIMEZONES = [
   'Pacific/Honolulu',
@@ -53,10 +55,7 @@ export interface WorkshopFormValues {
   timezone: string;
   public_page_enabled: boolean;
   location_name: string;
-  location_address: string;
-  location_city: string;
-  location_state: string;
-  location_country: string;
+  location_address_data: AddressFormData | null;
 }
 
 export interface WorkshopFormErrors {
@@ -113,10 +112,7 @@ export function WorkshopForm({
     timezone: 'UTC',
     public_page_enabled: false,
     location_name: '',
-    location_address: '',
-    location_city: '',
-    location_state: '',
-    location_country: '',
+    location_address_data: null,
     ...initialValues,
   });
   const [locationExpanded, setLocationExpanded] = useState(false);
@@ -124,6 +120,10 @@ export function WorkshopForm({
 
   function set(field: keyof WorkshopFormValues, value: string | boolean) {
     setValues((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function setAddress(data: AddressFormData) {
+    setValues((prev) => ({ ...prev, location_address_data: data }));
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -321,30 +321,16 @@ export function WorkshopForm({
               onChange={(e) => set('location_name', e.target.value)}
               placeholder="e.g. Mount Hood Photography Center"
             />
-            <Input
-              label="Address"
-              value={values.location_address}
-              onChange={(e) => set('location_address', e.target.value)}
-              placeholder="Street address"
+            <AddressForm
+              label="Default Location Address"
+              value={values.location_address_data}
+              onChange={setAddress}
+              workshopTimezone={values.timezone}
+              required={false}
             />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Input
-                label="City"
-                value={values.location_city}
-                onChange={(e) => set('location_city', e.target.value)}
-              />
-              <Input
-                label="State / Region"
-                value={values.location_state}
-                onChange={(e) => set('location_state', e.target.value)}
-              />
-              <Input
-                label="Country"
-                value={values.location_country}
-                onChange={(e) => set('location_country', e.target.value)}
-                placeholder="e.g. US"
-              />
-            </div>
+            <p className="text-xs text-medium-gray">
+              Sessions without a specific location will inherit this address.
+            </p>
           </div>
         )}
       </div>

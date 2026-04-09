@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiKey;
+use App\Http\Middleware\CheckFeatureAccess;
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureTenantUser;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,17 +18,17 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             // Platform API — Command Center routes (/api/platform/v1/*)
             // Separate from tenant API (/api/v1/*). Uses the platform_admin guard.
-            \Illuminate\Support\Facades\Route::middleware('api')
+            Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/platform.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
-            'tenant.user'    => \App\Http\Middleware\EnsureTenantUser::class,
-            'feature'        => \App\Http\Middleware\CheckFeatureAccess::class,
-            'auth.api_key'   => \App\Http\Middleware\AuthenticateApiKey::class,
+            'platform.admin' => EnsurePlatformAdmin::class,
+            'tenant.user' => EnsureTenantUser::class,
+            'feature' => CheckFeatureAccess::class,
+            'auth.api_key' => AuthenticateApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

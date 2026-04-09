@@ -22,15 +22,15 @@ class SystemAnnouncementController extends Controller
         $announcements = SystemAnnouncement::currentlyActive()
             ->get()
             ->map(fn (SystemAnnouncement $a) => [
-                'id'                => $a->id,
-                'title'             => $a->title,
-                'message'           => $a->message,
+                'id' => $a->id,
+                'title' => $a->title,
+                'message' => $a->message,
                 'announcement_type' => $a->announcement_type,
-                'severity'          => $a->severity,
-                'is_dismissable'    => $a->is_dismissable,
-                'starts_at'         => $a->starts_at?->toIso8601String(),
-                'ends_at'           => $a->ends_at?->toIso8601String(),
-                'color'             => SystemAnnouncement::TYPE_COLORS[$a->announcement_type] ?? null,
+                'severity' => $a->severity,
+                'is_dismissable' => $a->is_dismissable,
+                'starts_at' => $a->starts_at?->toIso8601String(),
+                'ends_at' => $a->ends_at?->toIso8601String(),
+                'color' => SystemAnnouncement::TYPE_COLORS[$a->announcement_type] ?? null,
             ]);
 
         return response()->json(['data' => $announcements]);

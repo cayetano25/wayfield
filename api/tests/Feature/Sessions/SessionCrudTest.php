@@ -5,20 +5,22 @@ use App\Models\OrganizationUser;
 use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function ownerWithSessionBasedWorkshop(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
+
     return [$user, $org, $workshop];
 }
 
@@ -27,9 +29,9 @@ test('owner can create a session', function () {
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/sessions", [
-            'title'         => 'Morning Shoot',
-            'start_at'      => '2026-09-01 08:00:00',
-            'end_at'        => '2026-09-01 11:00:00',
+            'title' => 'Morning Shoot',
+            'start_at' => '2026-09-01 08:00:00',
+            'end_at' => '2026-09-01 11:00:00',
             'delivery_type' => 'in_person',
         ])
         ->assertStatus(201)
@@ -46,9 +48,9 @@ test('sessions have no leader_id column', function () {
 
     $response = $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/sessions", [
-            'title'         => 'Check for leader_id',
-            'start_at'      => '2026-09-01 08:00:00',
-            'end_at'        => '2026-09-01 10:00:00',
+            'title' => 'Check for leader_id',
+            'start_at' => '2026-09-01 08:00:00',
+            'end_at' => '2026-09-01 10:00:00',
             'delivery_type' => 'in_person',
         ])
         ->assertStatus(201);
@@ -85,9 +87,9 @@ test('session end_at must be after start_at', function () {
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/sessions", [
-            'title'         => 'Bad Times',
-            'start_at'      => '2026-09-01 12:00:00',
-            'end_at'        => '2026-09-01 09:00:00',
+            'title' => 'Bad Times',
+            'start_at' => '2026-09-01 12:00:00',
+            'end_at' => '2026-09-01 09:00:00',
             'delivery_type' => 'in_person',
         ])
         ->assertStatus(422)
@@ -99,11 +101,11 @@ test('capacity null creates session with unlimited capacity', function () {
 
     $response = $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/sessions", [
-            'title'         => 'Unlimited Session',
-            'start_at'      => '2026-09-01 08:00:00',
-            'end_at'        => '2026-09-01 10:00:00',
+            'title' => 'Unlimited Session',
+            'start_at' => '2026-09-01 08:00:00',
+            'end_at' => '2026-09-01 10:00:00',
             'delivery_type' => 'in_person',
-            'capacity'      => null,
+            'capacity' => null,
         ])
         ->assertStatus(201);
 
@@ -116,9 +118,9 @@ test('non-member cannot create a session', function () {
 
     $this->actingAs($outsider, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/sessions", [
-            'title'         => 'Hack',
-            'start_at'      => '2026-09-01 08:00:00',
-            'end_at'        => '2026-09-01 10:00:00',
+            'title' => 'Hack',
+            'start_at' => '2026-09-01 08:00:00',
+            'end_at' => '2026-09-01 10:00:00',
             'delivery_type' => 'in_person',
         ])
         ->assertStatus(403);
@@ -138,7 +140,7 @@ test('owner can list sessions for a workshop', function () {
 });
 
 test('tenant boundary: owner cannot view sessions from another org workshop', function () {
-    [$user,] = ownerWithSessionBasedWorkshop();
+    [$user] = ownerWithSessionBasedWorkshop();
     [,, $otherWorkshop] = ownerWithSessionBasedWorkshop();
 
     $session = Session::factory()->forWorkshop($otherWorkshop->id)->create();

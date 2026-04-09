@@ -12,19 +12,19 @@ class NotificationRecipientFactory extends Factory
     {
         return [
             'notification_id' => Notification::factory(),
-            'user_id'         => User::factory(),
-            'email_status'    => 'pending',
-            'push_status'     => 'pending',
-            'in_app_status'   => 'pending',
-            'read_at'         => null,
+            'user_id' => User::factory(),
+            'email_status' => 'pending',
+            'push_status' => 'pending',
+            'in_app_status' => 'pending',
+            'read_at' => null,
         ];
     }
 
     public function delivered(): static
     {
         return $this->state([
-            'email_status'  => 'sent',
-            'push_status'   => 'sent',
+            'email_status' => 'sent',
+            'push_status' => 'sent',
             'in_app_status' => 'delivered',
         ]);
     }
@@ -33,7 +33,7 @@ class NotificationRecipientFactory extends Factory
     {
         return $this->state([
             'in_app_status' => 'read',
-            'read_at'       => now(),
+            'read_at' => now(),
         ]);
     }
 }

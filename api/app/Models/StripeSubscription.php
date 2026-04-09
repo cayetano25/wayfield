@@ -23,12 +23,12 @@ class StripeSubscription extends Model
     ];
 
     protected $casts = [
-        'trial_ends_at'        => 'datetime',
+        'trial_ends_at' => 'datetime',
         'current_period_start' => 'datetime',
-        'current_period_end'   => 'datetime',
-        'canceled_at'          => 'datetime',
-        'ended_at'             => 'datetime',
-        'metadata_json'        => 'array',
+        'current_period_end' => 'datetime',
+        'canceled_at' => 'datetime',
+        'ended_at' => 'datetime',
+        'metadata_json' => 'array',
     ];
 
     public function organization(): BelongsTo

@@ -45,21 +45,21 @@ class SelfCheckInAction
         $record = AttendanceRecord::updateOrCreate(
             ['session_id' => $session->id, 'user_id' => $user->id],
             [
-                'status'            => 'checked_in',
-                'check_in_method'   => 'self',
-                'checked_in_at'     => now(),
+                'status' => 'checked_in',
+                'check_in_method' => 'self',
+                'checked_in_at' => now(),
                 'checked_in_by_user_id' => null,
             ]
         );
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $user->id,
-            'entity_type'     => 'attendance_record',
-            'entity_id'       => $record->id,
-            'action'          => 'self_check_in',
-            'metadata'        => [
-                'session_id'  => $session->id,
+            'actor_user_id' => $user->id,
+            'entity_type' => 'attendance_record',
+            'entity_id' => $record->id,
+            'action' => 'self_check_in',
+            'metadata' => [
+                'session_id' => $session->id,
                 'workshop_id' => $workshop->id,
             ],
         ]);

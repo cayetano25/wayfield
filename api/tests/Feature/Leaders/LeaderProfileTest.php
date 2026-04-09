@@ -1,19 +1,21 @@
 <?php
 
 use App\Models\Leader;
-use App\Models\LeaderInvitation;
 use App\Models\Organization;
 use App\Models\OrganizationLeader;
 use App\Models\OrganizationUser;
+use App\Models\Session;
+use App\Models\SessionLeader;
 use App\Models\User;
-use Illuminate\Support\Str;
+use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Leader self-profile ──────────────────────────────────────────────────────
 
 test('leader can retrieve their own profile', function () {
-    $user   = User::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
@@ -33,13 +35,13 @@ test('user without leader profile gets 404', function () {
 });
 
 test('leader can update their own profile', function () {
-    $user   = User::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
         ->patchJson('/api/v1/leader/profile', [
-            'bio'       => 'Updated bio.',
-            'city'      => 'Portland',
+            'bio' => 'Updated bio.',
+            'city' => 'Portland',
             'website_url' => 'https://example.com',
         ])
         ->assertStatus(200)
@@ -47,14 +49,14 @@ test('leader can update their own profile', function () {
         ->assertJsonPath('city', 'Portland');
 
     $this->assertDatabaseHas('leaders', [
-        'id'   => $leader->id,
-        'bio'  => 'Updated bio.',
+        'id' => $leader->id,
+        'bio' => 'Updated bio.',
         'city' => 'Portland',
     ]);
 });
 
 test('leader cannot update another leader\'s profile', function () {
-    $user1   = User::factory()->create();
+    $user1 = User::factory()->create();
     $leader1 = Leader::factory()->withUser($user1->id)->create();
 
     $user2 = User::factory()->create();
@@ -73,7 +75,7 @@ test('leader cannot update another leader\'s profile', function () {
 });
 
 test('profile update is logged to audit_logs', function () {
-    $user   = User::factory()->create();
+    $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
@@ -84,22 +86,22 @@ test('profile update is logged to audit_logs', function () {
 
     $this->assertDatabaseHas('audit_logs', [
         'actor_user_id' => $user->id,
-        'entity_type'   => 'leader',
-        'entity_id'     => $leader->id,
-        'action'        => 'leader_profile_updated',
+        'entity_type' => 'leader',
+        'entity_id' => $leader->id,
+        'action' => 'leader_profile_updated',
     ]);
 });
 
 test('leader can view their assigned sessions', function () {
-    $user    = User::factory()->create();
-    $leader  = Leader::factory()->withUser($user->id)->create();
-    $org     = Organization::factory()->create();
-    $workshop = \App\Models\Workshop::factory()->forOrganization($org->id)->published()->create();
-    $session = \App\Models\Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $user = User::factory()->create();
+    $leader = Leader::factory()->withUser($user->id)->create();
+    $org = Organization::factory()->create();
+    $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
-    \App\Models\SessionLeader::factory()->create([
+    SessionLeader::factory()->create([
         'session_id' => $session->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -111,17 +113,17 @@ test('leader can view their assigned sessions', function () {
 });
 
 test('leader sees only their assigned sessions, not others', function () {
-    $user    = User::factory()->create();
-    $leader  = Leader::factory()->withUser($user->id)->create();
-    $org     = Organization::factory()->create();
-    $workshop = \App\Models\Workshop::factory()->forOrganization($org->id)->published()->create();
+    $user = User::factory()->create();
+    $leader = Leader::factory()->withUser($user->id)->create();
+    $org = Organization::factory()->create();
+    $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
 
-    $assignedSession   = \App\Models\Session::factory()->forWorkshop($workshop->id)->published()->create();
-    $unassignedSession = \App\Models\Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $assignedSession = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $unassignedSession = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
-    \App\Models\SessionLeader::factory()->create([
+    SessionLeader::factory()->create([
         'session_id' => $assignedSession->id,
-        'leader_id'  => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -139,20 +141,20 @@ test('organizer without a linked leader record cannot update any leader profile'
     // An org admin who has never accepted a leader invitation has no linked
     // Leader record. The profile endpoint resolves the leader by the authenticated
     // user's user_id — so they get 404, not someone else's profile.
-    $org   = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     // A separate leader exists in this org — organizer must NOT be able to reach it
     $leader = Leader::factory()->create();
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
+        'leader_id' => $leader->id,
     ]);
 
     $this->actingAs($admin, 'sanctum')
@@ -167,13 +169,13 @@ test('organizer without a linked leader record cannot update any leader profile'
 test('organizer with their own leader profile can only update their own, not another leader', function () {
     // Even when the org admin happens to also be a leader, the profile endpoint
     // is bound to their own user_id — they cannot reach a different leader's profile.
-    $org   = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     // Admin is also a leader
@@ -183,7 +185,7 @@ test('organizer with their own leader profile can only update their own, not ano
     $otherLeader = Leader::factory()->create(['bio' => 'Other bio.']);
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $otherLeader->id,
+        'leader_id' => $otherLeader->id,
     ]);
 
     // The PATCH /leader/profile endpoint always resolves to the authenticated user's own leader
@@ -200,20 +202,20 @@ test('organizer with their own leader profile can only update their own, not ano
 // ─── Organizer leaders list ───────────────────────────────────────────────────
 
 test('organizer can view org leaders list', function () {
-    $org    = Organization::factory()->create();
-    $admin  = User::factory()->create();
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $admin->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     $leader = Leader::factory()->create();
     OrganizationLeader::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'active',
+        'leader_id' => $leader->id,
+        'status' => 'active',
     ]);
 
     $response = $this->actingAs($admin, 'sanctum')

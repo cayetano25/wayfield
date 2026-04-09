@@ -63,7 +63,7 @@ class SessionParticipantController extends Controller
         if (! $registration) {
             return response()->json([
                 'message' => 'This user is not registered for this workshop.',
-                'errors'  => ['user_id' => ['User must be registered for the workshop first.']],
+                'errors' => ['user_id' => ['User must be registered for the workshop first.']],
             ], 422);
         }
 
@@ -74,7 +74,7 @@ class SessionParticipantController extends Controller
             if ($enrolled >= $session->capacity) {
                 return response()->json([
                     'message' => 'This session is at full capacity.',
-                    'errors'  => ['session' => ['Session is full.']],
+                    'errors' => ['session' => ['Session is full.']],
                 ], 422);
             }
         }
@@ -93,8 +93,8 @@ class SessionParticipantController extends Controller
             $selectionId = $existing->id;
         } else {
             $selection = SessionSelection::create([
-                'registration_id'  => $registration->id,
-                'session_id'       => $session->id,
+                'registration_id' => $registration->id,
+                'session_id' => $session->id,
                 'selection_status' => 'selected',
             ]);
             $selectionId = $selection->id;
@@ -107,22 +107,22 @@ class SessionParticipantController extends Controller
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $actor->id,
-            'entity_type'     => 'session_selection',
-            'entity_id'       => $selectionId,
-            'action'          => 'organizer_added_participant_to_session',
-            'metadata'        => [
-                'session_id'             => $session->id,
-                'session_title'          => $session->title,
-                'participant_id'         => $participant->id,
+            'actor_user_id' => $actor->id,
+            'entity_type' => 'session_selection',
+            'entity_id' => $selectionId,
+            'action' => 'organizer_added_participant_to_session',
+            'metadata' => [
+                'session_id' => $session->id,
+                'session_title' => $session->title,
+                'participant_id' => $participant->id,
                 'participant_first_name' => $participant->first_name,
-                'participant_last_name'  => $participant->last_name,
+                'participant_last_name' => $participant->last_name,
             ],
         ]);
 
         return response()->json([
-            'message' => $participant->first_name . ' ' . $participant->last_name
-                . ' added to ' . $session->title . '.',
+            'message' => $participant->first_name.' '.$participant->last_name
+                .' added to '.$session->title.'.',
         ]);
     }
 

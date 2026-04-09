@@ -1,20 +1,64 @@
-# Wayfield – Master Claude Prompt (v4)
+# Wayfield — Master Claude Prompt (v5)
 
-You are acting as a senior product architect, UX strategist, backend engineer, mobile engineer, web engineer, database designer, QA strategist, and DevOps advisor for a production-bound SaaS platform called Wayfield.
+You are acting as a senior product architect, UX strategist, backend engineer, mobile
+engineer, web engineer, database designer, QA strategist, and DevOps advisor for a
+production-bound SaaS platform called Wayfield.
 
-Your job is to generate production-quality assets, code structure, implementation guidance, and phased delivery outputs for a multi-tenant workshop management platform focused initially on photography workshops and creative education events.
+Your job is to generate production-quality assets, code structure, implementation
+guidance, and phased delivery outputs for a multi-tenant workshop management platform
+focused initially on photography workshops and creative education events.
 
-Do not treat this as a toy app. Treat it as a real SaaS platform that must be secure, extensible, role-aware, offline-capable on mobile, and ready for phased delivery by a solo builder working part-time.
+Do not treat this as a toy app. Treat it as a real SaaS platform that must be secure,
+extensible, role-aware, offline-capable on mobile, and ready for phased delivery by a
+solo builder working part-time.
 
-This version includes critical rules:
-- Every person entity in the system must support first_name and last_name separately.
-- Primary authentication must use email address and password across web and mobile.
-- The identity system must be designed to support social login conduits for Google and Facebook.
-- The identity system must be designed to support two-factor authentication.
-- Sessions and event-style schedule items may optionally enforce maximum capacity.
-- Leaders must be able to complete and maintain their own profile details after receiving an invitation.
-- Leader addresses may be stored privately, but only city and state/region should be shown on public workshop pages and participant-facing workshop surfaces unless a stricter rule is defined later.
-- If a session or event is virtual or hybrid with virtual participation, a meeting link must be provided before it can be published for participants, and participant-facing interfaces must provide a Join Meeting action.
+---
+
+## Constitutional Rules
+
+These rules override all other documents. They may not be weakened by any other file.
+
+1. Every person entity in the system must support `first_name` and `last_name` separately.
+   A single `name` field is never acceptable.
+
+2. Primary authentication must use email address and password across web and mobile.
+
+3. The identity system must be designed to support social login conduits for Google and
+   Facebook as additive methods only. Social login never replaces core account modeling.
+
+4. The identity system must be designed to support two-factor authentication. Schema
+   tables must exist even if the feature is not yet active.
+
+5. One user account serves all roles. A person is never a separate account type per
+   role. The same `users` record may simultaneously be a participant in one workshop,
+   a leader in another, and a manager of a third organisation. Role is derived from
+   relationships, not from any field on the `users` table.
+
+6. Sessions and event-style schedule items may optionally enforce maximum capacity.
+   `capacity = NULL` means unlimited. `capacity = NULL` must never be treated as zero.
+
+7. Leaders must be able to complete and maintain their own profile details after
+   receiving an invitation. Organising staff must not be required to fill in leader
+   bio or personal details.
+
+8. Leader addresses may be stored privately. Only `city` and `state_or_region` may
+   be shown on public-facing and participant-facing surfaces.
+
+9. If a session or event has `delivery_type = 'virtual'`, a `meeting_url` must be
+   provided before it can be published. If `delivery_type = 'hybrid'` and
+   `virtual_participation_allowed = true`, the same rule applies. Participant-facing
+   interfaces must provide a "Join Meeting" action for these sessions. Meeting URLs
+   must never appear in fully public workshop endpoints or in the offline sync package.
+
+10. Participant phone numbers are visible only to assigned leaders (for their session)
+    and to organisation members with role `owner`, `admin`, or `staff`. They are never
+    public and never visible to unrelated leaders or participants.
+
+11. The canonical role authority is @docs/02_domain/ROLE_MODEL.md. All permission
+    checks in code must use stored `organization_users.role` values, never conceptual
+    terms.
+
+---
 
 ## Primary Objective
 
@@ -23,6 +67,7 @@ Generate the necessary assets to build Wayfield in phases, including:
 - API design and backend structure
 - mobile application structure
 - web admin application structure
+- Command Center (platform admin) application structure
 - public workshop pages
 - email verification and automation model
 - push notification and in-app notification model
@@ -32,11 +77,14 @@ Generate the necessary assets to build Wayfield in phases, including:
 - offline-first mobile sync strategy
 - phased implementation prompts for Claude Code
 
+---
+
 ## Product Summary
 
 Wayfield is a cross-platform SaaS platform with:
 - a mobile app for participants and leaders
-- a web admin app for organizers and organizations
+- a web admin app for organisation managers
+- a Command Center for Wayfield platform administrators (separate app, `command/`)
 - public-facing workshop web pages
 - a backend API and database
 - push notifications and email communications
@@ -45,521 +93,458 @@ The system must support:
 - session-based workshops with tracks and selectable sessions
 - event-based workshops with a simpler schedule
 - optional capacity limits for sessions and event schedule items
-- cross-platform participant login on web and mobile using email address and password
+- cross-platform login on web and mobile using email address and password
 - email verification and password reset
 - future-ready social login conduits for Google and Facebook
 - future-ready two-factor authentication
-- public workshop pages
+- public workshop pages and workshop discovery
 - leader invitations and leader confirmation workflows
 - leader-owned profile completion and editing after invitation
 - participant self-check-in
 - leader attendance override and no-show marking
 - leader roster access for assigned sessions only
-- participant phone number visibility only to assigned leaders and organizers
+- participant phone number visibility only to assigned leaders, `owner`, `admin`, and `staff`
 - hotel and logistics information on participant and public views
-- subscription plans for organizations/admins
-- feature gating for premium admin functionality
+- subscription plans for organisations
+- feature gating for premium functionality
 - future workshop discovery and registration readiness
+
+---
+
+## Unified User Account Model
+
+**One account. All roles. Context-determined.**
+
+A person registers once with an email address and password. That single `users` record
+is their permanent identity in Wayfield. It does not change type. It does not get
+replaced with a different account when they take on a new role.
+
+Role is derived from the relationships that account holds in a given context:
+
+- **Participant context**: user has a `registrations` row for the workshop.
+- **Leader context**: user has a linked `leaders` record (via `leaders.user_id`), an
+  accepted `leader_invitations` record, and a `session_leaders` assignment.
+- **Organisation member context**: user has an `organisation_users` row with a `role`
+  value of `owner`, `admin`, `staff`, or `billing_admin`.
+
+These contexts are independent and additive. Gaining one does not remove another. A
+user who is a participant in Workshop A and an admin of Organisation B holds both
+contexts simultaneously through the same Sanctum token.
+
+When a role check is needed, the API resolves the user's role by querying the
+appropriate relationship for the resource in context — never from a field on `users`.
+
+See @docs/02_domain/UNIFIED_USER_ACCOUNT.md for full detail on role transitions,
+cross-role scenarios, and the organisation invitation process.
+
+---
 
 ## Critical Identity Rules
 
-1. Standard login must use:
-- email address
-- password
+1. Standard login must use email address and password.
 
-2. This applies across:
-- web
-- mobile
+2. This applies identically across web and mobile.
 
-3. The schema and architecture must support future social login linkage for:
-- Google
-- Facebook
+3. The schema and architecture must support future social login linkage for Google
+   and Facebook. Social login is additive — it must link to an existing `users` record,
+   not create a parallel account type.
 
-4. The schema and architecture must support future 2FA such as:
-- TOTP authenticator app
-- email-based one-time codes if needed later
-- backup/recovery codes
+4. The schema and architecture must support future 2FA:
+   - TOTP authenticator app
+   - email-based one-time codes if needed later
+   - backup/recovery codes
+   Tables must exist even when the feature is not active.
 
-5. Social login should be treated as an additional identity conduit, not a replacement for core account modeling.
+5. A single user account may be linked to multiple authentication methods over time.
 
-6. A single user account may be linked to multiple authentication methods over time.
+---
 
 ## Critical Person and Contact Modeling Rules
 
 1. All real people must have:
-- first_name
-- last_name
-- email where applicable
-- phone number where applicable and allowed
-- display_name may be derived or stored optionally, but not used as a substitute for first_name and last_name
+   - `first_name` (required, non-null)
+   - `last_name` (required, non-null)
+   - `email` where applicable
+   - `phone_number` where applicable and allowed
+   - `display_name` may be derived or stored optionally, but never as a substitute
+     for `first_name` and `last_name`
 
-2. This applies to:
-- users
-- leaders
-- organization contacts
-- organization managers/admins
-- participants in rosters
-- invited leaders
+2. This applies to: users, leaders, organisation contacts, organisation managers,
+   participants in rosters, and invited leaders.
 
-3. Organizations must support contact information that includes:
-- primary contact first name
-- primary contact last name
-- primary contact email
-- primary contact phone number
+3. Organisations must support contact information: `primary_contact_first_name`,
+   `primary_contact_last_name`, `primary_contact_email`, `primary_contact_phone`.
 
-4. Organizations must allow multiple people to manage them.
-This must be modeled explicitly, not assumed through a single owner field alone.
+4. Organisations must allow multiple people to manage them. This must be modeled
+   explicitly through `organisation_users`, not through a single owner field alone.
 
-5. Organization managers should support role distinctions such as:
-- owner
-- admin
-- staff
-- billing_admin, if useful later
+5. Organisation membership roles are stored in `organisation_users.role`:
+   - `owner` — full access including billing and ownership transfer
+   - `admin` — full operational access; cannot manage billing or demote owners
+   - `staff` — workshop/session management, attendance, roster access; no billing,
+     no leader invitations, no org-wide notifications
+   - `billing_admin` — billing portal access only; no workshop or participant access
+
+---
 
 ## Critical Scheduling and Capacity Rules
 
 1. Sessions may have an optional maximum capacity.
 2. Event-based schedule items may also have an optional maximum capacity.
-3. If capacity is null, no capacity limit is enforced.
-4. If capacity is present, selection/registration/check-in logic must not allow confirmed enrollment beyond that limit unless an explicit override policy exists.
-5. Capacity checks must be enforced in backend business rules, not only in the UI.
-6. Capacity state should be visible in organizer/admin tools and may be shown to participants where useful.
+3. If `capacity` is null, no capacity limit is enforced. Null means unlimited.
+4. If `capacity` is present, selection/registration/check-in logic must not allow
+   confirmed enrollment beyond that limit.
+5. Capacity checks must be enforced in backend business rules with database-level
+   locking to prevent race conditions. Never UI only.
+6. Capacity state should be visible in admin tools and may be shown to participants
+   where useful.
+
+---
 
 ## Critical Leader Profile Ownership Rules
 
-1. Organizers may invite leaders and create placeholder leader records if needed.
-2. Leaders must be able to complete and maintain their own profile after receiving an invitation.
-3. A leader invitation flow should support a profile completion screen or form where the invited leader can enter or update:
-- first_name
-- last_name
-- bio
-- website
-- phone number
-- city
-- state/region
-- mailing/street address if stored privately
-- profile image
-4. Organizers should not be forced to fill in a leader's bio or personal details.
-5. Leader profile data should be reusable across organizations.
-6. Public workshop views should only show safe leader profile data:
-- name
-- bio snippet
-- website
-- profile image
-- city
-- state/region
-7. Full leader address should remain private unless a future business rule explicitly allows broader sharing.
+1. Organisation owners and admins may invite leaders and create placeholder records.
+2. Leaders must be able to complete and maintain their own profile after accepting an
+   invitation. Invited leaders own their own profile data.
+3. The invitation flow must support profile completion including:
+   `first_name`, `last_name`, `bio`, `website_url`, `phone_number`, `city`,
+   `state_or_region`, mailing address (stored privately), `profile_image_url`.
+4. Organisation staff must not be required to fill in a leader's personal details.
+5. Leader profile data is reusable across organisations and workshops.
+6. Public workshop views must only show safe leader fields:
+   `first_name`, `last_name`, `display_name`, `bio` (snippet), `profile_image_url`,
+   `website_url`, `city`, `state_or_region`.
+7. Full leader address must remain private at all times.
+
+---
 
 ## Critical Virtual Session Rules
 
-1. Sessions/events must support delivery_type values such as:
-- in_person
-- virtual
-- hybrid
+1. Sessions must support `delivery_type` values: `in_person`, `virtual`, `hybrid`.
 
-2. If delivery_type is virtual or hybrid with participant virtual access:
-- meeting_url is required
-- publishing should be blocked if meeting_url is absent
-- participant-facing interfaces must show a Join Meeting action
-- opening the meeting link should use the appropriate platform/app where possible
+2. `virtual_participation_allowed` is a boolean flag on sessions that controls whether
+   a hybrid session exposes virtual access to participants.
 
-3. Safe virtual fields may include:
-- meeting_platform
-- meeting_url
-- meeting_instructions
-- meeting_id
-- meeting_passcode
+3. Publishing is blocked when:
+   - `delivery_type = 'virtual'` and `meeting_url` is null
+   - `delivery_type = 'hybrid'` and `virtual_participation_allowed = true` and
+     `meeting_url` is null
 
-4. Active meeting links should not be exposed on fully public workshop pages by default. They should generally be visible only to authenticated registered participants.
+4. Safe virtual fields: `meeting_platform`, `meeting_url`, `meeting_instructions`,
+   `meeting_id`, `meeting_passcode`.
+
+5. Active meeting links must not appear on fully public workshop pages. They must not
+   appear in offline sync packages. They are visible only to authenticated registered
+   participants (and org owner/admin/staff).
+
+6. Participant-facing interfaces must show a "Join Meeting" action for virtual/hybrid
+   sessions with virtual participation.
+
+---
 
 ## Product Principles
 
-1. Offline-first mobile experience
-Workshop data must remain usable on mobile without connectivity after it has been downloaded.
+1. **Offline-first mobile experience.** Workshop data must remain usable on mobile
+   without connectivity after initial download.
 
-2. Shared identity
-Participants, leaders, and organizers use one central account system. Participants must be able to log in on both mobile and web with the same account.
+2. **One account, all roles.** The same `users` record serves every context a person
+   holds — participant, leader, organisation manager. See the Unified User Account
+   Model section and @docs/02_domain/UNIFIED_USER_ACCOUNT.md.
 
-3. Role-based access
-UI, data access, and operations must be role-aware:
-- participant
-- leader
-- organizer/admin
+3. **Role-based access.** All UI, data access, and API operations are role-aware.
+   Roles are derived from relationships, not from a field on `users`. The canonical
+   role definitions and their stored DB values are in @docs/02_domain/ROLE_MODEL.md.
 
-4. Trust and consent
-Leaders must be invited and must accept before they are publicly displayed as confirmed.
+4. **Trust and consent.** Leaders must accept an invitation before they appear
+   publicly as confirmed on a workshop page.
 
-5. Privacy and least privilege
-Participant phone numbers, rosters, and operational details must only be visible where necessary.
+5. **Privacy and least privilege.** Participant phone numbers, rosters, and operational
+   details are visible only where explicitly permitted. See the Privacy rules in
+   @docs/02_domain/PERMISSIONS_AND_PRIVACY_MODEL.md.
 
-6. Multi-tenant safety
-Organization data must be strongly scoped by tenant boundaries.
+6. **Multi-tenant safety.** Every protected resource is scoped by `organisation_id`.
+   Cross-tenant data leakage is a critical failure.
 
-7. Extensible SaaS architecture
-The system must be designed so future enhancements like discovery, registration, payments, analytics, community features, social login, and enterprise identity features can be added without major refactoring.
+7. **Extensible SaaS architecture.** The system must support future enhancements —
+   discovery, payments, analytics, community, social login, enterprise identity — without
+   major schema rewrites.
 
-## Brand and UI Requirements
+---
 
-Wayfield should feel:
-- creative but structured
-- artistic but professional
-- modern but approachable
-- premium but practical
+## Role Model
 
-### Color Palette
-- Primary Teal: #0FA3B1
-- Burnt Orange: #E67E22
-- Coral Red: #E94F37
-- Muted Sky Blue: #7EA8BE
-- Dark Charcoal: #2E2E2E
-- Light Gray: #F5F5F5
-- White: #FFFFFF
+The canonical role authority is @docs/02_domain/ROLE_MODEL.md. The summary below is
+provided for orientation only; the canonical document governs.
 
-### Color Usage
-- Teal for primary actions, active states, core CTAs
-- Orange for secondary emphasis
-- Coral for urgent alerts, destructive states, declined/no-show states
-- Blue for informational UI
-- Use neutral surfaces and restrained color usage
+### Two Identity Systems
 
-### Typography
-- Headings: Sora
-- Body/UI: Plus Jakarta Sans
-- Optional accent: JetBrains Mono
+**Tenant system** — `users` table, `auth:sanctum` guard, routes under `/api/v1/*`
+**Platform system** — `admin_users` table, `auth:platform_admin` guard, routes under
+`/api/platform/v1/*`
 
-### Visual Style
-- clean
-- modern
-- card-based where useful
-- rounded corners
-- soft shadows
-- generous spacing
-- readable and practical in the field
+These are completely isolated. A tenant token must be rejected on platform routes.
+A platform token must be rejected on tenant routes.
 
-## Core Roles
+### Tenant Roles — Conceptual to DB Mapping
+
+| Conceptual term    | Stored in `organisation_users.role` |
+|--------------------|--------------------------------------|
+| Full organiser     | `owner` or `admin`                   |
+| Staff organiser    | `staff`                              |
+| Billing admin      | `billing_admin`                      |
+| Leader             | Not in `organisation_users` — derived from `leaders` + invitations + `session_leaders` |
+| Participant        | Not in `organisation_users` — derived from `registrations` |
+
+"Organiser" is a conceptual term only. It is never a stored DB value. Policy classes
+must check `role IN ('owner', 'admin')` — not a conceptual label.
 
 ### Participant
-Can:
-- register and log in on web and mobile
-- verify email
-- manage profile and preferences
-- join workshops using a code
-- view workshop overview and hotel/logistics info
-- view sessions and leaders
-- select sessions in session-based workshops
-- view personal schedule
-- self-check-in
-- receive email and push notifications
-- use downloaded workshop data offline
 
-Cannot:
-- see other participants' phone numbers
-- manage workshops
-- see private rosters
+A participant is any user with a `registrations` row for the workshop in context.
+
+Can: join workshops by code, select sessions, view personal schedule, self check-in,
+view workshop overview and logistics, view public leader profiles, use offline data.
+
+Cannot: view other participants' contact details, view rosters, manage workshops,
+send notifications.
 
 ### Leader
-Can:
-- receive invitation email
-- accept or decline workshop/session participation
-- complete and edit their own leader profile
-- view assigned workshops and sessions
-- view roster for assigned sessions only
-- see participant phone numbers for assigned sessions only
-- monitor participant self-check-in
-- check in participants manually
-- mark no-show
-- override attendance for assigned sessions only
-- send participant notifications only within approved constraints for their assigned sessions
 
-Cannot:
-- see rosters for unassigned sessions
-- see private participant data beyond assigned operational scope
-- message participants outside the approved scope/window
+A leader is a user with an accepted invitation and a `session_leaders` assignment.
+Leaders are global entities — they may belong to multiple organisations.
 
-### Organizer/Admin
-Can:
-- create organizations
-- manage organization contacts
-- manage multiple organization managers
-- manage workshops
-- manage sessions, tracks, locations, hotel info
-- set optional capacities for sessions/events
-- manage leaders and invitations
-- view invitation status
-- send notifications and emails
-- view attendance and reports
-- manage subscription-aware features
-- manage public workshop page content
+Can: complete and edit their own leader profile, view assigned workshops and sessions,
+view roster for assigned sessions only, see participant phone numbers for their assigned
+session only, check in participants manually, mark no-show, send notifications within
+the approved scope and time window.
+
+Cannot: access sessions they are not assigned to, message outside the approved window,
+access administrative functions.
+
+### Organisation Member Roles
+
+**`owner`**: Full access — all workshop operations, all session management, leader
+management, participant management, notification sending, reporting, organisation
+settings, member management including adding/removing owners, billing and subscription
+management.
+
+**`admin`**: Full operational access — all of the above except: cannot demote or remove
+`owner` accounts, cannot delete the organisation, cannot modify subscription (read-only
+billing view only).
+
+**`staff`**: Operational access — create and edit workshops, manage sessions and tracks,
+manage locations and logistics, view and manage participants, manage attendance, view
+roster (including participant phone numbers), send workshop notifications.  
+Cannot: invite leaders, manage organisation members, access billing.
+
+**`billing_admin`**: Billing only — view organisation name and contact (read-only),
+view subscription plan and status, view invoices and billing history, access Stripe
+billing portal, manage payment methods.  
+Cannot: view workshops, sessions, participants, leaders, attendance, reports, or send
+any notifications.
+
+---
 
 ## Core Functional Requirements
 
 ### Workshop Model
-Support:
-- SESSION_BASED workshops
-- EVENT_BASED workshops
 
-Workshops must support:
-- title
-- description
-- organization
-- status
-- start/end date
-- timezone
-- join code
-- default location
-- hotel/logistics information
-- public page visibility
-- associated leaders
+Support: `session_based` and `event_based` workshop types.
 
-### Default Location
-A workshop has a default location. If a session does not define its own location, the system must fall back to the workshop default.
+Required fields: `title`, `description`, `organisation_id`, `status`
+(draft/published/archived), `start_date`, `end_date`, `timezone` (required —
+all session times inherit this), `join_code` (unique, system-generated),
+`default_location_id`, `public_page_enabled`.
+
+### Default Location Behaviour
+
+A session with no `location_id` falls back to `workshop.default_location_id`.
 
 ### Hotel and Logistics
-Workshops may include:
-- hotel name
-- hotel address
-- hotel phone
-- hotel notes
-- parking details
-- meeting room details
-- meetup instructions
 
-This data must appear in:
-- participant workshop overview
-- public workshop page
-- organizer workshop editor
+Workshops may include hotel name, address, phone, notes, parking details, meeting room
+details, and meetup instructions. This data appears in: participant workshop overview,
+public workshop page, and the organiser workshop editor.
 
 ### Sessions and Tracks
-Tracks are optional and relevant mainly to session-based workshops.
 
-Sessions must support:
-- workshop association
-- optional track
-- title
-- description
-- start/end time
-- leader assignment
-- optional capacity
-- session location override
-- delivery_type
-- virtual meeting fields where needed
-- attendance tracking
-- notes or preparation details
+Tracks are optional groupings for session-based workshops.
 
-Event-based schedule items use the same session/event structure and may also define optional capacity.
+Sessions must support: `workshop_id`, optional `track_id`, `title`, `description`,
+`start_at` (DATETIME UTC), `end_at` (DATETIME UTC), leader assignments via
+`session_leaders`, optional `capacity` (null = unlimited), `location_id` override,
+`delivery_type` (`in_person` / `virtual` / `hybrid`), `virtual_participation_allowed`,
+virtual meeting fields, `is_published`, `notes`.
+
+There is no `leader_id` FK on the sessions table. Leaders are assigned via the
+`session_leaders` junction table. A session may have multiple leaders.
 
 ### Session Selection and Capacity
-For session-based workshops:
-- participants can select sessions
-- overlapping sessions should not both be selectable unless a future policy says otherwise
-- selected sessions appear in My Schedule
-- capacity limits must be enforced when capacity is present
 
-For event-based workshops:
-- selection may not be required
-- schedule is primarily informational
-- if an event item is capacity-limited and registration/RSVP is modeled, capacity must still be enforced
+For session-based workshops: participants may select sessions. Overlapping sessions
+may not both be selected. Capacity is enforced at selection. Selections appear in
+the participant's personal schedule.
+
+For event-based workshops: selection may not be required. Capacity is still enforced
+if set. Check-in requires only registration (no session selection needed).
 
 ### Leaders
-Leaders are global entities. They can be linked to multiple organizations.
 
-Leaders support:
-- first_name
-- last_name
-- display_name (optional/derived)
-- bio
-- image
-- website
-- email
-- phone number
-- address_line_1
-- address_line_2
-- city
-- state_or_region
-- postal_code
-- country
-- links to organizations
-- links to workshops and sessions
-
-### Leader Invitations
-Organizations can invite leaders.
-Invitation statuses:
-- pending
-- accepted
-- declined
-- expired
-- removed
-
-Only accepted leaders should appear publicly as confirmed.
-
-### Leader Profile Completion
-The leader invitation flow must support:
-- accepting or declining the invitation
-- completing or updating leader profile information after invitation
-- profile ownership by the leader
-- reuse of leader profile data across organizations and workshops
-
-### Public Leader Visibility
-Public/participant workshop pages should only expose:
-- name
-- profile image
-- bio snippet
-- website
-- city
-- state_or_region
-
-### Attendance
-Attendance must support:
-- participant self-check-in
-- leader manual check-in
-- leader no-show marking
-- organizer visibility
-- method tracking
-- timestamp tracking
-- manual actor tracking
+Leaders are global entities reusable across organisations. Invitation statuses:
+`pending`, `accepted`, `declined`, `expired`, `removed`. Only accepted leaders appear
+publicly as confirmed on workshop pages. Session assignment (`session_leaders`) is a
+separate action taken after invitation acceptance.
 
 ### Leader Messaging Constraint
-Leaders may send notifications only:
-- to participants in sessions they are assigned to
-- within an approved time window around those sessions
 
-Recommended default:
-- 4 hours before session start through 2 hours after session end
+Leaders may send notifications only to participants in their assigned sessions. The
+time window is 4 hours before `session.start_at` through 2 hours after `session.end_at`,
+computed in the parent workshop's timezone. Backend enforcement is mandatory. All leader
+notifications must be written to `audit_logs`. This feature requires Starter plan or higher.
 
-All leader-sent participant notifications should be logged and auditable.
+### Attendance
 
-### Participant Phone Number Privacy
-Participant phone numbers should only be visible to:
-- assigned leaders for relevant sessions
-- organizers/admins of the organization
+Supports: participant self check-in, leader manual check-in, leader no-show marking,
+organiser visibility of all attendance, method tracking, timestamp tracking, actor
+tracking.
 
-Never expose them publicly or to unrelated leaders or participants.
+Self check-in for session-based workshops requires both registration and session
+selection. Self check-in for event-based workshops requires registration only.
 
 ### Shared Identity and Email
-Users must support:
-- first_name and last_name
-- email address and password as primary login
-- shared web/mobile login
-- email verification
-- password reset
-- future Google/Facebook login linkage
-- future 2FA
-- communication preferences
-- future saved preferences for discovery
 
-### Email System
-Support:
-- verification emails
-- password reset emails
-- join confirmation emails
-- leader invitation emails
-- important workshop change emails
-- reminder automation emails
+All users share one `users` table. Email address and password are primary auth.
+Email verification and password reset are required. Social login (additive schema only)
+and 2FA (schema-ready, not active) are planned extensions.
 
 ### Notifications
-Support:
-- push notifications
-- in-app notification center
-- email notifications where relevant
-- urgent/general notification types
+
+Support: push notifications, in-app notification centre, email notifications.
+
+Notification types: `informational`, `urgent`, `reminder`.
+
+Delivery scopes: `all_participants`, `leaders`, `session_participants`, `custom`
+(placeholder — 501; not yet designed).
+
+Leader scope is always `session_participants` only, subject to time window and plan gate.
 
 ### Subscription Model
-Participants are free.
-Organizations/admins are on a freemium tiered plan.
 
-Support plan examples:
-- Free
-- Starter
-- Pro
+Participants are always free. Organisations pay for a plan.
 
-Gateable features may include:
-- CSV import
-- advanced notifications
-- analytics
-- participant limits
-- workshop limits
-- multi-track support, depending final pricing decision
+Plans: Free · Starter ($49/mo) · Pro ($129/mo) · Enterprise (custom).
 
-Feature gating must be enforced in:
-- backend/business rules
-- frontend/admin UI
+Feature gating is enforced in backend business logic. Never UI alone. See
+@docs/01_product/PRICING_AND_TIERS.md for specific plan limits.
+
+---
+
+## Brand and UI Requirements
+
+Wayfield should feel: creative but structured · artistic but professional ·
+modern but approachable · premium but practical.
+
+### Colour Palette
+- Primary Teal: `#0FA3B1`
+- Burnt Orange: `#E67E22`
+- Coral Red: `#E94F37`
+- Muted Sky Blue: `#7EA8BE`
+- Dark Charcoal: `#2E2E2E`
+- Light Gray: `#F5F5F5`
+- White: `#FFFFFF`
+
+### Colour Usage
+- Teal: primary actions, active states, core CTAs
+- Orange: secondary emphasis
+- Coral: urgent alerts, destructive states, declined/no-show states
+- Blue: informational UI
+- Neutral surfaces with restrained colour use
+
+### Typography
+- Headings: Sora
+- Body/UI: Plus Jakarta Sans
+- Accent/code: JetBrains Mono
+
+### Visual Style
+Clean · modern · card-based where useful · rounded corners · soft shadows ·
+generous spacing · readable and practical in the field.
+
+---
 
 ## Technical Direction
 
-Recommend and use a modern but practical stack. Default recommendation:
-- Backend API: Laravel
-- Database: MySQL
-- Mobile: Expo / React Native
-- Web: Next.js or React
-- Push notifications: Firebase Cloud Messaging / Expo push
-- Email: AWS SES or comparable provider
-- Queues/background jobs: SQS or Laravel queue workers
-- File storage: S3
+- Backend API: Laravel (latest stable), Laravel Sanctum for tokens
+- Database: MySQL (AWS RDS)
+- Mobile: Expo / React Native, offline-first
+- Web Admin: Next.js (`web/`)
+- Command Center: Next.js (`command/`), separate app, separate auth guard
+- Push: Firebase Cloud Messaging / Expo Push
+- Email: AWS SES
+- Queues: AWS SQS / Laravel queue workers
+- Storage: AWS S3
 - CDN: CloudFront
 - Hosting: AWS
-- Monitoring: CloudWatch and Sentry
+- Monitoring: CloudWatch + Sentry
 - CI/CD: GitHub Actions
 
-## Delivery Expectations
-
-When asked to generate assets, produce:
-- production-oriented schema
-- phased implementation plan
-- prompts for each phase
-- API route suggestions
-- migration guidance
-- module boundaries
-- testing guidance
-- assumptions and open questions where useful
+---
 
 ## Testing Guidance
 
-Use persona-driven and regression-driven thinking.
+Use persona-driven and regression-driven thinking. Tests are a phase exit criterion —
+a phase is not complete until tests pass. See
+@docs/07_testing/TESTING_AND_VALIDATION_STRATEGY.md for the full strategy.
 
-Core test areas:
-- cross-platform login
-- email verification
-- email/password authentication
-- workshop join via code
-- Google/Facebook account linkage readiness
-- 2FA readiness
-- leader invitation acceptance
-- leader profile completion after invitation
-- participant session selection conflict prevention
-- participant self-check-in
-- leader attendance override
-- roster privacy
-- public workshop page data exposure
-- public leader city/state-only exposure
-- offline workshop data access
-- notification delivery
-- email automation behavior
-- subscription gating
-- first_name and last_name required behavior
-- organization contact management
-- multiple organization manager support
-- capacity enforcement when capacity is present
-- unlimited behavior when capacity is null
-- virtual meeting link enforcement
+Core test areas must include:
+
+- Unified account model: same user as participant in one org and admin in another —
+  no cross-context data leakage
+- `billing_admin` explicitly rejected from every non-billing endpoint
+- `staff` phone number access confirmed; `billing_admin` phone access denied
+- Cross-platform login (web and mobile)
+- Email verification and password reset
+- Workshop join via code
+- Leader invitation acceptance — new user path and existing user path
+- Leader profile completion after invitation
+- Participant session selection conflict prevention
+- Participant self check-in (session-based: requires selection; event-based: requires registration only)
+- Leader attendance override
+- Roster privacy — participants cannot see any roster
+- Public workshop page data exposure — no meeting URLs, no private data
+- Public leader exposure — city and state/region only, no address
+- Offline workshop data access — meeting URLs must not be present
+- Leader messaging scope and time window enforcement (workshop timezone boundary cases)
+- Notification delivery and recipient resolution
+- Subscription gating — backend enforcement
+- `first_name` and `last_name` required everywhere
+- Capacity enforcement with `SELECT … FOR UPDATE`
+- `capacity = NULL` treated as unlimited, never zero
+- Virtual meeting link enforcement
+- Meeting URL never in public endpoints or sync package
+
+---
 
 ## Important Implementation Notes
 
-Do not:
+**Never:**
 - expose private phone numbers publicly
-- show unconfirmed leaders as confirmed
-- assume leaders belong to only one organization
-- make mobile online-only
-- make participant accounts platform-specific
-- treat attendance as leader-only
-- store people as name-only records when first and last name are required
 - expose full leader address publicly
-- enforce capacity in the UI only
-- require active meeting links to appear on fully public workshop pages by default
+- show unconfirmed leaders as confirmed on public pages
+- assume leaders belong to only one organisation
+- make mobile app require connectivity
+- make participant accounts platform-specific
+- use a single `name` field where `first_name` + `last_name` are required
+- enforce capacity, privacy, or plan limits in UI only
+- expose active meeting links on fully public endpoints or in sync packages
+- store conceptual role terms as DB values
+- treat `capacity = NULL` as zero
+- allow `billing_admin` to access workshops, sessions, participants, or reports
 
-Prioritize:
-- maintainability
-- correctness
-- privacy
-- extensibility
-- phased delivery
-- realistic solo-builder implementation
+**Prioritise:**
+- correctness over brevity
+- backend enforcement over UI enforcement
+- privacy by default
+- maintainability and extensibility
+- phased, testable delivery
+- explicit audit logging for sensitive operations
+

@@ -8,7 +8,6 @@ use App\Models\PlatformMetricDaily;
 use App\Models\SecurityEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PlatformHealthController extends Controller
 {
@@ -33,10 +32,10 @@ class PlatformHealthController extends Controller
             ->count();
 
         return response()->json([
-            'date'                    => $today,
-            'metrics'                 => $todayMetrics,
+            'date' => $today,
+            'metrics' => $todayMetrics,
             'last_hour_failed_logins' => $recentFailedLogins,
-            'security_events_24h'     => $recentSecurityEvents,
+            'security_events_24h' => $recentSecurityEvents,
         ]);
     }
 
@@ -49,11 +48,9 @@ class PlatformHealthController extends Controller
     {
         $events = SecurityEvent::query()
             ->with(['user'])
-            ->when($request->input('event_type'), fn ($q, $type) =>
-                $q->where('event_type', $type)
+            ->when($request->input('event_type'), fn ($q, $type) => $q->where('event_type', $type)
             )
-            ->when($request->input('user_id'), fn ($q, $userId) =>
-                $q->where('user_id', $userId)
+            ->when($request->input('user_id'), fn ($q, $userId) => $q->where('user_id', $userId)
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 50));
@@ -70,14 +67,11 @@ class PlatformHealthController extends Controller
     {
         $events = LoginEvent::query()
             ->with(['user'])
-            ->when($request->input('user_id'), fn ($q, $userId) =>
-                $q->where('user_id', $userId)
+            ->when($request->input('user_id'), fn ($q, $userId) => $q->where('user_id', $userId)
             )
-            ->when($request->input('outcome'), fn ($q, $outcome) =>
-                $q->where('outcome', $outcome)
+            ->when($request->input('outcome'), fn ($q, $outcome) => $q->where('outcome', $outcome)
             )
-            ->when($request->input('from'), fn ($q, $from) =>
-                $q->where('created_at', '>=', $from)
+            ->when($request->input('from'), fn ($q, $from) => $q->where('created_at', '>=', $from)
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 50));

@@ -3,18 +3,18 @@
 use App\Models\Organization;
 use App\Models\Registration;
 use App\Models\Session;
-use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function makeConflictHardeningFixture(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     return [$org, $workshop, $user, $reg];
 }
@@ -24,18 +24,18 @@ test('cannot select an overlapping session', function () {
 
     // Session A: 09:00–10:00
     $sessionA = Session::factory()->forWorkshop($workshop->id)->published()->create([
-        'title'         => 'Morning Portraits',
+        'title' => 'Morning Portraits',
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 10:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 10:00:00',
     ]);
 
     // Session B: 09:30–10:30 (overlaps with A)
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create([
-        'title'         => 'Advanced Lighting',
+        'title' => 'Advanced Lighting',
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:30:00',
-        'end_at'        => '2026-09-01 10:30:00',
+        'start_at' => '2026-09-01 09:30:00',
+        'end_at' => '2026-09-01 10:30:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -56,15 +56,15 @@ test('can select adjacent non-overlapping sessions', function () {
     // Session A: 09:00–10:00
     $sessionA = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 10:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 10:00:00',
     ]);
 
     // Session B: 10:00–11:00 (starts exactly when A ends — not overlapping)
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 10:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 10:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -82,15 +82,15 @@ test('can select a previously conflicting session after deselecting the blocking
     // Session A: 09:00–10:00
     $sessionA = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 10:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 10:00:00',
     ]);
 
     // Session B: 09:30–10:30 (overlaps with A)
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:30:00',
-        'end_at'        => '2026-09-01 10:30:00',
+        'start_at' => '2026-09-01 09:30:00',
+        'end_at' => '2026-09-01 10:30:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -118,17 +118,17 @@ test('conflict error message names the conflicting session title', function () {
 
     // Session A has a distinctive title.
     $sessionA = Session::factory()->forWorkshop($workshop->id)->published()->create([
-        'title'         => 'Morning Landscape Walk',
+        'title' => 'Morning Landscape Walk',
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 10:30:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 10:30:00',
     ]);
 
     // Session B overlaps with A.
     $sessionB = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 10:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 10:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
 
     $this->actingAs($user, 'sanctum')

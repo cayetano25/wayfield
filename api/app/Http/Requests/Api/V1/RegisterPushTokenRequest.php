@@ -14,7 +14,7 @@ class RegisterPushTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'platform'   => ['required', 'string', 'in:ios,android'],
+            'platform' => ['required', 'string', 'in:ios,android'],
             'push_token' => ['required', 'string', 'max:500'],
         ];
     }

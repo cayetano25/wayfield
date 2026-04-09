@@ -5,20 +5,22 @@ use App\Models\OrganizationUser;
 use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function ownerWithWorkshop(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
+
     return [$user, $org, $workshop];
 }
 
@@ -27,7 +29,7 @@ test('owner can publish an in_person session', function () {
 
     $session = Session::factory()->forWorkshop($workshop->id)->create([
         'delivery_type' => 'in_person',
-        'meeting_url'   => null,
+        'meeting_url' => null,
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -62,9 +64,9 @@ test('hybrid session with virtual_participation_allowed=true requires meeting_ur
     [$user,, $workshop] = ownerWithWorkshop();
 
     $session = Session::factory()->forWorkshop($workshop->id)->create([
-        'delivery_type'                => 'hybrid',
+        'delivery_type' => 'hybrid',
         'virtual_participation_allowed' => true,
-        'meeting_url'                  => null,
+        'meeting_url' => null,
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -114,7 +116,7 @@ test('publish fails when start_at is not before end_at', function () {
 
     $session = Session::factory()->forWorkshop($workshop->id)->create([
         'start_at' => '2026-09-01 12:00:00',
-        'end_at'   => '2026-09-01 10:00:00',
+        'end_at' => '2026-09-01 10:00:00',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -125,15 +127,15 @@ test('publish fails when start_at is not before end_at', function () {
 
 test('staff cannot publish a session', function () {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->create(['delivery_type' => 'in_person']);
+    $session = Session::factory()->forWorkshop($workshop->id)->create(['delivery_type' => 'in_person']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/sessions/{$session->id}/publish")

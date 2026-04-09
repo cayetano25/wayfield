@@ -22,7 +22,7 @@ class Registration extends Model
 
     protected $casts = [
         'registered_at' => 'datetime',
-        'canceled_at'   => 'datetime',
+        'canceled_at' => 'datetime',
     ];
 
     public function workshop(): BelongsTo

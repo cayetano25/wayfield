@@ -1,173 +1,117 @@
-# Wayfield Command Center — Overview and Architecture
+# Command Center — Overview
+## docs/command_center/COMMAND_CENTER_OVERVIEW.md
 
-## What It Is
-
-The Command Center is a separate platform-level operations interface used
-exclusively by Wayfield employees (platform_admins). It is not accessible
-to organization admins, organizers, participants, or leaders.
-
-It provides visibility and control across the entire SaaS platform:
-tenant health, billing, support, automations, security, and product metrics.
+> **Backend API:** Complete (CC-API Phases 1–5)
+> **Frontend app (`command/`):** Scaffolded only — no domain screens built
 
 ---
 
-## How It Fits in the Monorepo
+## What Is the Command Center
 
-```
-wayfield/
-├── api/          ← Laravel backend (shared — serves both web admin and command center)
-├── web/          ← Organizer web admin (tenant-facing)
-├── mobile/       ← Expo app (participant + leader)
-└── command/      ← Command Center (platform-facing) ← NEW
-```
+The Command Center is a separate internal web application for Wayfield platform
+administrators — employees of Wayfield itself. It is not accessible to tenant
+organisations or their users.
 
-The Command Center is a separate Next.js app in the same monorepo.
-It calls the same Laravel API but hits a separate route prefix:
-`/api/platform/v1` — authenticated exclusively with platform_admin tokens.
+It provides:
+- A read view across all tenant organisations and their usage data
+- Billing management and Stripe subscription control
+- Feature flag overrides per organisation
+- Platform-level automation rule management
+- Support ticket oversight
+- System announcement publishing
+- Audit log access for platform admin mutations
 
-Tenant-facing API routes (`/api/v1`) do not accept platform_admin tokens.
-Platform API routes (`/api/platform/v1`) do not accept tenant user tokens.
-These are completely isolated at the middleware level.
+The Command Center is a **Wayfield-internal tool only**. It is not a white-label
+admin panel. Tenant organisations use the web admin at `web/` for their own management.
 
 ---
 
-## Tech Stack
+## Architecture Separation
 
-| Layer | Technology | Notes |
+The Command Center has complete architectural isolation from the tenant-facing system.
+
+| Concern | Tenant System | Command Center |
 |---|---|---|
-| Frontend | Next.js 15 (App Router) | Separate app in command/ |
-| Auth | Laravel Sanctum (platform_admin guard) | Separate token table |
-| Database | Same MySQL instance, same Laravel API | New tables added |
-| Billing | Stripe | Webhooks → stripe_events table |
-| Support | Crisp ($25/mo) | Webhooks mirrored locally |
-| Automations | Laravel Queue + rule engine tables | Extensible |
-| Charts | Recharts or Tremor | Lightweight, no backend dependency |
-| Metrics | On-demand SQL queries | Aggregation hooks ready |
+| User table | `users` | `admin_users` |
+| Auth guard | `auth:sanctum` | `auth:platform_admin` |
+| Token type | `users` Sanctum token | `admin_users` Sanctum token |
+| Route prefix | `/api/v1/*` | `/api/platform/v1/*` |
+| Frontend app | `web/` (Next.js) | `command/` (Next.js, separate app) |
+| Audit log | `audit_logs` (tenant events) | `platform_audit_logs` (platform mutations) |
+
+**A tenant token is always rejected on platform routes.**
+**A platform admin token is always rejected on tenant routes.**
+This is enforced by middleware on every route, not by convention.
 
 ---
 
-## Stripe Integration
+## What Platform Admins Can Do
 
-Stripe handles all billing. The Laravel API:
-- Creates Stripe customers on organization creation
-- Creates/updates subscriptions via Stripe Checkout or API
-- Receives webhooks for payment events
-- Mirrors Stripe data into local tables for fast querying
+Platform admins can **read** all tenant data across organisations for support
+and oversight purposes.
 
-Local tables (`stripe_customers`, `stripe_subscriptions`, `stripe_invoices`,
-`stripe_events`) are the source of truth for the command center's
-financial views. They are populated by Stripe webhooks, not polled.
+Platform admins can **only mutate** tenant data through the following explicitly
+defined actions:
+- Feature flag overrides: `POST /api/platform/v1/organizations/{org}/feature-flags`
+- Plan changes: `POST /api/platform/v1/organizations/{org}/billing/plan`
+- System announcements: create, update, delete via platform announcement endpoints
 
----
-
-## Support Integration — Crisp
-
-Crisp is the customer support tool. Platform admins use the Crisp
-dashboard for day-to-day support work. The Command Center shows a
-read-only view of ticket activity via Crisp webhooks mirrored locally.
-
-Why Crisp:
-- $25/mo for the growth plan — reasonable for a small team
-- Good REST API and webhook support
-- Conversation + contact metadata lets you tag tickets by organization
-- Can embed a chat widget in the organizer web app later
-
-Local mirroring: Crisp webhooks → `crisp_conversations` table →
-read-only view in Command Center showing open tickets per org,
-response times, and volume trends. Platform admins still work
-in Crisp's own interface for actual support work.
+Every platform admin mutation writes to `platform_audit_logs`. No exceptions.
 
 ---
 
-## Automation Engine Design
+## Platform Admin Roles
 
-Automations follow a trigger → condition → action model.
+Stored in `admin_users.role`. Completely separate from tenant `organization_users.role`.
 
-Stored in `automation_rules` table. Evaluated by a Laravel scheduled
-command that runs every 5 minutes (`php artisan automations:evaluate`).
+| Role | Description |
+|---|---|
+| `super_admin` | Full access including managing other admin users |
+| `admin` | Full platform access; cannot manage `super_admin` accounts |
+| `support` | Read all tenant data, manage support tickets; no billing or feature flags |
+| `billing` | Read all, manage billing and plan changes; no feature flags or admin management |
+| `readonly` | View-only across all platform sections |
 
-**Built-in trigger types (Phase CC-4):**
-- `invitation_pending_48h` — leader invitation not accepted after 48 hours
-- `session_starting_24h` — session starts in 24 hours
-- `payment_failed` — Stripe payment failure webhook received
-- `organization_inactive_30d` — org has had no activity in 30 days
-- `attendance_anomaly` — session check-in rate below threshold
-
-**Built-in action types:**
-- `send_email` — queued via SES
-- `send_platform_notification` — in-app alert in command center
-- `create_audit_log` — record the automation firing
-- `send_webhook` — future: POST to external URL
-
-Extensibility: new trigger types are registered in a `TriggerRegistry`
-service class. New action types in an `ActionRegistry`. Neither requires
-schema changes — only new PHP classes.
+There must always be at least one active `super_admin`. The last-super-admin guard
+prevents removal or demotion of the final `super_admin`.
 
 ---
 
-## Platform Admin Auth
+## Current Build State
 
-Platform admins are entirely separate from tenant users:
+### API Backend — ✅ Complete
 
-- Separate `admin_users` table (no shared rows with `users`)
-- Separate Sanctum token ability: `platform:*`
-- Separate login endpoint: `POST /api/platform/v1/auth/login`
-- Separate middleware: `auth:platform_admin`
-- Tokens are stored in `personal_access_tokens` with tokenable_type
-  = `App\Models\AdminUser` (Sanctum polymorphic — no custom table needed)
+All five CC-API phases are complete. The following capabilities exist as working
+API endpoints:
+- Platform admin login and session management
+- Organisation list with usage metrics and billing data
+- Organisation detail with plan and feature flag management
+- User list with login history
+- Stripe billing data (mirror tables — webhook handler not wired)
+- Automation rules CRUD
+- Support ticket oversight (Crisp skipped; placeholder only)
+- Feature flag management with platform audit logging
+- Platform admin user management with last-super-admin guard
+- Platform audit log retrieval
+- System announcements CRUD
 
-Platform admins cannot log into the organizer web app.
-Tenant users cannot log into the command center.
+### Frontend Application — ❌ Not Started
 
----
+The `command/` Next.js application exists in the monorepo but contains only:
+- `app/layout.tsx` — root layout
+- `app/page.tsx` — root page
 
-## Impersonation (Stubbed)
-
-The impersonation feature is scaffolded but inactive:
-
-- `POST /api/platform/v1/impersonate/{organization}` endpoint exists
-  but returns `501 Not Implemented`
-- The audit log hook is wired: any future activation automatically
-  logs the impersonation event
-- A `can_impersonate` boolean on `admin_users` is set to false for
-  all users until the feature is activated
-- No UI in the command center for impersonation yet
-
----
-
-## Security Boundaries
-
-- Platform API routes behind `auth:platform_admin` middleware on every route
-- No cross-contamination: platform token → tenant route = 401
-- All platform admin actions written to `platform_audit_logs`
-  (separate from tenant `audit_logs`)
-- Admin session timeout: configurable, default 8 hours
-- Admin accounts support IP allowlisting (config-based, not DB-based initially)
-- Failed login attempts tracked in `admin_login_events`
+No auth flow, no navigation shell, no dashboard, no domain screens have been built.
+The frontend build is planned across four phases (CC-Web 1–4).
+See `COMMAND_CENTER_PHASE_PROMPTS.md` for the build prompts.
 
 ---
 
-## Deployment
+## Known Limitations (Not Bugs)
 
-The command center is deployed separately from the organizer web app:
-
-| App | URL | Deployment |
-|---|---|---|
-| Organizer Web | app.yourdomain.com | Vercel or AWS Amplify |
-| Command Center | ops.yourdomain.com | Separate Vercel project or EC2 |
-| Laravel API | api.yourdomain.com | EC2 + Nginx |
-
-The command center should never be publicly discoverable.
-Use a non-obvious subdomain (`ops`, `platform`, `cc`) and
-consider IP restriction at the Nginx or CloudFront level.
-
----
-
-## Non-Negotiable Rules
-
-- Platform admins can VIEW all tenant data — they cannot MUTATE tenant data
-  except through explicitly defined platform actions (feature flags, plan changes)
-- Every platform admin action is written to `platform_audit_logs`
-- No hardcoding of admin credentials, plan limits, or feature keys
-- Plan limits live in config/plans.php — not in the codebase directly
-- All sensitive platform endpoints rate-limited independently of tenant API limits
+| Limitation | Status |
+|---|---|
+| Stripe webhook handler | Tables exist; no active handler. Stripe data is not currently being mirrored in real time. See OPEN_QUESTIONS Q4. |
+| Automation execution engine | Automation rules can be created via API but no scheduler or runner exists to execute them. See OPEN_QUESTIONS Q8. |
+| Crisp integration | `crisp_conversations` table exists as a placeholder. No Crisp webhook handler is wired. Support section in the CC frontend will link to Freshdesk or similar. |
+| `platform_admins` table | Deprecated and replaced by `admin_users`. The migration has not been rolled back. AR-10 tracks the cleanup. |

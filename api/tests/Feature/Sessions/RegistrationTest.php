@@ -3,12 +3,13 @@
 use App\Models\Registration;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('participant can join a published workshop by join code', function () {
     $workshop = Workshop::factory()->published()->create(['join_code' => 'TESTCODE']);
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
 
     $this->actingAs($user, 'sanctum')
         ->postJson('/api/v1/workshops/join', ['join_code' => 'TESTCODE'])
@@ -16,8 +17,8 @@ test('participant can join a published workshop by join code', function () {
         ->assertJsonPath('registration_status', 'registered');
 
     $this->assertDatabaseHas('registrations', [
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 });
@@ -41,7 +42,7 @@ test('joining a draft workshop returns 404', function () {
 
 test('joining the same workshop twice returns the existing registration', function () {
     $workshop = Workshop::factory()->published()->create(['join_code' => 'DUPE0001']);
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
 
     $this->actingAs($user, 'sanctum')
         ->postJson('/api/v1/workshops/join', ['join_code' => 'DUPE0001'])
@@ -61,7 +62,7 @@ test('joining the same workshop twice returns the existing registration', functi
 
 test('participant can view their own registration', function () {
     $workshop = Workshop::factory()->published()->create();
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
     Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
@@ -73,7 +74,7 @@ test('participant can view their own registration', function () {
 
 test('unauthenticated user gets 404 for missing registration', function () {
     $workshop = Workshop::factory()->published()->create();
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/workshops/{$workshop->id}/registration")
@@ -82,7 +83,7 @@ test('unauthenticated user gets 404 for missing registration', function () {
 
 test('participant can cancel their registration', function () {
     $workshop = Workshop::factory()->published()->create();
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
     Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $this->actingAs($user, 'sanctum')
@@ -90,15 +91,15 @@ test('participant can cancel their registration', function () {
         ->assertStatus(204);
 
     $this->assertDatabaseHas('registrations', [
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'canceled',
     ]);
 });
 
 test('join code is case-insensitive', function () {
     $workshop = Workshop::factory()->published()->create(['join_code' => 'ABCD1234']);
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
 
     $this->actingAs($user, 'sanctum')
         ->postJson('/api/v1/workshops/join', ['join_code' => 'abcd1234'])

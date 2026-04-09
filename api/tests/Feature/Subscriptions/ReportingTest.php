@@ -8,8 +8,9 @@ use App\Models\Session;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,9 @@ function makeStarterOrg(): array
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     return [$org, $owner];
@@ -35,13 +36,13 @@ test('attendance report returns data for all org workshops', function () {
     [$org, $owner] = makeStarterOrg();
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     $participant = User::factory()->create();
     AttendanceRecord::factory()->create([
         'session_id' => $session->id,
-        'user_id'    => $participant->id,
-        'status'     => 'checked_in',
+        'user_id' => $participant->id,
+        'status' => 'checked_in',
     ]);
 
     $this->actingAs($owner, 'sanctum')
@@ -100,7 +101,7 @@ test('attendance report supports workshop_id filter', function () {
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance?workshop_id={$w1->id}")
         ->assertOk();
 
-    $data        = $response->json('data');
+    $data = $response->json('data');
     $workshopIds = collect($data)->pluck('workshop_id')->all();
 
     expect($workshopIds)->toContain($w1->id);
@@ -111,7 +112,7 @@ test('attendance report correctly counts checked_in and no_show', function () {
     [$org, $owner] = makeStarterOrg();
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     $u1 = User::factory()->create();
     $u2 = User::factory()->create();
@@ -139,12 +140,12 @@ test('workshops report returns summary for all org workshops', function () {
     [$org, $owner] = makeStarterOrg();
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->sessionBased()->create();
-    $session  = Session::factory()->forWorkshop($workshop->id)->published()->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->published()->create();
 
     $participant = User::factory()->create();
     Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $participant->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $participant->id,
         'registration_status' => 'registered',
     ]);
 
@@ -170,7 +171,7 @@ test('workshops report returns summary for all org workshops', function () {
 test('workshops report only returns data for the requesting org', function () {
     [$org, $owner] = makeStarterOrg();
 
-    $otherOrg      = Organization::factory()->create();
+    $otherOrg = Organization::factory()->create();
     $otherWorkshop = Workshop::factory()->forOrganization($otherOrg->id)->published()->create();
 
     $ownWorkshop = Workshop::factory()->forOrganization($org->id)->published()->create();
@@ -243,9 +244,9 @@ test('subscription endpoint returns free plan info when no subscription exists',
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     $this->actingAs($owner, 'sanctum')

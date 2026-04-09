@@ -39,8 +39,8 @@ class PlatformConfig extends Model
         return match ($record->value_type) {
             'integer' => (int) $record->config_value,
             'boolean' => filter_var($record->config_value, FILTER_VALIDATE_BOOLEAN),
-            'json'    => json_decode($record->config_value, true),
-            default   => $record->config_value,
+            'json' => json_decode($record->config_value, true),
+            default => $record->config_value,
         };
     }
 }

@@ -7,6 +7,8 @@ import {
   CalendarDays, Clock, MapPin, Monitor, Layers, Users,
   Infinity, ArrowLeft, UserPlus,
 } from 'lucide-react';
+import { SessionLocationDisplay } from '@/components/sessions/SessionLocationDisplay';
+import type { SessionLocationResponse } from '@/lib/types/session-location';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -37,6 +39,7 @@ interface Session {
   confirmed_count: number;
   is_published: boolean;
   track_id: number | null;
+  location: SessionLocationResponse | null;
 }
 
 interface RosterEntry {
@@ -264,6 +267,14 @@ export default function SessionDetailPage() {
               <Card className="p-5">
                 <h2 className="font-heading text-sm font-semibold text-dark mb-2">Description</h2>
                 <p className="text-sm text-medium-gray leading-relaxed">{session.description}</p>
+              </Card>
+            )}
+
+            {/* Location */}
+            {session.location?.type && (
+              <Card className="p-5 space-y-2">
+                <h2 className="font-heading text-sm font-semibold text-dark">Location</h2>
+                <SessionLocationDisplay location={session.location} compact={false} />
               </Card>
             )}
           </div>

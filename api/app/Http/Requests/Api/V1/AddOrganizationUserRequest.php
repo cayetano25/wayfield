@@ -15,7 +15,7 @@ class AddOrganizationUserRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'role'    => ['required', 'string', 'in:owner,admin,staff,billing_admin'],
+            'role' => ['required', 'string', 'in:owner,admin,staff,billing_admin'],
         ];
     }
 }

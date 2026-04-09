@@ -21,22 +21,22 @@ class MarkNoShowAction
         $record = AttendanceRecord::updateOrCreate(
             ['session_id' => $session->id, 'user_id' => $participant->id],
             [
-                'status'                => 'no_show',
-                'check_in_method'       => 'leader',
-                'checked_in_at'         => null,
+                'status' => 'no_show',
+                'check_in_method' => 'leader',
+                'checked_in_at' => null,
                 'checked_in_by_user_id' => $leader_user->id,
             ]
         );
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $leader_user->id,
-            'entity_type'     => 'attendance_record',
-            'entity_id'       => $record->id,
-            'action'          => 'mark_no_show',
-            'metadata'        => [
-                'session_id'     => $session->id,
-                'workshop_id'    => $workshop->id,
+            'actor_user_id' => $leader_user->id,
+            'entity_type' => 'attendance_record',
+            'entity_id' => $record->id,
+            'action' => 'mark_no_show',
+            'metadata' => [
+                'session_id' => $session->id,
+                'workshop_id' => $workshop->id,
                 'participant_id' => $participant->id,
             ],
         ]);

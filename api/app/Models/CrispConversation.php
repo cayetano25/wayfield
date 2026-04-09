@@ -24,10 +24,10 @@ class CrispConversation extends Model
 
     protected $casts = [
         'first_message_at' => 'datetime',
-        'last_message_at'  => 'datetime',
-        'first_reply_at'   => 'datetime',
-        'resolved_at'      => 'datetime',
-        'tags_json'        => 'array',
+        'last_message_at' => 'datetime',
+        'first_reply_at' => 'datetime',
+        'resolved_at' => 'datetime',
+        'tags_json' => 'array',
     ];
 
     public function organization(): BelongsTo

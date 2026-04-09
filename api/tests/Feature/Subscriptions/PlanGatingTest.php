@@ -6,8 +6,9 @@ use App\Models\Registration;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,9 +20,9 @@ function makePlanOrg(string $plan, string $role = 'owner'): array
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];
@@ -31,11 +32,11 @@ function workshopPayload(): array
 {
     return [
         'workshop_type' => 'session_based',
-        'title'         => 'Test Workshop',
-        'description'   => 'A description',
-        'timezone'      => 'America/New_York',
-        'start_date'    => now()->addMonth()->format('Y-m-d'),
-        'end_date'      => now()->addMonth()->addDays(3)->format('Y-m-d'),
+        'title' => 'Test Workshop',
+        'description' => 'A description',
+        'timezone' => 'America/New_York',
+        'start_date' => now()->addMonth()->format('Y-m-d'),
+        'end_date' => now()->addMonth()->addDays(3)->format('Y-m-d'),
     ];
 }
 
@@ -125,8 +126,8 @@ test('free plan blocks the 76th participant registration', function () {
     $existingUsers = User::factory()->count(75)->create();
     foreach ($existingUsers as $u) {
         Registration::factory()->create([
-            'workshop_id'         => $workshop->id,
-            'user_id'             => $u->id,
+            'workshop_id' => $workshop->id,
+            'user_id' => $u->id,
             'registration_status' => 'registered',
         ]);
     }
@@ -134,9 +135,9 @@ test('free plan blocks the 76th participant registration', function () {
     $newParticipant = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $newParticipant->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $newParticipant->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     // Actually, the participant just uses the join code — no org membership needed
@@ -155,8 +156,8 @@ test('free plan allows the 75th participant registration', function () {
     $existingUsers = User::factory()->count(74)->create();
     foreach ($existingUsers as $u) {
         Registration::factory()->create([
-            'workshop_id'         => $workshop->id,
-            'user_id'             => $u->id,
+            'workshop_id' => $workshop->id,
+            'user_id' => $u->id,
             'registration_status' => 'registered',
         ]);
     }
@@ -177,8 +178,8 @@ test('pro plan has no participant limit', function () {
     $existingUsers = User::factory()->count(76)->create();
     foreach ($existingUsers as $u) {
         Registration::factory()->create([
-            'workshop_id'         => $workshop->id,
-            'user_id'             => $u->id,
+            'workshop_id' => $workshop->id,
+            'user_id' => $u->id,
             'registration_status' => 'registered',
         ]);
     }
@@ -214,9 +215,9 @@ test('organization with no subscription defaults to free plan limits', function 
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     Workshop::factory()->forOrganization($org->id)->draft()->count(2)->create();
@@ -290,7 +291,7 @@ test('entitlements endpoint returns plan feature set and limits', function () {
             'subscription_status',
             'limits' => ['max_active_workshops', 'max_participants_per_workshop', 'max_managers'],
             'features',
-            'usage'  => ['active_workshop_count', 'active_manager_count', 'active_leader_count'],
+            'usage' => ['active_workshop_count', 'active_manager_count', 'active_leader_count'],
         ])
         ->assertJsonPath('plan', 'starter')
         ->assertJsonPath('limits.max_active_workshops', 10)

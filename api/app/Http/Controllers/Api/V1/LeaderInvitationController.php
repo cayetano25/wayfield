@@ -29,7 +29,7 @@ class LeaderInvitationController extends Controller
         if (! $invitation->isActionable()) {
             return response()->json([
                 'message' => 'This invitation is no longer actionable.',
-                'status'  => $invitation->status,
+                'status' => $invitation->status,
             ], 422);
         }
 
@@ -58,7 +58,7 @@ class LeaderInvitationController extends Controller
         if (! $invitation->isActionable()) {
             return response()->json([
                 'message' => 'This invitation is no longer actionable.',
-                'status'  => $invitation->status,
+                'status' => $invitation->status,
             ], 422);
         }
 
@@ -86,7 +86,7 @@ class LeaderInvitationController extends Controller
         if (! $invitation->isActionable()) {
             return response()->json([
                 'message' => 'This invitation is no longer actionable.',
-                'status'  => $invitation->status,
+                'status' => $invitation->status,
             ], 422);
         }
 

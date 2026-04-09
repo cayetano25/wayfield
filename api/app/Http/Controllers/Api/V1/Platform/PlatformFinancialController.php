@@ -19,17 +19,13 @@ class PlatformFinancialController extends Controller
     {
         $invoices = Invoice::query()
             ->with(['organization'])
-            ->when($request->input('organization_id'), fn ($q, $orgId) =>
-                $q->where('organization_id', $orgId)
+            ->when($request->input('organization_id'), fn ($q, $orgId) => $q->where('organization_id', $orgId)
             )
-            ->when($request->input('status'), fn ($q, $status) =>
-                $q->where('status', $status)
+            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status)
             )
-            ->when($request->input('from'), fn ($q, $from) =>
-                $q->where('issued_at', '>=', $from)
+            ->when($request->input('from'), fn ($q, $from) => $q->where('issued_at', '>=', $from)
             )
-            ->when($request->input('to'), fn ($q, $to) =>
-                $q->where('issued_at', '<=', $to)
+            ->when($request->input('to'), fn ($q, $to) => $q->where('issued_at', '<=', $to)
             )
             ->orderBy('issued_at', 'desc')
             ->paginate($request->integer('per_page', 50));
@@ -46,11 +42,9 @@ class PlatformFinancialController extends Controller
     {
         $subscriptions = Subscription::query()
             ->with(['organization'])
-            ->when($request->input('plan'), fn ($q, $plan) =>
-                $q->where('plan', $plan)
+            ->when($request->input('plan'), fn ($q, $plan) => $q->where('plan', $plan)
             )
-            ->when($request->input('status'), fn ($q, $status) =>
-                $q->where('status', $status)
+            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status)
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 50));

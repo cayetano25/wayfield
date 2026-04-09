@@ -10,11 +10,11 @@ class PublicPageFactory extends Factory
     public function definition(): array
     {
         return [
-            'workshop_id'   => Workshop::factory(),
-            'hero_title'    => $this->faker->sentence(4),
+            'workshop_id' => Workshop::factory(),
+            'hero_title' => $this->faker->sentence(4),
             'hero_subtitle' => $this->faker->sentence(8),
-            'body_content'  => '<p>' . $this->faker->paragraph() . '</p>',
-            'is_visible'    => false,
+            'body_content' => '<p>'.$this->faker->paragraph().'</p>',
+            'is_visible' => false,
         ];
     }
 

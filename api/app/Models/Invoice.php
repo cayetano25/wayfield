@@ -24,11 +24,11 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'amount_cents'  => 'integer',
-        'period_start'  => 'datetime',
-        'period_end'    => 'datetime',
-        'paid_at'       => 'datetime',
-        'due_at'        => 'datetime',
+        'amount_cents' => 'integer',
+        'period_start' => 'datetime',
+        'period_end' => 'datetime',
+        'paid_at' => 'datetime',
+        'due_at' => 'datetime',
         'metadata_json' => 'array',
     ];
 

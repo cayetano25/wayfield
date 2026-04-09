@@ -22,10 +22,10 @@ class WebhookDelivery extends Model
     ];
 
     protected $casts = [
-        'payload_json'      => 'array',
+        'payload_json' => 'array',
         'last_attempted_at' => 'datetime',
-        'delivered_at'      => 'datetime',
-        'next_retry_at'     => 'datetime',
+        'delivered_at' => 'datetime',
+        'next_retry_at' => 'datetime',
     ];
 
     public function organization(): BelongsTo

@@ -23,8 +23,8 @@ class ApiClient extends Model
     ];
 
     protected $casts = [
-        'scopes_json'  => 'array',
-        'is_active'    => 'boolean',
+        'scopes_json' => 'array',
+        'is_active' => 'boolean',
         'last_used_at' => 'datetime',
     ];
 

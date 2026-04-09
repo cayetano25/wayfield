@@ -24,11 +24,11 @@ class NotificationPreferenceController extends Controller
         $prefs = NotificationPreference::firstOrNew(
             ['user_id' => $user->id],
             [
-                'email_enabled'            => true,
-                'push_enabled'             => true,
+                'email_enabled' => true,
+                'push_enabled' => true,
                 'workshop_updates_enabled' => true,
-                'reminder_enabled'         => true,
-                'marketing_enabled'        => false,
+                'reminder_enabled' => true,
+                'marketing_enabled' => false,
             ]
         );
 

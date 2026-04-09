@@ -19,7 +19,7 @@ class StripeEvent extends Model
     ];
 
     protected $casts = [
-        'livemode'     => 'boolean',
+        'livemode' => 'boolean',
         'payload_json' => 'array',
         'processed_at' => 'datetime',
     ];

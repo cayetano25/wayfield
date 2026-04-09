@@ -1,13 +1,14 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('GET /me returns authenticated user with first_name and last_name', function () {
     $user = User::factory()->create([
         'first_name' => 'Alice',
-        'last_name'  => 'Smith',
+        'last_name' => 'Smith',
     ]);
 
     $this->actingAs($user, 'sanctum')
@@ -24,16 +25,16 @@ test('PATCH /me updates first_name and last_name', function () {
     $this->actingAs($user, 'sanctum')
         ->patchJson('/api/v1/me', [
             'first_name' => 'Updated',
-            'last_name'  => 'Name',
+            'last_name' => 'Name',
         ])
         ->assertStatus(200)
         ->assertJsonPath('first_name', 'Updated')
         ->assertJsonPath('last_name', 'Name');
 
     $this->assertDatabaseHas('users', [
-        'id'         => $user->id,
+        'id' => $user->id,
         'first_name' => 'Updated',
-        'last_name'  => 'Name',
+        'last_name' => 'Name',
     ]);
 });
 

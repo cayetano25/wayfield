@@ -22,7 +22,7 @@ class Subscription extends Model
     {
         return [
             'starts_at' => 'datetime',
-            'ends_at'   => 'datetime',
+            'ends_at' => 'datetime',
         ];
     }
 

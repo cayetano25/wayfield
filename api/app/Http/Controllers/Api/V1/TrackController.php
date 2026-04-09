@@ -31,9 +31,9 @@ class TrackController extends Controller
 
         $track = Track::create([
             'workshop_id' => $workshop->id,
-            'title'       => $request->validated('title'),
+            'title' => $request->validated('title'),
             'description' => $request->validated('description'),
-            'sort_order'  => $request->validated('sort_order', 0) ?? 0,
+            'sort_order' => $request->validated('sort_order', 0) ?? 0,
         ]);
 
         return response()->json(new TrackResource($track), 201);

@@ -1,15 +1,15 @@
 <?php
 
 use App\Models\User;
-use App\Models\UserSession;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('user can log in with valid credentials', function () {
     $user = User::factory()->create();
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email'    => $user->email,
+        'email' => $user->email,
         'password' => 'password',
         'platform' => 'web',
     ]);
@@ -24,13 +24,13 @@ test('login creates a user_sessions audit record', function () {
     $user = User::factory()->create();
 
     $this->postJson('/api/v1/auth/login', [
-        'email'    => $user->email,
+        'email' => $user->email,
         'password' => 'password',
         'platform' => 'ios',
     ]);
 
     $this->assertDatabaseHas('user_sessions', [
-        'user_id'  => $user->id,
+        'user_id' => $user->id,
         'platform' => 'ios',
     ]);
 });
@@ -39,7 +39,7 @@ test('login fails with wrong password', function () {
     $user = User::factory()->create();
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email'    => $user->email,
+        'email' => $user->email,
         'password' => 'wrong-password',
     ]);
 
@@ -50,7 +50,7 @@ test('login fails for inactive user', function () {
     $user = User::factory()->inactive()->create();
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email'    => $user->email,
+        'email' => $user->email,
         'password' => 'password',
     ]);
 
@@ -61,7 +61,7 @@ test('login does not expose password_hash', function () {
     $user = User::factory()->create();
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email'    => $user->email,
+        'email' => $user->email,
         'password' => 'password',
     ]);
 

@@ -26,15 +26,15 @@ class PlatformWebhookController extends Controller
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (WebhookEndpoint $e) => [
-                'id'              => $e->id,
-                'url'             => $e->url,
-                'description'     => $e->description,
-                'is_active'       => $e->is_active,
-                'event_types'     => $e->event_types,
-                'failure_count'   => $e->failure_count,
+                'id' => $e->id,
+                'url' => $e->url,
+                'description' => $e->description,
+                'is_active' => $e->is_active,
+                'event_types' => $e->event_types,
+                'failure_count' => $e->failure_count,
                 'last_success_at' => $e->last_success_at?->toIso8601String(),
                 'last_failure_at' => $e->last_failure_at?->toIso8601String(),
-                'created_at'      => $e->created_at?->toIso8601String(),
+                'created_at' => $e->created_at?->toIso8601String(),
                 // secret_encrypted intentionally absent
             ]);
 

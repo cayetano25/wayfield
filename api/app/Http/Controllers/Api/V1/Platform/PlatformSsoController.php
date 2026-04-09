@@ -46,25 +46,25 @@ class PlatformSsoController extends Controller
     public function update(Request $request, Organization $organization): JsonResponse
     {
         $validated = $request->validate([
-            'provider_type'     => ['required', 'string', 'in:saml,oidc'],
-            'is_enabled'        => ['required', 'boolean'],
-            'entity_id'         => ['nullable', 'string', 'max:500'],
-            'sso_url'           => ['nullable', 'string', 'url', 'max:1000'],
-            'certificate'       => ['nullable', 'string'],
-            'client_secret'     => ['nullable', 'string', 'max:500'],
+            'provider_type' => ['required', 'string', 'in:saml,oidc'],
+            'is_enabled' => ['required', 'boolean'],
+            'entity_id' => ['nullable', 'string', 'max:500'],
+            'sso_url' => ['nullable', 'string', 'url', 'max:1000'],
+            'certificate' => ['nullable', 'string'],
+            'client_secret' => ['nullable', 'string', 'max:500'],
             'attribute_mapping' => ['nullable', 'array'],
-            'allowed_domains'   => ['nullable', 'array'],
+            'allowed_domains' => ['nullable', 'array'],
             'allowed_domains.*' => ['string', 'max:255'],
         ]);
 
         $data = [
-            'provider_type'     => $validated['provider_type'],
-            'is_enabled'        => $validated['is_enabled'],
-            'entity_id'         => $validated['entity_id'] ?? null,
-            'sso_url'           => $validated['sso_url'] ?? null,
-            'certificate'       => $validated['certificate'] ?? null,
+            'provider_type' => $validated['provider_type'],
+            'is_enabled' => $validated['is_enabled'],
+            'entity_id' => $validated['entity_id'] ?? null,
+            'sso_url' => $validated['sso_url'] ?? null,
+            'certificate' => $validated['certificate'] ?? null,
             'attribute_mapping' => $validated['attribute_mapping'] ?? null,
-            'allowed_domains'   => $validated['allowed_domains'] ?? null,
+            'allowed_domains' => $validated['allowed_domains'] ?? null,
         ];
 
         // Encrypt the OIDC client secret if provided
@@ -82,13 +82,13 @@ class PlatformSsoController extends Controller
         // but here we scope it to the org for traceability).
         AuditLogService::record([
             'organization_id' => $organization->id,
-            'actor_user_id'   => Auth::id(),
-            'entity_type'     => 'sso_configuration',
-            'entity_id'       => $config->id,
-            'action'          => 'sso_configuration_updated',
-            'metadata'        => [
+            'actor_user_id' => Auth::id(),
+            'entity_type' => 'sso_configuration',
+            'entity_id' => $config->id,
+            'action' => 'sso_configuration_updated',
+            'metadata' => [
                 'provider_type' => $validated['provider_type'],
-                'is_enabled'    => $validated['is_enabled'],
+                'is_enabled' => $validated['is_enabled'],
                 'allowed_domains' => $validated['allowed_domains'] ?? [],
             ],
         ]);
@@ -99,16 +99,16 @@ class PlatformSsoController extends Controller
     private function serialize(SsoConfiguration $config): array
     {
         return [
-            'id'               => $config->id,
-            'organization_id'  => $config->organization_id,
-            'provider_type'    => $config->provider_type,
-            'is_enabled'       => $config->is_enabled,
-            'entity_id'        => $config->entity_id,
-            'sso_url'          => $config->sso_url,
+            'id' => $config->id,
+            'organization_id' => $config->organization_id,
+            'provider_type' => $config->provider_type,
+            'is_enabled' => $config->is_enabled,
+            'entity_id' => $config->entity_id,
+            'sso_url' => $config->sso_url,
             'attribute_mapping' => $config->attribute_mapping,
-            'allowed_domains'  => $config->allowed_domains,
-            'created_at'       => $config->created_at?->toIso8601String(),
-            'updated_at'       => $config->updated_at?->toIso8601String(),
+            'allowed_domains' => $config->allowed_domains,
+            'created_at' => $config->created_at?->toIso8601String(),
+            'updated_at' => $config->updated_at?->toIso8601String(),
             // certificate and client_secret_enc are intentionally omitted
         ];
     }

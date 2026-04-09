@@ -67,10 +67,10 @@ class EnforceLeaderMessagingRulesService
         // Carbon::parse() treats the stored value as UTC (MySQL default).
         // setTimezone() converts to the workshop timezone for window math.
         $sessionStart = Carbon::parse($session->start_at)->setTimezone($workshopTimezone);
-        $sessionEnd   = Carbon::parse($session->end_at)->setTimezone($workshopTimezone);
+        $sessionEnd = Carbon::parse($session->end_at)->setTimezone($workshopTimezone);
 
-        $windowStart  = $sessionStart->copy()->subHours(4);
-        $windowEnd    = $sessionEnd->copy()->addHours(2);
+        $windowStart = $sessionStart->copy()->subHours(4);
+        $windowEnd = $sessionEnd->copy()->addHours(2);
 
         // Current time in the same timezone for an apples-to-apples comparison.
         $now = Carbon::now($workshopTimezone);

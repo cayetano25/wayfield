@@ -11,12 +11,12 @@ class RegistrationFactory extends Factory
     public function definition(): array
     {
         return [
-            'workshop_id'         => Workshop::factory()->published(),
-            'user_id'             => User::factory(),
+            'workshop_id' => Workshop::factory()->published(),
+            'user_id' => User::factory(),
             'registration_status' => 'registered',
-            'joined_via_code'     => null,
-            'registered_at'       => now(),
-            'canceled_at'         => null,
+            'joined_via_code' => null,
+            'registered_at' => now(),
+            'canceled_at' => null,
         ];
     }
 
@@ -24,7 +24,7 @@ class RegistrationFactory extends Factory
     {
         return $this->state([
             'registration_status' => 'canceled',
-            'canceled_at'         => now(),
+            'canceled_at' => now(),
         ]);
     }
 

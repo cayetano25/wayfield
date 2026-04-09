@@ -23,14 +23,12 @@ class PlatformOrganizationController extends Controller
                 'workshops',
                 'workshops as active_workshops_count' => fn ($q) => $q->where('status', 'published'),
             ])
-            ->when($request->input('search'), fn ($q, $search) =>
-                $q->where(fn ($q) => $q
-                    ->where('name', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%")
-                )
+            ->when($request->input('search'), fn ($q, $search) => $q->where(fn ($q) => $q
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('slug', 'like', "%{$search}%")
             )
-            ->when($request->input('plan'), fn ($q, $plan) =>
-                $q->whereHas('subscription', fn ($q) => $q->where('plan', $plan))
+            )
+            ->when($request->input('plan'), fn ($q, $plan) => $q->whereHas('subscription', fn ($q) => $q->where('plan', $plan))
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 25));

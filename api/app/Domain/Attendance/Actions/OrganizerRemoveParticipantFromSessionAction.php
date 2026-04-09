@@ -51,9 +51,9 @@ class OrganizerRemoveParticipantFromSessionAction
             if ($attendance && $attendance->status === 'checked_in') {
                 $wasCheckedIn = true;
                 $attendance->update([
-                    'status'                => 'not_checked_in',
-                    'check_in_method'       => null,
-                    'checked_in_at'         => null,
+                    'status' => 'not_checked_in',
+                    'check_in_method' => null,
+                    'checked_in_at' => null,
                     'checked_in_by_user_id' => null,
                 ]);
             }
@@ -62,17 +62,17 @@ class OrganizerRemoveParticipantFromSessionAction
         // 6. Write audit log after the transaction commits.
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $organizer->id,
-            'entity_type'     => 'session_selection',
-            'entity_id'       => $selection->id,
-            'action'          => 'organizer_removed_participant_from_session',
-            'metadata'        => [
-                'session_id'             => $session->id,
-                'session_title'          => $session->title,
-                'participant_id'         => $participant->id,
+            'actor_user_id' => $organizer->id,
+            'entity_type' => 'session_selection',
+            'entity_id' => $selection->id,
+            'action' => 'organizer_removed_participant_from_session',
+            'metadata' => [
+                'session_id' => $session->id,
+                'session_title' => $session->title,
+                'participant_id' => $participant->id,
                 'participant_first_name' => $participant->first_name,
-                'participant_last_name'  => $participant->last_name,
-                'was_checked_in'         => $wasCheckedIn,
+                'participant_last_name' => $participant->last_name,
+                'was_checked_in' => $wasCheckedIn,
             ],
         ]);
     }

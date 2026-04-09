@@ -15,23 +15,23 @@ class ParticipantSessionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                           => $this->id,
-            'workshop_id'                  => $this->workshop_id,
-            'track_id'                     => $this->track_id,
-            'title'                        => $this->title,
-            'description'                  => $this->description,
-            'start_at'                     => $this->start_at?->toIso8601String(),
-            'end_at'                       => $this->end_at?->toIso8601String(),
-            'location_id'                  => $this->location_id,
-            'location'                     => $this->whenLoaded('location', fn () => new LocationResource($this->location)),
-            'capacity'                     => $this->capacity,
-            'delivery_type'                => $this->delivery_type,
+            'id' => $this->id,
+            'workshop_id' => $this->workshop_id,
+            'track_id' => $this->track_id,
+            'title' => $this->title,
+            'description' => $this->description,
+            'start_at' => $this->start_at?->toIso8601String(),
+            'end_at' => $this->end_at?->toIso8601String(),
+            'location_id' => $this->location_id,
+            'location' => $this->whenLoaded('location', fn () => new LocationResource($this->location)),
+            'capacity' => $this->capacity,
+            'delivery_type' => $this->delivery_type,
             'virtual_participation_allowed' => $this->virtual_participation_allowed,
             // meeting_url exposed to registered participants for virtual/hybrid sessions
-            'meeting_url'                  => $this->requiresMeetingUrl() ? $this->meeting_url : null,
-            'meeting_platform'             => $this->requiresMeetingUrl() ? $this->meeting_platform : null,
-            'meeting_instructions'         => $this->requiresMeetingUrl() ? $this->meeting_instructions : null,
-            'is_published'                 => $this->is_published,
+            'meeting_url' => $this->requiresMeetingUrl() ? $this->meeting_url : null,
+            'meeting_platform' => $this->requiresMeetingUrl() ? $this->meeting_platform : null,
+            'meeting_instructions' => $this->requiresMeetingUrl() ? $this->meeting_instructions : null,
+            'is_published' => $this->is_published,
         ];
     }
 }

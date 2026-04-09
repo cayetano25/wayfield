@@ -53,11 +53,11 @@ class RegistrationController extends Controller
                 );
             } catch (PlanLimitExceededException $e) {
                 return response()->json([
-                    'error'         => 'plan_limit_exceeded',
-                    'message'       => $e->getMessage(),
-                    'limit_key'     => $e->limitKey,
-                    'current'       => $e->current,
-                    'max'           => $e->max,
+                    'error' => 'plan_limit_exceeded',
+                    'message' => $e->getMessage(),
+                    'limit_key' => $e->limitKey,
+                    'current' => $e->current,
+                    'max' => $e->max,
                     'required_plan' => $e->requiredPlan,
                 ], 403);
             }
@@ -73,19 +73,19 @@ class RegistrationController extends Controller
             // Re-activate a previously canceled registration.
             $existing->update([
                 'registration_status' => 'registered',
-                'canceled_at'         => null,
-                'joined_via_code'     => $request->validated('join_code'),
+                'canceled_at' => null,
+                'joined_via_code' => $request->validated('join_code'),
             ]);
 
             return response()->json(new RegistrationResource($existing->fresh()), 200);
         }
 
         $registration = Registration::create([
-            'workshop_id'         => $workshop->id,
-            'user_id'             => $user->id,
+            'workshop_id' => $workshop->id,
+            'user_id' => $user->id,
             'registration_status' => 'registered',
-            'joined_via_code'     => $request->validated('join_code'),
-            'registered_at'       => now(),
+            'joined_via_code' => $request->validated('join_code'),
+            'registered_at' => now(),
         ]);
 
         Mail::to($user->email)->queue(new WorkshopJoinConfirmationMail($user, $workshop, $registration));
@@ -94,18 +94,18 @@ class RegistrationController extends Controller
         try {
             $this->webhookDispatcher->dispatch('participant.registered', $workshop->organization_id, [
                 'registration_id' => $registration->id,
-                'workshop_id'     => $workshop->id,
-                'workshop_title'  => $workshop->title,
-                'user_id'         => $user->id,
-                'first_name'      => $user->first_name,
-                'last_name'       => $user->last_name,
-                'registered_at'   => $registration->registered_at?->toIso8601String(),
+                'workshop_id' => $workshop->id,
+                'workshop_title' => $workshop->title,
+                'user_id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'registered_at' => $registration->registered_at?->toIso8601String(),
                 'joined_via_code' => $registration->joined_via_code !== null,
             ]);
         } catch (\Throwable $e) {
             Log::warning('RegistrationController: webhook dispatch failed', [
                 'registration_id' => $registration->id,
-                'error'           => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -148,7 +148,7 @@ class RegistrationController extends Controller
 
         $registration->update([
             'registration_status' => 'canceled',
-            'canceled_at'         => now(),
+            'canceled_at' => now(),
         ]);
 
         return response()->json(null, 204);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AdminUser;
 use App\Models\User;
 
 return [
@@ -47,7 +48,7 @@ return [
         // Sanctum uses tokenable_type to separate AdminUser tokens from User tokens.
         // Tenant tokens (tokenable_type = User) are rejected by this guard automatically.
         'platform_admin' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'admin_users',
         ],
     ],
@@ -72,12 +73,12 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model'  => env('AUTH_MODEL', User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
 
         'admin_users' => [
             'driver' => 'eloquent',
-            'model'  => \App\Models\AdminUser::class,
+            'model' => AdminUser::class,
         ],
     ],
 

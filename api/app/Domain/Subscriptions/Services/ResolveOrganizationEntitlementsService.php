@@ -19,24 +19,24 @@ class ResolveOrganizationEntitlementsService
      */
     private const PLAN_LIMITS = [
         'free' => [
-            'max_active_workshops'          => 2,
-            'max_participants_per_workshop'  => 75,
-            'max_managers'                  => 1,
+            'max_active_workshops' => 2,
+            'max_participants_per_workshop' => 75,
+            'max_managers' => 1,
         ],
         'starter' => [
-            'max_active_workshops'          => 10,
-            'max_participants_per_workshop'  => 250,
-            'max_managers'                  => 5,
+            'max_active_workshops' => 10,
+            'max_participants_per_workshop' => 250,
+            'max_managers' => 5,
         ],
         'pro' => [
-            'max_active_workshops'          => null,
-            'max_participants_per_workshop'  => null,
-            'max_managers'                  => null,
+            'max_active_workshops' => null,
+            'max_participants_per_workshop' => null,
+            'max_managers' => null,
         ],
         'enterprise' => [
-            'max_active_workshops'          => null,
-            'max_participants_per_workshop'  => null,
-            'max_managers'                  => null,
+            'max_active_workshops' => null,
+            'max_participants_per_workshop' => null,
+            'max_managers' => null,
         ],
     ];
 
@@ -45,52 +45,52 @@ class ResolveOrganizationEntitlementsService
      */
     private const PLAN_FEATURES = [
         'free' => [
-            'analytics'               => false,
-            'reporting'               => false,
-            'automation'              => false,
-            'advanced_notifications'  => false,
-            'waitlists'               => false,
-            'branded_pages'           => false,
-            'leader_messaging'        => false,
-            'api_access'              => false,
-            'webhooks'                => false,
-            'segmentation'            => false,
+            'analytics' => false,
+            'reporting' => false,
+            'automation' => false,
+            'advanced_notifications' => false,
+            'waitlists' => false,
+            'branded_pages' => false,
+            'leader_messaging' => false,
+            'api_access' => false,
+            'webhooks' => false,
+            'segmentation' => false,
         ],
         'starter' => [
-            'analytics'               => true,
-            'reporting'               => true,
-            'automation'              => true,
-            'advanced_notifications'  => true,
-            'waitlists'               => true,
-            'branded_pages'           => true,
-            'leader_messaging'        => true,
-            'api_access'              => false,
-            'webhooks'                => false,
-            'segmentation'            => false,
+            'analytics' => true,
+            'reporting' => true,
+            'automation' => true,
+            'advanced_notifications' => true,
+            'waitlists' => true,
+            'branded_pages' => true,
+            'leader_messaging' => true,
+            'api_access' => false,
+            'webhooks' => false,
+            'segmentation' => false,
         ],
         'pro' => [
-            'analytics'               => true,
-            'reporting'               => true,
-            'automation'              => true,
-            'advanced_notifications'  => true,
-            'waitlists'               => true,
-            'branded_pages'           => true,
-            'leader_messaging'        => true,
-            'api_access'              => true,
-            'webhooks'                => true,
-            'segmentation'            => true,
+            'analytics' => true,
+            'reporting' => true,
+            'automation' => true,
+            'advanced_notifications' => true,
+            'waitlists' => true,
+            'branded_pages' => true,
+            'leader_messaging' => true,
+            'api_access' => true,
+            'webhooks' => true,
+            'segmentation' => true,
         ],
         'enterprise' => [
-            'analytics'               => true,
-            'reporting'               => true,
-            'automation'              => true,
-            'advanced_notifications'  => true,
-            'waitlists'               => true,
-            'branded_pages'           => true,
-            'leader_messaging'        => true,
-            'api_access'              => true,
-            'webhooks'                => true,
-            'segmentation'            => true,
+            'analytics' => true,
+            'reporting' => true,
+            'automation' => true,
+            'advanced_notifications' => true,
+            'waitlists' => true,
+            'branded_pages' => true,
+            'leader_messaging' => true,
+            'api_access' => true,
+            'webhooks' => true,
+            'segmentation' => true,
         ],
     ];
 
@@ -98,16 +98,16 @@ class ResolveOrganizationEntitlementsService
      * The minimum plan required to access each feature.
      */
     public const FEATURE_REQUIRED_PLAN = [
-        'analytics'              => 'starter',
-        'reporting'              => 'starter',
-        'automation'             => 'starter',
+        'analytics' => 'starter',
+        'reporting' => 'starter',
+        'automation' => 'starter',
         'advanced_notifications' => 'starter',
-        'waitlists'              => 'starter',
-        'branded_pages'          => 'starter',
-        'leader_messaging'       => 'starter',
-        'api_access'             => 'pro',
-        'webhooks'               => 'pro',
-        'segmentation'           => 'pro',
+        'waitlists' => 'starter',
+        'branded_pages' => 'starter',
+        'leader_messaging' => 'starter',
+        'api_access' => 'pro',
+        'webhooks' => 'pro',
+        'segmentation' => 'pro',
     ];
 
     /**
@@ -128,11 +128,11 @@ class ResolveOrganizationEntitlementsService
             ->latest('starts_at')
             ->first();
 
-        $planCode   = $subscription?->plan_code ?? 'free';
-        $subStatus  = $subscription?->status    ?? 'none';
+        $planCode = $subscription?->plan_code ?? 'free';
+        $subStatus = $subscription?->status ?? 'none';
 
-        $limits   = self::PLAN_LIMITS[$planCode]   ?? self::PLAN_LIMITS['free'];
-        $features = self::PLAN_FEATURES[$planCode]  ?? self::PLAN_FEATURES['free'];
+        $limits = self::PLAN_LIMITS[$planCode] ?? self::PLAN_LIMITS['free'];
+        $features = self::PLAN_FEATURES[$planCode] ?? self::PLAN_FEATURES['free'];
 
         // Apply manual_override rows from feature_flags
         $overrides = $organization->featureFlags()
@@ -147,11 +147,11 @@ class ResolveOrganizationEntitlementsService
         $usage = $this->computeUsage($organization);
 
         return [
-            'plan'                => $planCode,
+            'plan' => $planCode,
             'subscription_status' => $subStatus,
-            'limits'              => $limits,
-            'features'            => $features,
-            'usage'               => $usage,
+            'limits' => $limits,
+            'features' => $features,
+            'usage' => $usage,
         ];
     }
 
@@ -175,8 +175,8 @@ class ResolveOrganizationEntitlementsService
 
         return [
             'active_workshop_count' => $activeWorkshopCount,
-            'active_manager_count'  => $activeManagerCount,
-            'active_leader_count'   => $activeLeaderCount,
+            'active_manager_count' => $activeManagerCount,
+            'active_leader_count' => $activeLeaderCount,
         ];
     }
 

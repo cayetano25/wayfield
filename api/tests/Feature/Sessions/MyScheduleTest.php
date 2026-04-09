@@ -5,29 +5,30 @@ use App\Models\Session;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('participant sees only their selected sessions for session-based workshop', function () {
     $workshop = Workshop::factory()->sessionBased()->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $session1 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 09:00:00',
-        'end_at'        => '2026-09-01 11:00:00',
+        'start_at' => '2026-09-01 09:00:00',
+        'end_at' => '2026-09-01 11:00:00',
     ]);
     $session2 = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
-        'start_at'      => '2026-09-01 13:00:00',
-        'end_at'        => '2026-09-01 15:00:00',
+        'start_at' => '2026-09-01 13:00:00',
+        'end_at' => '2026-09-01 15:00:00',
     ]);
 
     // Only select session1.
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session1->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session1->id,
         'selection_status' => 'selected',
     ]);
 
@@ -42,8 +43,8 @@ test('participant sees only their selected sessions for session-based workshop',
 
 test('canceled selections do not appear in my schedule', function () {
     $workshop = Workshop::factory()->sessionBased()->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $session = Session::factory()->forWorkshop($workshop->id)->published()->create([
         'delivery_type' => 'in_person',
@@ -52,7 +53,7 @@ test('canceled selections do not appear in my schedule', function () {
     // Canceled selection.
     SessionSelection::factory()->canceled()->create([
         'registration_id' => $reg->id,
-        'session_id'      => $session->id,
+        'session_id' => $session->id,
     ]);
 
     $response = $this->actingAs($user, 'sanctum')
@@ -64,7 +65,7 @@ test('canceled selections do not appear in my schedule', function () {
 
 test('event-based workshop schedule returns all published sessions', function () {
     $workshop = Workshop::factory()->eventBased()->published()->create();
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
     Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     Session::factory()->forWorkshop($workshop->id)->published()->create(['delivery_type' => 'in_person']);
@@ -81,7 +82,7 @@ test('event-based workshop schedule returns all published sessions', function ()
 
 test('unregistered user cannot view my-schedule', function () {
     $workshop = Workshop::factory()->sessionBased()->published()->create();
-    $user     = User::factory()->create();
+    $user = User::factory()->create();
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/workshops/{$workshop->id}/my-schedule")
@@ -95,14 +96,14 @@ test('participant schedule resource does not expose meeting_url for virtual sess
     // meeting_url in their schedule so they can join. This differs from PublicSessionResource
     // which NEVER exposes meeting_url.
     $workshop = Workshop::factory()->sessionBased()->published()->create();
-    $user     = User::factory()->create();
-    $reg      = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
+    $user = User::factory()->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
     $virtualSession = Session::factory()->virtual()->forWorkshop($workshop->id)->published()->create();
 
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $virtualSession->id,
+        'registration_id' => $reg->id,
+        'session_id' => $virtualSession->id,
         'selection_status' => 'selected',
     ]);
 
@@ -118,7 +119,7 @@ test('participant schedule resource does not expose meeting_url for virtual sess
 test('public workshop endpoint never exposes meeting_url', function () {
     $workshop = Workshop::factory()->published()->create([
         'public_page_enabled' => true,
-        'public_slug'         => 'test-workshop-public',
+        'public_slug' => 'test-workshop-public',
     ]);
 
     Session::factory()->virtual()->forWorkshop($workshop->id)->published()->create();

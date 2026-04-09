@@ -10,11 +10,11 @@ class PushTokenFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id'             => User::factory(),
-            'platform'            => $this->faker->randomElement(['ios', 'android']),
-            'push_token'          => 'ExponentPushToken[' . $this->faker->unique()->regexify('[A-Za-z0-9]{20}') . ']',
-            'is_active'           => true,
-            'last_registered_at'  => now(),
+            'user_id' => User::factory(),
+            'platform' => $this->faker->randomElement(['ios', 'android']),
+            'push_token' => 'ExponentPushToken['.$this->faker->unique()->regexify('[A-Za-z0-9]{20}').']',
+            'is_active' => true,
+            'last_registered_at' => now(),
         ];
     }
 

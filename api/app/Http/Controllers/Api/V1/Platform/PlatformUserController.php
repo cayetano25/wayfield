@@ -18,15 +18,13 @@ class PlatformUserController extends Controller
     {
         $users = User::query()
             ->with(['organizationUsers.organization'])
-            ->when($request->input('search'), fn ($q, $search) =>
-                $q->where(fn ($q) => $q
-                    ->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                )
+            ->when($request->input('search'), fn ($q, $search) => $q->where(fn ($q) => $q
+                ->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
             )
-            ->when($request->boolean('email_verified'), fn ($q) =>
-                $q->whereNotNull('email_verified_at')
+            )
+            ->when($request->boolean('email_verified'), fn ($q) => $q->whereNotNull('email_verified_at')
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 25));
@@ -44,18 +42,18 @@ class PlatformUserController extends Controller
         $user->load(['organizationUsers.organization', 'leader']);
 
         return response()->json([
-            'id'                => $user->id,
-            'first_name'        => $user->first_name,
-            'last_name'         => $user->last_name,
-            'email'             => $user->email,
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
-            'is_active'         => $user->is_active,
-            'created_at'        => $user->created_at?->toIso8601String(),
-            'organizations'     => $user->organizationUsers->map(fn ($ou) => [
-                'organization_id'   => $ou->organization_id,
+            'is_active' => $user->is_active,
+            'created_at' => $user->created_at?->toIso8601String(),
+            'organizations' => $user->organizationUsers->map(fn ($ou) => [
+                'organization_id' => $ou->organization_id,
                 'organization_name' => $ou->organization?->name,
-                'role'              => $ou->role,
-                'is_active'         => $ou->is_active,
+                'role' => $ou->role,
+                'is_active' => $ou->is_active,
             ]),
             'has_leader_profile' => $user->leader !== null,
         ]);

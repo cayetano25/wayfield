@@ -20,10 +20,10 @@ class MetricSnapshot extends Model
     ];
 
     protected $casts = [
-        'period_start'  => 'date',
-        'period_end'    => 'date',
-        'value'         => 'decimal:4',
+        'period_start' => 'date',
+        'period_end' => 'date',
+        'value' => 'decimal:4',
         'metadata_json' => 'array',
-        'computed_at'   => 'datetime',
+        'computed_at' => 'datetime',
     ];
 }

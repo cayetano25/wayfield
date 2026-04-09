@@ -7,6 +7,7 @@ use App\Models\Leader;
 use App\Models\Session;
 use App\Models\SessionLeader;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UpdateSessionLeaderStatusAction
 {
@@ -20,9 +21,10 @@ class UpdateSessionLeaderStatusAction
      * Leaders accepting/declining their own assignment call this with
      * the appropriate status ('accepted' or 'declined').
      *
-     * @param string $status One of: pending, accepted, declined, removed
+     * @param  string  $status  One of: pending, accepted, declined, removed
+     *
      * @throws \InvalidArgumentException if status is invalid
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException if not found
+     * @throws ModelNotFoundException if not found
      */
     public function execute(
         Session $session,
@@ -34,7 +36,7 @@ class UpdateSessionLeaderStatusAction
 
         if (! in_array($status, $validStatuses)) {
             throw new \InvalidArgumentException(
-                "Invalid assignment_status '{$status}'. Must be one of: " . implode(', ', $validStatuses)
+                "Invalid assignment_status '{$status}'. Must be one of: ".implode(', ', $validStatuses)
             );
         }
 
@@ -54,15 +56,15 @@ class UpdateSessionLeaderStatusAction
 
         AuditLogService::record([
             'organization_id' => $session->workshop->organization_id,
-            'actor_user_id'   => $actor->id,
-            'entity_type'     => 'session_leader',
-            'entity_id'       => $sessionLeader->id,
-            'action'          => 'leader_assignment_status_updated',
-            'metadata'        => [
-                'leader_id'       => $leader->id,
-                'session_id'      => $session->id,
+            'actor_user_id' => $actor->id,
+            'entity_type' => 'session_leader',
+            'entity_id' => $sessionLeader->id,
+            'action' => 'leader_assignment_status_updated',
+            'metadata' => [
+                'leader_id' => $leader->id,
+                'session_id' => $session->id,
                 'previous_status' => $previousStatus,
-                'new_status'      => $status,
+                'new_status' => $status,
             ],
         ]);
 

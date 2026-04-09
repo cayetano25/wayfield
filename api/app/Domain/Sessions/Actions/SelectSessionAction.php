@@ -50,12 +50,13 @@ class SelectSessionAction
                     return $existing;
                 }
                 $existing->update(['selection_status' => 'selected']);
+
                 return $existing->fresh();
             }
 
             return SessionSelection::create([
-                'registration_id'  => $registration->id,
-                'session_id'       => $session->id,
+                'registration_id' => $registration->id,
+                'session_id' => $session->id,
                 'selection_status' => 'selected',
             ]);
         });

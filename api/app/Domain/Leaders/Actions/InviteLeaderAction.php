@@ -23,15 +23,15 @@ class InviteLeaderAction
         $tokenHash = hash('sha256', $rawToken);
 
         $invitation = LeaderInvitation::create([
-            'organization_id'    => $organization->id,
-            'workshop_id'        => $data['workshop_id'] ?? null,
-            'leader_id'          => null,
-            'invited_email'      => $data['invited_email'],
+            'organization_id' => $organization->id,
+            'workshop_id' => $data['workshop_id'] ?? null,
+            'leader_id' => null,
+            'invited_email' => $data['invited_email'],
             'invited_first_name' => $data['invited_first_name'] ?? null,
-            'invited_last_name'  => $data['invited_last_name'] ?? null,
-            'status'             => 'pending',
+            'invited_last_name' => $data['invited_last_name'] ?? null,
+            'status' => 'pending',
             'invitation_token_hash' => $tokenHash,
-            'expires_at'         => now()->addDays(7),
+            'expires_at' => now()->addDays(7),
             'created_by_user_id' => $invitedBy->id,
         ]);
 
@@ -41,13 +41,13 @@ class InviteLeaderAction
 
         AuditLogService::record([
             'organization_id' => $organization->id,
-            'actor_user_id'   => $invitedBy->id,
-            'entity_type'     => 'leader_invitation',
-            'entity_id'       => $invitation->id,
-            'action'          => 'invitation_sent',
-            'metadata'        => [
-                'invited_email'   => $invitation->invited_email,
-                'workshop_id'     => $invitation->workshop_id,
+            'actor_user_id' => $invitedBy->id,
+            'entity_type' => 'leader_invitation',
+            'entity_id' => $invitation->id,
+            'action' => 'invitation_sent',
+            'metadata' => [
+                'invited_email' => $invitation->invited_email,
+                'workshop_id' => $invitation->workshop_id,
             ],
         ]);
 

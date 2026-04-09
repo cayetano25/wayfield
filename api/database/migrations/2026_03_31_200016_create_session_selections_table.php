@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('registration_id')->constrained()->cascadeOnDelete();
             $table->foreignId('session_id')->constrained()->cascadeOnDelete();
             $table->enum('selection_status', ['selected', 'canceled', 'waitlisted'])
-                  ->default('selected');
+                ->default('selected');
             $table->timestamps();
 
             $table->unique(['registration_id', 'session_id']);

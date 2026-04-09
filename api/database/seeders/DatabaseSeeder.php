@@ -18,15 +18,15 @@ class DatabaseSeeder extends Seeder
 
         $user = User::factory()->create([
             'first_name' => 'Seed',
-            'last_name'  => 'User',
-            'email'      => 'seed@wayfield.dev',
+            'last_name' => 'User',
+            'email' => 'seed@wayfield.dev',
         ]);
 
         app(CreateOrganizationAction::class)->execute($user, [
-            'name'                       => 'Demo Organization',
+            'name' => 'Demo Organization',
             'primary_contact_first_name' => 'Seed',
-            'primary_contact_last_name'  => 'User',
-            'primary_contact_email'      => 'seed@wayfield.dev',
+            'primary_contact_last_name' => 'User',
+            'primary_contact_email' => 'seed@wayfield.dev',
         ]);
     }
 }

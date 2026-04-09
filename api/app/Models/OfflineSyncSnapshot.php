@@ -18,7 +18,7 @@ class OfflineSyncSnapshot extends Model
 
     protected $casts = [
         'generated_at' => 'datetime',
-        'created_at'   => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     public function workshop(): BelongsTo

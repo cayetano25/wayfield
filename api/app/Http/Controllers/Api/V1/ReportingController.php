@@ -13,7 +13,7 @@ class ReportingController extends Controller
 {
     public function __construct(
         private readonly BuildAttendanceReportService $attendanceService,
-        private readonly BuildUsageReportService      $usageService,
+        private readonly BuildUsageReportService $usageService,
     ) {}
 
     /**
@@ -28,8 +28,8 @@ class ReportingController extends Controller
 
         $filters = array_filter([
             'workshop_id' => $request->integer('workshop_id') ?: null,
-            'start_date'  => $request->input('start_date'),
-            'end_date'    => $request->input('end_date'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
         ], fn ($v) => $v !== null);
 
         $report = $this->attendanceService->build($organization, $filters);
@@ -56,14 +56,14 @@ class ReportingController extends Controller
         $workshops = $query->orderBy('start_date', 'desc')->get();
 
         $data = $workshops->map(fn ($workshop) => [
-            'workshop_id'         => $workshop->id,
-            'title'               => $workshop->title,
-            'status'              => $workshop->status,
-            'workshop_type'       => $workshop->workshop_type,
-            'start_date'          => $workshop->start_date,
-            'end_date'            => $workshop->end_date,
-            'session_count'       => $workshop->sessions->count(),
-            'registration_count'  => $workshop->registrations
+            'workshop_id' => $workshop->id,
+            'title' => $workshop->title,
+            'status' => $workshop->status,
+            'workshop_type' => $workshop->workshop_type,
+            'start_date' => $workshop->start_date,
+            'end_date' => $workshop->end_date,
+            'session_count' => $workshop->sessions->count(),
+            'registration_count' => $workshop->registrations
                 ->where('registration_status', 'registered')
                 ->count(),
         ])->values();

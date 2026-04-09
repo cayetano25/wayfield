@@ -30,11 +30,17 @@ class Leader extends Model
         'state_or_region',
         'postal_code',
         'country',
+        'address_id',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
     }
 
     public function organizationLeaders(): HasMany

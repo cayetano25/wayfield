@@ -4,7 +4,6 @@ use App\Models\AttendanceRecord;
 use App\Models\Leader;
 use App\Models\OfflineActionQueue;
 use App\Models\Organization;
-use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionLeader;
@@ -12,14 +11,16 @@ use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopLeader;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Fixture helpers ──────────────────────────────────────────────────────────
 
 function makeSyncWorkshop(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
@@ -31,7 +32,7 @@ function makeSyncWorkshop(): array
         ->published()
         ->create([
             'delivery_type' => 'in_person',
-            'meeting_url'   => null,
+            'meeting_url' => null,
         ]);
 
     return [$org, $workshop, $session];
@@ -51,17 +52,17 @@ function makeRegisteredParticipant(Workshop $workshop): User
 function makeAcceptedLeader(Workshop $workshop, Session $session): array
 {
     $leaderUser = User::factory()->create(['phone_number' => '555-0001']);
-    $leader     = Leader::factory()->create(['user_id' => $leaderUser->id]);
+    $leader = Leader::factory()->create(['user_id' => $leaderUser->id]);
 
     WorkshopLeader::create([
-        'workshop_id'  => $workshop->id,
-        'leader_id'    => $leader->id,
+        'workshop_id' => $workshop->id,
+        'leader_id' => $leader->id,
         'is_confirmed' => true,
     ]);
 
     SessionLeader::factory()->create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'accepted',
     ]);
 
@@ -78,7 +79,7 @@ test('sync version returns a sha256 hash', function () {
         ->getJson("/api/v1/workshops/{$workshop->id}/sync-version");
 
     $response->assertOk()
-             ->assertJsonStructure(['version_hash']);
+        ->assertJsonStructure(['version_hash']);
 
     expect(strlen($response->json('version_hash')))->toBe(64); // SHA-256 hex
 });
@@ -94,8 +95,8 @@ test('sync version changes when a leader is added to a session', function () {
     // Add a leader assignment — touches session_leaders.updated_at
     $leader = Leader::factory()->create();
     SessionLeader::factory()->create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'accepted',
     ]);
 
@@ -115,7 +116,7 @@ test('unauthenticated user cannot download sync package', function () {
     [, $workshop] = makeSyncWorkshop();
 
     $this->getJson("/api/v1/workshops/{$workshop->id}/sync-package")
-         ->assertUnauthorized();
+        ->assertUnauthorized();
 });
 
 test('user with no relationship to workshop cannot download sync package', function () {
@@ -153,8 +154,8 @@ test('participant sync package never includes meeting_url', function () {
     [, $workshop, $session] = makeSyncWorkshop();
     $session->update([
         'delivery_type' => 'virtual',
-        'meeting_url'   => 'https://zoom.us/j/secret',
-        'meeting_id'    => '123456',
+        'meeting_url' => 'https://zoom.us/j/secret',
+        'meeting_id' => '123456',
         'meeting_passcode' => 'abc',
     ]);
 
@@ -167,17 +168,17 @@ test('participant sync package never includes meeting_url', function () {
     $encoded = json_encode($body);
 
     expect($encoded)->not->toContain('https://zoom.us/j/secret')
-                    ->not->toContain('meeting_url')
-                    ->not->toContain('meeting_id')
-                    ->not->toContain('meeting_passcode');
+        ->not->toContain('meeting_url')
+        ->not->toContain('meeting_id')
+        ->not->toContain('meeting_passcode');
 });
 
 test('leader sync package never includes meeting_url', function () {
     [, $workshop, $session] = makeSyncWorkshop();
     $session->update([
         'delivery_type' => 'virtual',
-        'meeting_url'   => 'https://zoom.us/j/leader-secret',
-        'meeting_id'    => '999',
+        'meeting_url' => 'https://zoom.us/j/leader-secret',
+        'meeting_id' => '999',
         'meeting_passcode' => 'xyz',
     ]);
 
@@ -189,7 +190,7 @@ test('leader sync package never includes meeting_url', function () {
     $encoded = json_encode($response->json());
 
     expect($encoded)->not->toContain('https://zoom.us/j/leader-secret')
-                    ->not->toContain('meeting_passcode');
+        ->not->toContain('meeting_passcode');
 });
 
 // ─── Sync Package — participant package has no phone numbers ──────────────────
@@ -233,14 +234,14 @@ test('sync package leaders array includes all confirmed workshop leaders with pu
     // Private fields must not appear for other users
     $encoded = json_encode($leaders);
     expect($encoded)->not->toContain('private@leader.com')
-                    ->not->toContain('555-PRIV');
+        ->not->toContain('555-PRIV');
 });
 
 test('leader sync package includes own private contact fields in leaders array', function () {
     [, $workshop, $session] = makeSyncWorkshop();
     [$leaderUser, $leader] = makeAcceptedLeader($workshop, $session);
     $leader->update([
-        'email'        => 'me@leader.com',
+        'email' => 'me@leader.com',
         'phone_number' => '555-OWN',
         'address_line_1' => '123 Private St',
     ]);
@@ -249,7 +250,7 @@ test('leader sync package includes own private contact fields in leaders array',
         ->getJson("/api/v1/workshops/{$workshop->id}/sync-package")
         ->json('data');
 
-    $leaders  = collect($data['leaders']);
+    $leaders = collect($data['leaders']);
     $ownEntry = $leaders->firstWhere('id', $leader->id);
 
     expect($ownEntry['email'])->toBe('me@leader.com')
@@ -263,7 +264,7 @@ test('leader sync package includes own private contact fields in leaders array',
  * Each leader's sync package must contain ONLY their own session's roster data.
  */
 test('two leaders receive only their own sessions roster in sync package', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
@@ -275,13 +276,13 @@ test('two leaders receive only their own sessions roster in sync package', funct
 
     // Leader A → Session A only
     $leaderUserA = User::factory()->create();
-    $leaderA     = Leader::factory()->create(['user_id' => $leaderUserA->id]);
+    $leaderA = Leader::factory()->create(['user_id' => $leaderUserA->id]);
     WorkshopLeader::create(['workshop_id' => $workshop->id, 'leader_id' => $leaderA->id, 'is_confirmed' => true]);
     SessionLeader::factory()->create(['session_id' => $sessionA->id, 'leader_id' => $leaderA->id, 'assignment_status' => 'accepted']);
 
     // Leader B → Session B only
     $leaderUserB = User::factory()->create();
-    $leaderB     = Leader::factory()->create(['user_id' => $leaderUserB->id]);
+    $leaderB = Leader::factory()->create(['user_id' => $leaderUserB->id]);
     WorkshopLeader::create(['workshop_id' => $workshop->id, 'leader_id' => $leaderB->id, 'is_confirmed' => true]);
     SessionLeader::factory()->create(['session_id' => $sessionB->id, 'leader_id' => $leaderB->id, 'assignment_status' => 'accepted']);
 
@@ -331,19 +332,19 @@ test('replaying same client_action_uuid twice produces only one attendance row',
 
     $participant = makeRegisteredParticipant($workshop);
     SessionSelection::factory()->create([
-        'registration_id'  => Registration::where('user_id', $participant->id)->where('workshop_id', $workshop->id)->first()->id,
-        'session_id'       => $session->id,
+        'registration_id' => Registration::where('user_id', $participant->id)->where('workshop_id', $workshop->id)->first()->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
-    $uuid = \Illuminate\Support\Str::uuid()->toString();
+    $uuid = Str::uuid()->toString();
 
     $payload = [
         'actions' => [
             [
                 'client_action_uuid' => $uuid,
-                'action_type'        => 'self_check_in',
-                'payload'            => ['session_id' => $session->id],
+                'action_type' => 'self_check_in',
+                'payload' => ['session_id' => $session->id],
             ],
         ],
     ];
@@ -375,19 +376,19 @@ test('replayed action that was already processed returns already_processed statu
 
     $participant = makeRegisteredParticipant($workshop);
     SessionSelection::factory()->create([
-        'registration_id'  => Registration::where('user_id', $participant->id)->where('workshop_id', $workshop->id)->first()->id,
-        'session_id'       => $session->id,
+        'registration_id' => Registration::where('user_id', $participant->id)->where('workshop_id', $workshop->id)->first()->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
-    $uuid = \Illuminate\Support\Str::uuid()->toString();
+    $uuid = Str::uuid()->toString();
 
     $payload = [
         'actions' => [
             [
                 'client_action_uuid' => $uuid,
-                'action_type'        => 'self_check_in',
-                'payload'            => ['session_id' => $session->id],
+                'action_type' => 'self_check_in',
+                'payload' => ['session_id' => $session->id],
             ],
         ],
     ];
@@ -411,15 +412,15 @@ test('offline action with invalid session_id returns rejected status', function 
     [, $workshop] = makeSyncWorkshop();
     $participant = makeRegisteredParticipant($workshop);
 
-    $uuid = \Illuminate\Support\Str::uuid()->toString();
+    $uuid = Str::uuid()->toString();
 
     $response = $this->actingAs($participant, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/offline-actions", [
             'actions' => [
                 [
                     'client_action_uuid' => $uuid,
-                    'action_type'        => 'self_check_in',
-                    'payload'            => ['session_id' => 99999],
+                    'action_type' => 'self_check_in',
+                    'payload' => ['session_id' => 99999],
                 ],
             ],
         ]);
@@ -434,15 +435,15 @@ test('unregistered participant offline self-check-in is rejected', function () {
     // This user is NOT registered in the workshop
     $stranger = User::factory()->create();
 
-    $uuid = \Illuminate\Support\Str::uuid()->toString();
+    $uuid = Str::uuid()->toString();
 
     $response = $this->actingAs($stranger, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/offline-actions", [
             'actions' => [
                 [
                     'client_action_uuid' => $uuid,
-                    'action_type'        => 'self_check_in',
-                    'payload'            => ['session_id' => $session->id],
+                    'action_type' => 'self_check_in',
+                    'payload' => ['session_id' => $session->id],
                 ],
             ],
         ]);
@@ -453,7 +454,7 @@ test('unregistered participant offline self-check-in is rejected', function () {
 // ─── Sync Package — leader roster with event_based workshop ───────────────────
 
 test('leader sees all registered participants in roster for event_based workshop without requiring selection', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
@@ -479,7 +480,7 @@ test('leader sees all registered participants in roster for event_based workshop
     $phones = array_column(array_column($roster, 'user'), 'phone_number');
 
     expect($phones)->toContain('555-P1')
-                   ->toContain('555-P2');
+        ->toContain('555-P2');
 });
 
 // ─── Sync Package — my_selections in participant package ─────────────────────
@@ -490,8 +491,8 @@ test('participant sync package includes their selected sessions', function () {
 
     $reg = Registration::where('user_id', $participant->id)->where('workshop_id', $workshop->id)->first();
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 

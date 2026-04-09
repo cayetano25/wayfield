@@ -42,11 +42,11 @@ class BuildUsageReportService
                 ->count();
 
             return [
-                'workshop_id'    => $workshop->id,
+                'workshop_id' => $workshop->id,
                 'workshop_title' => $workshop->title,
-                'status'         => $workshop->status,
+                'status' => $workshop->status,
                 'participant_count' => $count,
-                'limit'          => $entitlements['limits']['max_participants_per_workshop'],
+                'limit' => $entitlements['limits']['max_participants_per_workshop'],
             ];
         })->values()->all();
 
@@ -56,13 +56,13 @@ class BuildUsageReportService
             ->count('user_id');
 
         return [
-            'plan'   => $entitlements['plan'],
+            'plan' => $entitlements['plan'],
             'limits' => $entitlements['limits'],
-            'usage'  => [
-                'active_workshop_count'   => $entitlements['usage']['active_workshop_count'],
-                'total_workshop_count'    => $totalWorkshops,
-                'active_manager_count'    => $entitlements['usage']['active_manager_count'],
-                'active_leader_count'     => $entitlements['usage']['active_leader_count'],
+            'usage' => [
+                'active_workshop_count' => $entitlements['usage']['active_workshop_count'],
+                'total_workshop_count' => $totalWorkshops,
+                'active_manager_count' => $entitlements['usage']['active_manager_count'],
+                'active_leader_count' => $entitlements['usage']['active_leader_count'],
                 'total_participant_count' => $totalParticipants,
                 'participants_by_workshop' => $participantsByWorkshop,
             ],

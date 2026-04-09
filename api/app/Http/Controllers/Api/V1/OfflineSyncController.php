@@ -7,7 +7,7 @@ use App\Domain\Sync\Services\GenerateSyncVersionService;
 use App\Domain\Sync\Services\ReplayOfflineActionsService;
 use App\Http\Controllers\Controller;
 use App\Models\Leader;
-use App\Models\Registration;
+use App\Models\SessionLeader;
 use App\Models\Workshop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +16,8 @@ class OfflineSyncController extends Controller
 {
     public function __construct(
         private readonly BuildWorkshopSyncPackageService $packageService,
-        private readonly GenerateSyncVersionService       $versionService,
-        private readonly ReplayOfflineActionsService      $replayService,
+        private readonly GenerateSyncVersionService $versionService,
+        private readonly ReplayOfflineActionsService $replayService,
     ) {}
 
     /**
@@ -85,13 +85,13 @@ class OfflineSyncController extends Controller
         $this->authorize('sync.download', $workshop);
 
         $validated = $request->validate([
-            'actions'                          => ['required', 'array', 'min:1'],
-            'actions.*.client_action_uuid'     => ['required', 'string', 'max:36'],
-            'actions.*.action_type'            => ['required', 'string'],
-            'actions.*.payload'                => ['required', 'array'],
+            'actions' => ['required', 'array', 'min:1'],
+            'actions.*.client_action_uuid' => ['required', 'string', 'max:36'],
+            'actions.*.action_type' => ['required', 'string'],
+            'actions.*.payload' => ['required', 'array'],
         ]);
 
-        $user    = $request->user();
+        $user = $request->user();
         $results = $this->replayService->replay($user, $workshop, $validated['actions']);
 
         return response()->json(['results' => $results]);
@@ -110,7 +110,7 @@ class OfflineSyncController extends Controller
         $leader = Leader::where('user_id', $user->id)->first();
 
         if ($leader) {
-            $isAssigned = \App\Models\SessionLeader::join('sessions', 'sessions.id', '=', 'session_leaders.session_id')
+            $isAssigned = SessionLeader::join('sessions', 'sessions.id', '=', 'session_leaders.session_id')
                 ->where('sessions.workshop_id', $workshop->id)
                 ->where('session_leaders.leader_id', $leader->id)
                 ->where('session_leaders.assignment_status', 'accepted')

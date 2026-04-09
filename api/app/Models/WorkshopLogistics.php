@@ -21,10 +21,16 @@ class WorkshopLogistics extends Model
         'parking_details',
         'meeting_room_details',
         'meetup_instructions',
+        'hotel_address_id',
     ];
 
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
+    }
+
+    public function hotelAddress(): BelongsTo
+    {
+        return $this->belongsTo(Address::class, 'hotel_address_id');
     }
 }

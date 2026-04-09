@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('workshop_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->enum('registration_status', ['registered', 'canceled', 'waitlisted'])
-                  ->default('registered');
+                ->default('registered');
             $table->string('joined_via_code', 100)->nullable();
             $table->dateTime('registered_at');
             $table->dateTime('canceled_at')->nullable();

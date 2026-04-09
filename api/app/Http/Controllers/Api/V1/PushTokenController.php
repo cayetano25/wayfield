@@ -29,9 +29,9 @@ class PushTokenController extends Controller
         $token = PushToken::updateOrCreate(
             ['push_token' => $request->input('push_token')],
             [
-                'user_id'            => $user->id,
-                'platform'           => $request->input('platform'),
-                'is_active'          => true,
+                'user_id' => $user->id,
+                'platform' => $request->input('platform'),
+                'is_active' => true,
                 'last_registered_at' => now(),
             ]
         );

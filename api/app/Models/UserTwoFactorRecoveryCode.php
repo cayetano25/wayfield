@@ -21,7 +21,7 @@ class UserTwoFactorRecoveryCode extends Model
     protected function casts(): array
     {
         return [
-            'used_at'    => 'datetime',
+            'used_at' => 'datetime',
             'created_at' => 'datetime',
         ];
     }

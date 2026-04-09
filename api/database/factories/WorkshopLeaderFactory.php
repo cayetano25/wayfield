@@ -11,10 +11,10 @@ class WorkshopLeaderFactory extends Factory
     public function definition(): array
     {
         return [
-            'workshop_id'   => Workshop::factory(),
-            'leader_id'     => Leader::factory(),
+            'workshop_id' => Workshop::factory(),
+            'leader_id' => Leader::factory(),
             'invitation_id' => null,
-            'is_confirmed'  => false,
+            'is_confirmed' => false,
         ];
     }
 

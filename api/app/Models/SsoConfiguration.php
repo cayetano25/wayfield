@@ -20,9 +20,9 @@ class SsoConfiguration extends Model
     ];
 
     protected $casts = [
-        'is_enabled'        => 'boolean',
+        'is_enabled' => 'boolean',
         'attribute_mapping' => 'array',
-        'allowed_domains'   => 'array',
+        'allowed_domains' => 'array',
     ];
 
     protected $hidden = [

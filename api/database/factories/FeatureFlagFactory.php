@@ -15,9 +15,9 @@ class FeatureFlagFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'feature_key'     => 'reporting',
-            'is_enabled'      => false,
-            'source'          => 'plan',
+            'feature_key' => 'reporting',
+            'is_enabled' => false,
+            'source' => 'plan',
         ];
     }
 

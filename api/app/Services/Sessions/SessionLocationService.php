@@ -172,8 +172,8 @@ final class SessionLocationService
 
         if ($type === Session::LOCATION_TYPE_COORDINATES) {
             $loc = $session->location;
-            $lat = $loc?->latitude;
-            $lng = $loc?->longitude;
+            $lat = $loc?->latitude !== null ? (float) $loc->latitude : null;
+            $lng = $loc?->longitude !== null ? (float) $loc->longitude : null;
 
             return [
                 'type' => 'coordinates',
@@ -182,7 +182,7 @@ final class SessionLocationService
                 'latitude' => $lat,
                 'longitude' => $lng,
                 'address' => null,
-                'maps_url' => $lat && $lng
+                'maps_url' => $lat !== null && $lng !== null
                     ? "https://www.google.com/maps?q={$lat},{$lng}"
                     : null,
             ];
@@ -190,18 +190,20 @@ final class SessionLocationService
 
         if ($type === Session::LOCATION_TYPE_ADDRESS) {
             $loc = $session->location;
+            $lat = $loc?->latitude !== null ? (float) $loc->latitude : null;
+            $lng = $loc?->longitude !== null ? (float) $loc->longitude : null;
 
             return [
                 'type' => 'address',
                 'notes' => $notes,
                 'name' => $loc?->name,
-                'latitude' => $loc?->latitude,
-                'longitude' => $loc?->longitude,
+                'latitude' => $lat,
+                'longitude' => $lng,
                 'address' => $loc?->address
                     ? $this->addressService->toApiResponse($loc->address)
                     : null,
-                'maps_url' => $loc?->latitude && $loc?->longitude
-                    ? "https://www.google.com/maps?q={$loc->latitude},{$loc->longitude}"
+                'maps_url' => $lat !== null && $lng !== null
+                    ? "https://www.google.com/maps?q={$lat},{$lng}"
                     : null,
             ];
         }

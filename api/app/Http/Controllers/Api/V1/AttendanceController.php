@@ -15,9 +15,9 @@ use Illuminate\Http\Request;
 class AttendanceController extends Controller
 {
     public function __construct(
-        private readonly SelfCheckInAction  $selfCheckIn,
+        private readonly SelfCheckInAction $selfCheckIn,
         private readonly LeaderCheckInAction $leaderCheckIn,
-        private readonly MarkNoShowAction    $markNoShow,
+        private readonly MarkNoShowAction $markNoShow,
     ) {}
 
     /**
@@ -38,7 +38,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'message' => 'Checked in successfully.',
-            'status'  => $record->status,
+            'status' => $record->status,
         ]);
     }
 
@@ -56,7 +56,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'message' => 'Participant checked in.',
-            'status'  => $record->status,
+            'status' => $record->status,
         ]);
     }
 
@@ -74,7 +74,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'message' => 'Participant marked as no-show.',
-            'status'  => $record->status,
+            'status' => $record->status,
         ]);
     }
 }

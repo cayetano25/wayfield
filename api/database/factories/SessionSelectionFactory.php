@@ -11,8 +11,8 @@ class SessionSelectionFactory extends Factory
     public function definition(): array
     {
         return [
-            'registration_id'  => Registration::factory(),
-            'session_id'       => Session::factory()->published(),
+            'registration_id' => Registration::factory(),
+            'session_id' => Session::factory()->published(),
             'selection_status' => 'selected',
         ];
     }

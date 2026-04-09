@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -36,9 +37,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'       => 'datetime',
-            'last_login_at'           => 'datetime',
-            'is_active'               => 'boolean',
+            'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'is_active' => 'boolean',
             'onboarding_completed_at' => 'datetime',
         ];
     }
@@ -102,7 +103,7 @@ class User extends Authenticatable
         return $this->hasMany(NotificationRecipient::class);
     }
 
-    public function organizations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'organization_users')
             ->withPivot(['role', 'is_active'])

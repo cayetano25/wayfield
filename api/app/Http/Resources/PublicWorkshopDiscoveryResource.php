@@ -35,44 +35,42 @@ class PublicWorkshopDiscoveryResource extends JsonResource
     public function toArray(Request $request): array
     {
         $base = [
-            'id'             => $this->id,
-            'title'          => $this->title,
-            'description'    => $this->truncateDescription($this->description),
-            'workshop_type'  => $this->workshop_type,
-            'start_date'     => $this->start_date?->toDateString(),
-            'end_date'       => $this->end_date?->toDateString(),
-            'timezone'       => $this->timezone,
-            'public_slug'    => $this->public_slug,
-            'location'       => $this->serializeLocation(),
-            'leader_count'   => $this->whenLoaded('confirmedLeaders', fn () =>
-                $this->confirmedLeaders->count(),
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->truncateDescription($this->description),
+            'workshop_type' => $this->workshop_type,
+            'start_date' => $this->start_date?->toDateString(),
+            'end_date' => $this->end_date?->toDateString(),
+            'timezone' => $this->timezone,
+            'public_slug' => $this->public_slug,
+            'location' => $this->serializeLocation(),
+            'leader_count' => $this->whenLoaded('confirmedLeaders', fn () => $this->confirmedLeaders->count(),
                 $this->confirmed_leaders_count ?? 0,
             ),
-            'session_count'  => $this->whenLoaded('sessions', fn () =>
-                $this->sessions->where('is_published', true)->count(),
+            'session_count' => $this->whenLoaded('sessions', fn () => $this->sessions->where('is_published', true)->count(),
                 $this->published_sessions_count ?? 0,
             ),
             // join_code is intentionally absent — triple-checked.
         ];
 
         if ($this->includeDetail) {
-            $base['leaders']    = $this->whenLoaded('confirmedLeaders',
+            $base['leaders'] = $this->whenLoaded('confirmedLeaders',
                 fn () => $this->confirmedLeaders->map(fn ($l) => $this->serializeLeader($l))
             );
-            $base['sessions']   = $this->whenLoaded('sessions',
+            $base['sessions'] = $this->whenLoaded('sessions',
                 fn () => $this->sessions
                     ->where('is_published', true)
                     ->values()
                     ->map(fn ($s) => $this->serializeSession($s))
             );
-            $base['logistics']  = $this->whenLoaded('logistics',
+            $base['logistics'] = $this->whenLoaded('logistics',
                 fn () => $this->logistics ? $this->serializeLogistics($this->logistics) : null
             );
             $base['public_page'] = $this->whenLoaded('publicPage',
                 fn () => $this->publicPage ? [
-                    'hero_title'    => $this->publicPage->hero_title,
+                    'hero_title' => $this->publicPage->hero_title,
                     'hero_subtitle' => $this->publicPage->hero_subtitle,
-                    'body_content'  => $this->publicPage->body_content,
+                    'body_content' => $this->publicPage->body_content,
                 ] : null
             );
         }
@@ -89,7 +87,8 @@ class PublicWorkshopDiscoveryResource extends JsonResource
         if ($text === null) {
             return null;
         }
-        return mb_strlen($text) > 200 ? mb_substr($text, 0, 200) . '…' : $text;
+
+        return mb_strlen($text) > 200 ? mb_substr($text, 0, 200).'…' : $text;
     }
 
     private function serializeLocation(): ?array
@@ -101,9 +100,9 @@ class PublicWorkshopDiscoveryResource extends JsonResource
         }
 
         return [
-            'city'            => $location->city,
+            'city' => $location->city,
             'state_or_region' => $location->state_or_region,
-            'country'         => $location->country,
+            'country' => $location->country,
         ];
     }
 
@@ -114,15 +113,15 @@ class PublicWorkshopDiscoveryResource extends JsonResource
     private function serializeLeader($leader): array
     {
         return [
-            'id'                => $leader->id,
-            'first_name'        => $leader->first_name,
-            'last_name'         => $leader->last_name,
-            'display_name'      => $leader->display_name,
+            'id' => $leader->id,
+            'first_name' => $leader->first_name,
+            'last_name' => $leader->last_name,
+            'display_name' => $leader->display_name,
             'profile_image_url' => $leader->profile_image_url,
-            'bio'               => $leader->bio,
-            'website_url'       => $leader->website_url,
-            'city'              => $leader->city,
-            'state_or_region'   => $leader->state_or_region,
+            'bio' => $leader->bio,
+            'website_url' => $leader->website_url,
+            'city' => $leader->city,
+            'state_or_region' => $leader->state_or_region,
             // email, phone_number, address_line_1/2, postal_code, country — intentionally absent
         ];
     }
@@ -136,14 +135,14 @@ class PublicWorkshopDiscoveryResource extends JsonResource
         $location = $session->relationLoaded('location') ? $session->location : null;
 
         return [
-            'id'            => $session->id,
-            'title'         => $session->title,
-            'start_at'      => $session->start_at?->toIso8601String(),
-            'end_at'        => $session->end_at?->toIso8601String(),
+            'id' => $session->id,
+            'title' => $session->title,
+            'start_at' => $session->start_at?->toIso8601String(),
+            'end_at' => $session->end_at?->toIso8601String(),
             'delivery_type' => $session->delivery_type,
-            'capacity'      => $session->capacity,
-            'location'      => $location ? [
-                'city'            => $location->city,
+            'capacity' => $session->capacity,
+            'location' => $location ? [
+                'city' => $location->city,
                 'state_or_region' => $location->state_or_region,
             ] : null,
             // meeting_url, meeting_id, meeting_passcode, notes — intentionally absent
@@ -157,9 +156,9 @@ class PublicWorkshopDiscoveryResource extends JsonResource
     private function serializeLogistics($logistics): array
     {
         return [
-            'hotel_name'          => $logistics->hotel_name,
+            'hotel_name' => $logistics->hotel_name,
             // hotel_address deliberately omitted — city/state only policy for discovery
-            'parking_details'     => $logistics->parking_details,
+            'parking_details' => $logistics->parking_details,
             'meetup_instructions' => $logistics->meetup_instructions,
         ];
     }

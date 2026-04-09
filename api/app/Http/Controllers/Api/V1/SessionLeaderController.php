@@ -7,7 +7,6 @@ use App\Domain\Leaders\Actions\UpdateSessionLeaderStatusAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AttachLeaderToSessionRequest;
-use App\Http\Resources\OrganizerLeaderResource;
 use App\Http\Resources\SessionLeaderResource;
 use App\Models\Leader;
 use App\Models\Session;
@@ -103,12 +102,12 @@ class SessionLeaderController extends Controller
 
         AuditLogService::record([
             'organization_id' => $session->workshop->organization_id,
-            'actor_user_id'   => auth()->id(),
-            'entity_type'     => 'session_leader',
-            'entity_id'       => $sessionLeader->id,
-            'action'          => 'leader_removed_from_session',
-            'metadata'        => [
-                'leader_id'  => $leader->id,
+            'actor_user_id' => auth()->id(),
+            'entity_type' => 'session_leader',
+            'entity_id' => $sessionLeader->id,
+            'action' => 'leader_removed_from_session',
+            'metadata' => [
+                'leader_id' => $leader->id,
                 'session_id' => $session->id,
             ],
         ]);

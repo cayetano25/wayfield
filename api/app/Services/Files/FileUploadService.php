@@ -9,7 +9,7 @@ class FileUploadService
 {
     private static array $extensionMap = [
         'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
+        'image/png' => 'png',
         'image/webp' => 'webp',
     ];
 
@@ -26,26 +26,26 @@ class FileUploadService
     ): array {
         if (app()->environment('local')) {
             return [
-                'upload_url' => url('/api/v1/files/local-upload') . '?key=' . urlencode($key),
-                'key'        => $key,
+                'upload_url' => url('/api/v1/files/local-upload').'?key='.urlencode($key),
+                'key' => $key,
                 'expires_at' => now()->addMinutes(15)->toIso8601String(),
             ];
         }
 
         $client = new S3Client([
-            'version'     => 'latest',
-            'region'      => config('services.aws.region'),
+            'version' => 'latest',
+            'region' => config('services.aws.region'),
             'credentials' => [
-                'key'    => config('services.aws.key'),
+                'key' => config('services.aws.key'),
                 'secret' => config('services.aws.secret'),
             ],
         ]);
 
         $command = $client->getCommand('PutObject', [
-            'Bucket'         => config('services.aws.bucket'),
-            'Key'            => $key,
-            'ContentType'    => $contentType,
-            'ContentLength'  => $maxBytes,
+            'Bucket' => config('services.aws.bucket'),
+            'Key' => $key,
+            'ContentType' => $contentType,
+            'ContentLength' => $maxBytes,
         ]);
 
         $presignedRequest = $client->createPresignedRequest($command, '+15 minutes');
@@ -53,7 +53,7 @@ class FileUploadService
 
         return [
             'upload_url' => (string) $presignedRequest->getUri(),
-            'key'        => $key,
+            'key' => $key,
             'expires_at' => $expiresAt,
         ];
     }
@@ -65,12 +65,12 @@ class FileUploadService
     public function getPublicUrl(string $key): string
     {
         if (app()->environment('local')) {
-            return url('/storage/uploads/' . $key);
+            return url('/storage/uploads/'.$key);
         }
 
         $cloudfrontUrl = rtrim(config('services.aws.cloudfront_url'), '/');
 
-        return $cloudfrontUrl . '/' . $key;
+        return $cloudfrontUrl.'/'.$key;
     }
 
     /**
@@ -87,7 +87,7 @@ class FileUploadService
             ?? pathinfo($filename, PATHINFO_EXTENSION)
             ?: 'bin';
 
-        return "{$entityType}/{$entityId}/" . Str::uuid() . ".{$ext}";
+        return "{$entityType}/{$entityId}/".Str::uuid().".{$ext}";
     }
 
     /**
@@ -99,9 +99,9 @@ class FileUploadService
 
         return match ($contentType) {
             'image/jpeg' => in_array($ext, ['jpg', 'jpeg']),
-            'image/png'  => $ext === 'png',
+            'image/png' => $ext === 'png',
             'image/webp' => $ext === 'webp',
-            default      => false,
+            default => false,
         };
     }
 }

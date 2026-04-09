@@ -22,8 +22,8 @@ class AutomationRun extends Model
     ];
 
     protected $casts = [
-        'triggered_at'       => 'datetime',
-        'metadata_json'      => 'array',
+        'triggered_at' => 'datetime',
+        'metadata_json' => 'array',
     ];
 
     public function rule(): BelongsTo

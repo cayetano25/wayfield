@@ -39,16 +39,16 @@ class CreateOrganizerNotificationAction
     public function execute(User $organizer, Workshop $workshop, array $data): Notification
     {
         $notification = Notification::create([
-            'organization_id'    => $workshop->organization_id,
-            'workshop_id'        => $workshop->id,
+            'organization_id' => $workshop->organization_id,
+            'workshop_id' => $workshop->id,
             'created_by_user_id' => $organizer->id,
-            'title'              => $data['title'],
-            'message'            => $data['message'],
-            'notification_type'  => $data['notification_type'] ?? 'informational',
-            'sender_scope'       => 'organizer',
-            'delivery_scope'     => $data['delivery_scope'],
-            'session_id'         => $data['session_id'] ?? null,
-            'sent_at'            => Carbon::now(),
+            'title' => $data['title'],
+            'message' => $data['message'],
+            'notification_type' => $data['notification_type'] ?? 'informational',
+            'sender_scope' => 'organizer',
+            'delivery_scope' => $data['delivery_scope'],
+            'session_id' => $data['session_id'] ?? null,
+            'sent_at' => Carbon::now(),
         ]);
 
         // Resolve recipients and create notification_recipient rows
@@ -59,15 +59,15 @@ class CreateOrganizerNotificationAction
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $organizer->id,
-            'entity_type'     => 'notification',
-            'entity_id'       => $notification->id,
-            'action'          => 'organizer_notification_sent',
-            'metadata'        => [
-                'workshop_id'     => $workshop->id,
-                'delivery_scope'  => $data['delivery_scope'],
+            'actor_user_id' => $organizer->id,
+            'entity_type' => 'notification',
+            'entity_id' => $notification->id,
+            'action' => 'organizer_notification_sent',
+            'metadata' => [
+                'workshop_id' => $workshop->id,
+                'delivery_scope' => $data['delivery_scope'],
                 'recipient_count' => $recipients->count(),
-                'sent_at'         => $notification->sent_at->toIso8601String(),
+                'sent_at' => $notification->sent_at->toIso8601String(),
             ],
         ]);
 

@@ -27,7 +27,7 @@ class SsoController extends Controller
     {
         return response()->json([
             'error' => 'sso_not_active',
-            'stub'  => true,
+            'stub' => true,
         ], 501);
     }
 
@@ -41,7 +41,7 @@ class SsoController extends Controller
     {
         return response()->json([
             'error' => 'sso_not_active',
-            'stub'  => true,
+            'stub' => true,
         ], 501);
     }
 }

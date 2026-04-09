@@ -15,10 +15,10 @@ class SubscriptionFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'plan_code'       => 'free',
-            'status'          => 'active',
-            'starts_at'       => now()->subMonth(),
-            'ends_at'         => null,
+            'plan_code' => 'free',
+            'status' => 'active',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
         ];
     }
 

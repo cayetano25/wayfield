@@ -2,9 +2,10 @@
 
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('user can verify email with valid link', function () {
     $user = User::factory()->unverified()->create();

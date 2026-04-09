@@ -22,19 +22,19 @@ class SystemAnnouncement extends Model
     ];
 
     protected $casts = [
-        'starts_at'      => 'datetime',
-        'ends_at'        => 'datetime',
-        'is_active'      => 'boolean',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'is_active' => 'boolean',
         'is_dismissable' => 'boolean',
     ];
 
     /** @var array<string, string> */
     public const TYPE_COLORS = [
-        'info'        => '#7EA8BE',
-        'warning'     => '#F59E0B',
+        'info' => '#7EA8BE',
+        'warning' => '#F59E0B',
         'maintenance' => '#E67E22',
-        'outage'      => '#E94F37',
-        'update'      => '#0FA3B1',
+        'outage' => '#E94F37',
+        'update' => '#0FA3B1',
     ];
 
     public function createdByAdmin(): BelongsTo

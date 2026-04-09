@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ImageUploader } from '@/components/ui/ImageUploader';
+import { AddressForm } from '@/components/ui/AddressForm';
+import type { AddressFormData } from '@/lib/types/address';
 
 interface OrgDetail {
   id: number;
@@ -19,6 +21,7 @@ interface OrgDetail {
   primary_contact_last_name: string;
   primary_contact_email: string;
   primary_contact_phone: string;
+  address?: AddressFormData | null;
 }
 
 const EDIT_ROLES = ['owner', 'admin'];
@@ -45,6 +48,7 @@ export default function OrganizationSettingsPage() {
     primary_contact_phone: '',
   });
 
+  const [orgAddress, setOrgAddress] = useState<AddressFormData | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
 
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function OrganizationSettingsPage() {
           primary_contact_email: d.primary_contact_email ?? '',
           primary_contact_phone: d.primary_contact_phone ?? '',
         });
+        setOrgAddress(d.address ?? null);
       })
       .catch(() => toast.error('Failed to load organization'))
       .finally(() => setLoading(false));
@@ -79,7 +84,10 @@ export default function OrganizationSettingsPage() {
     setSaving(true);
     setErrors({});
     try {
-      await apiPatch(`/organizations/${currentOrg.id}`, form);
+      await apiPatch(`/organizations/${currentOrg.id}`, {
+        ...form,
+        ...(orgAddress ? { address: orgAddress } : {}),
+      });
       toast.success('Organization settings saved');
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
@@ -205,6 +213,26 @@ export default function OrganizationSettingsPage() {
               value={form.primary_contact_phone}
               onChange={(e) => handleChange('primary_contact_phone', e.target.value)}
               error={errors.primary_contact_phone}
+              disabled={!canEdit}
+            />
+          </div>
+        </Card>
+
+        {/* Organization Address */}
+        <Card className="mb-6">
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Organization Address</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              For internal use and billing purposes.
+            </p>
+          </div>
+          <div className="px-6 py-6">
+            <AddressForm
+              label=""
+              value={orgAddress}
+              onChange={setOrgAddress}
+              defaultCountryCode={orgAddress?.country_code ?? 'US'}
+              privacyNote="This address is for internal use and billing purposes only."
               disabled={!canEdit}
             />
           </div>

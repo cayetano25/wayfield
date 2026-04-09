@@ -112,9 +112,9 @@ class DashboardMetricsService
 
         return [
             'workshops' => [
-                'total'     => (int) ($workshopCounts->total ?? 0),
+                'total' => (int) ($workshopCounts->total ?? 0),
                 'published' => (int) ($workshopCounts->published ?? 0),
-                'draft'     => (int) ($workshopCounts->draft ?? 0),
+                'draft' => (int) ($workshopCounts->draft ?? 0),
             ],
             'participants' => [
                 'total_registered' => $totalRegistered,
@@ -126,8 +126,8 @@ class DashboardMetricsService
                 'checked_in_today' => $checkedInToday,
             ],
             'plan' => [
-                'plan_code'          => $this->planCode,
-                'workshops_limit'    => $limits['workshops_limit'],
+                'plan_code' => $this->planCode,
+                'workshops_limit' => $limits['workshops_limit'],
                 'participants_limit' => $limits['participants_limit'],
             ],
         ];
@@ -171,11 +171,11 @@ class DashboardMetricsService
             : null;
 
         return [
-            'attendance_rate'   => $attendanceRate,
-            'no_show_rate'      => $noShowRate,
-            'total_checked_in'  => $totalCheckedIn,
-            'total_no_show'     => $totalNoShow,
-            'total_registered'  => $totalRegistered,
+            'attendance_rate' => $attendanceRate,
+            'no_show_rate' => $noShowRate,
+            'total_checked_in' => $totalCheckedIn,
+            'total_no_show' => $totalNoShow,
+            'total_registered' => $totalRegistered,
         ];
     }
 
@@ -196,14 +196,14 @@ class DashboardMetricsService
 
         if ($capacitySessions->isEmpty()) {
             return [
-                'capacity_utilization'                   => null,
-                'total_enrolled_in_capacity_sessions'    => 0,
-                'total_capacity_slots'                   => 0,
+                'capacity_utilization' => null,
+                'total_enrolled_in_capacity_sessions' => 0,
+                'total_capacity_slots' => 0,
             ];
         }
 
         $totalCapacity = $capacitySessions->sum('capacity');
-        $sessionIds    = $capacitySessions->pluck('id');
+        $sessionIds = $capacitySessions->pluck('id');
 
         $totalEnrolled = SessionSelection::whereIn('session_id', $sessionIds)
             ->where('selection_status', 'selected')
@@ -214,9 +214,9 @@ class DashboardMetricsService
             : null;
 
         return [
-            'capacity_utilization'                   => $utilization,
-            'total_enrolled_in_capacity_sessions'    => $totalEnrolled,
-            'total_capacity_slots'                   => $totalCapacity,
+            'capacity_utilization' => $utilization,
+            'total_enrolled_in_capacity_sessions' => $totalEnrolled,
+            'total_capacity_slots' => $totalCapacity,
         ];
     }
 
@@ -257,14 +257,14 @@ class DashboardMetricsService
                 : null;
 
             return [
-                'session_id'             => $session->id,
-                'session_title'          => $session->title,
-                'workshop_title'         => $session->workshop?->title ?? '',
-                'enrolled_count'         => $enrolledCount,
-                'checked_in_count'       => $checkedInCount,
-                'no_show_count'          => $noShowCount,
+                'session_id' => $session->id,
+                'session_title' => $session->title,
+                'workshop_title' => $session->workshop?->title ?? '',
+                'enrolled_count' => $enrolledCount,
+                'checked_in_count' => $checkedInCount,
+                'no_show_count' => $noShowCount,
                 'session_attendance_rate' => $sessionAttendanceRate,
-                'capacity'               => $session->capacity,
+                'capacity' => $session->capacity,
             ];
         });
 
@@ -286,11 +286,11 @@ class DashboardMetricsService
         }
 
         $buckets = [];
-        $now     = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $now = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         for ($i = 11; $i >= 0; $i--) {
             $weekStart = $now->copy()->subWeeks($i);
-            $weekEnd   = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+            $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
 
             $count = $this->registrationScope()
                 ->where('registration_status', 'registered')
@@ -298,7 +298,7 @@ class DashboardMetricsService
                 ->count();
 
             $buckets[] = [
-                'week_start'    => $weekStart->toDateString(),
+                'week_start' => $weekStart->toDateString(),
                 'registrations' => $count,
             ];
         }
@@ -313,28 +313,28 @@ class DashboardMetricsService
     {
         return [
             'revenue' => [
-                'stub'         => true,
-                'label'        => 'Revenue',
+                'stub' => true,
+                'label' => 'Revenue',
                 'available_on' => 'starter',
-                'description'  => 'Track revenue from paid workshops',
+                'description' => 'Track revenue from paid workshops',
             ],
             'satisfaction' => [
-                'stub'         => true,
-                'label'        => 'Satisfaction Score',
+                'stub' => true,
+                'label' => 'Satisfaction Score',
                 'available_on' => 'starter',
-                'description'  => 'Measure participant satisfaction with NPS',
+                'description' => 'Measure participant satisfaction with NPS',
             ],
             'engagement' => [
-                'stub'         => true,
-                'label'        => 'Engagement Score',
+                'stub' => true,
+                'label' => 'Engagement Score',
                 'available_on' => 'pro',
-                'description'  => 'Track polls, Q&A, and participant engagement',
+                'description' => 'Track polls, Q&A, and participant engagement',
             ],
             'learning_outcomes' => [
-                'stub'         => true,
-                'label'        => 'Learning Outcomes',
+                'stub' => true,
+                'label' => 'Learning Outcomes',
                 'available_on' => 'pro',
-                'description'  => 'Measure learning outcomes with pre/post assessments',
+                'description' => 'Measure learning outcomes with pre/post assessments',
             ],
         ];
     }
@@ -342,11 +342,11 @@ class DashboardMetricsService
     private function planLimits(): array
     {
         return match ($this->planCode) {
-            'free'       => ['workshops_limit' => 2, 'participants_limit' => 75],
-            'starter'    => ['workshops_limit' => 10, 'participants_limit' => 250],
+            'free' => ['workshops_limit' => 2, 'participants_limit' => 75],
+            'starter' => ['workshops_limit' => 10, 'participants_limit' => 250],
             'pro',
             'enterprise' => ['workshops_limit' => null, 'participants_limit' => null],
-            default      => ['workshops_limit' => 2, 'participants_limit' => 75],
+            default => ['workshops_limit' => 2, 'participants_limit' => 75],
         };
     }
 }

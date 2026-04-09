@@ -1,229 +1,134 @@
-# Wayfield Web Admin — Navigation Specification
+# Command Center — Navigation Specification
+## docs/command_center/NAVIGATION_SPEC.md
 
-## Authority
-This file is the canonical definition of all navigation in the web admin app.
-Claude Code must read this file before building any screen that includes navigation.
-Do NOT invent, add, remove, or reorder navigation items.
-Do NOT modify the left sidebar structure between phases.
-Every screen must use the AdminShell component defined in Phase 1.
+> **Status:** Specification only. The Command Center frontend has not been built.
+> This document defines the navigation structure to be implemented in CC-Web Phases 1–4.
 
 ---
 
-## Left Sidebar — Permanent Structure
+## Shell Structure
 
-The sidebar is fixed, always visible on desktop (≥1024px), and a slide-over
-drawer on mobile (<1024px). It never changes between screens.
+The Command Center uses a **persistent dark sidebar shell** on all authenticated screens.
+This visually distinguishes it from the tenant web admin (`web/`) which uses a lighter theme.
+┌─────────────────────────────────────────────────────────────┐
+│  COMMAND CENTER          [Admin Name] [Role badge] [Logout] │  ← Top bar
+├──────────────┬──────────────────────────────────────────────┤
+│              │                                              │
+│  SIDEBAR     │  MAIN CONTENT AREA                          │
+│  (dark)      │                                              │
+│              │                                              │
+│  Nav items   │                                              │
+│              │                                              │
+└──────────────┴──────────────────────────────────────────────┘
 
-### Width
-- Desktop: 240px fixed
-- Collapsed (future): 64px icon-only (scaffold the toggle, keep expanded by default)
-
-### Header
-Wayfield wordmark in Sora font, teal #0FA3B1
-Below wordmark: organization name in small gray text (from UserContext)
-
-### Navigation Items (in exact order, no deviations)
-
-```
-┌─────────────────────────────┐
-│  Wayfield                   │
-│  Cascade Photo Workshops ↓  │
-├─────────────────────────────┤
-│  [LayoutDashboard] Dashboard│
-│  [CalendarDays]  Workshops  │
-│                             │
-│  ORGANIZATION               │
-│  [Building2]   Settings     │
-│  [Users]       Members      │
-│  [CreditCard]  Billing      │
-│                             │
-│  [BarChart3]   Reports      │
-├─────────────────────────────┤
-│  [HelpCircle]  Help         │
-├─────────────────────────────┤
-│  [avatar] Jordan Alvarez    │
-│  Owner · [LogOut] Sign out  │
-└─────────────────────────────┘
-```
-
-All icons are from lucide-react. Exact icon names:
-- Dashboard:   `LayoutDashboard`
-- Workshops:   `CalendarDays`
-- Settings:    `Building2`
-- Members:     `Users`
-- Billing:     `CreditCard`
-- Reports:     `BarChart3`
-- Help:        `HelpCircle`
-- Sign out:    `LogOut`
-
-### Section Labels
-"ORGANIZATION" is a non-clickable section label above Settings/Members/Billing.
-Style: uppercase, 10px, letter-spacing wider, gray #9CA3AF, padding 8px 16px.
-
-### Active State
-Active item: teal left border (3px solid #0FA3B1), teal text (#0FA3B1),
-background tint (#0FA3B1 at 8% opacity).
-All other items: dark charcoal text (#2E2E2E), transparent background.
-Hover: light gray background (#F5F5F5).
-
-### Role-Gated Items
-Billing item: only visible when user role is 'owner' or 'billing_admin'.
-If the user's role is 'staff' or 'admin' without billing access,
-the Billing item is completely hidden (not just grayed out).
-
-### Footer
-Always at the bottom of the sidebar:
-- User avatar (initials in teal circle if no photo)
-- User first_name + last_name
-- Role badge (small pill: owner/admin/staff/billing_admin)
-- Sign Out button (text link with LogOut icon)
+The top bar shows the admin's name, their role badge, and a logout button.
+The sidebar is always visible on authenticated screens.
 
 ---
 
-## Top Bar
+## Sidebar Navigation Items
 
-Height: 64px. White background. Bottom border: 1px solid #E5E7EB.
+Listed in display order. Role visibility noted where an item is restricted.
 
-Left: Page title (current page name in Sora, 20px, semibold).
-Right (from right to left):
-  1. System announcement bell icon (MegaphoneIcon, shows count badge if active announcements)
-  2. Notifications bell (BellIcon)
-  3. User name + avatar (matches sidebar footer)
+| Item | Icon | Route | Visible to | Built in |
+|---|---|---|---|---|
+| Overview | Dashboard | `/` | All roles | CC-Web 1 |
+| Organisations | Building | `/organizations` | All except `readonly` (read only) | CC-Web 2 |
+| Users | Users | `/users` | `super_admin`, `admin`, `support` | CC-Web 3 |
+| Financials | CreditCard | `/financials` | `super_admin`, `billing` | CC-Web 3 |
+| Support | Ticket | `/support` | `super_admin`, `admin`, `support` | CC-Web 3 |
+| Automations | Zap | `/automations` | `super_admin`, `admin` | CC-Web 4 |
+| Security | Shield | `/security` | `super_admin`, `admin`, `support` | CC-Web 4 |
+| Audit Log | ClipboardList | `/audit` | `super_admin`, `admin` | CC-Web 4 |
+| Settings | Settings | `/settings` | `super_admin` | CC-Web 4 |
 
-The top bar is part of AdminShell — it never changes.
-
----
-
-## Workshop-Level Secondary Navigation
-
-When a user is inside a specific workshop (/admin/workshops/[id]/*),
-a secondary tab bar appears BELOW the top bar and ABOVE the page content.
-This is NOT in the sidebar — it is a horizontal tab row.
-
-### Workshop Tabs (in exact order)
-
-```
-[Overview] [Sessions] [Leaders] [Participants] [Attendance] [Notifications]
-```
-
-Tab style:
-- Active: teal underline (2px solid #0FA3B1), teal text
-- Inactive: gray text (#6B7280), no underline
-- Hover: dark text (#2E2E2E)
-- Height: 48px
-- Full width of content area
-- Bottom border: 1px solid #E5E7EB
-
-These tabs only appear within the /admin/workshops/[id]/ route group.
-They are rendered in app/(admin)/workshops/[id]/layout.tsx, not in AdminShell.
-
-### Workshop Tab Routes
-- Overview:       /admin/workshops/[id]
-- Sessions:       /admin/workshops/[id]/sessions
-- Leaders:        /admin/workshops/[id]/leaders
-- Participants:   /admin/workshops/[id]/participants
-- Attendance:     /admin/workshops/[id]/attendance
-- Notifications:  /admin/workshops/[id]/notifications
+**`readonly` role**: sees Overview and Organisations (read-only) only.
+All mutation controls are hidden or disabled for `readonly`.
 
 ---
 
-## Breadcrumbs
+## Screen Inventory by Phase
 
-Breadcrumbs appear in the top bar on pages more than one level deep.
-Format: Workshops › Workshop Title › Sessions
+### CC-Web Phase 1 — Auth, Shell, Overview
 
-Max depth: 3 items. Separator: › in gray.
-Last item: not a link. Previous items: links.
+| Screen | Route | Description |
+|---|---|---|
+| Login | `/login` | Dark-themed login form. Calls `POST /api/platform/v1/auth/login`. No registration flow — admin accounts are created by `super_admin`. |
+| Overview Dashboard | `/` | Platform health metrics: total organisations by plan, MRR, active users (30-day), recent signups. Stat cards with trends. Plan distribution donut chart. Recent audit events list. |
 
-Examples:
-- /admin/workshops: no breadcrumb (top-level page)
-- /admin/workshops/[id]: "Workshops ›" + workshop title
-- /admin/workshops/[id]/sessions: "Workshops › Workshop Title › Sessions"
-- /admin/organization/settings: "Organization › Settings"
+### CC-Web Phase 2 — Organisation Management
 
----
+| Screen | Route | Description |
+|---|---|---|
+| Organisations List | `/organizations` | Filterable table: name, plan badge, status, participant count, workshop count, last active. Search by name or email. Filter by plan and status. |
+| Organisation Detail | `/organizations/{id}` | Tabs: Overview · Billing · Feature Flags · Usage · Audit. Overview shows contact info, plan, workshop count. |
+| Organisation > Billing tab | `/organizations/{id}?tab=billing` | Plan display, invoice list. Plan change modal (billing/super_admin only). Link to Stripe. |
+| Organisation > Feature Flags tab | `/organizations/{id}?tab=flags` | List of feature flags with toggle switches. Each toggle shows source (plan_default vs manual_override). Toggle writes audit log. Admin/super_admin only. |
+| Organisation > Usage tab | `/organizations/{id}?tab=usage` | Workshop count vs limit, participant count vs limit, manager count vs limit. Usage bars with thresholds. |
 
-## System Announcements Banner
+### CC-Web Phase 3 — Users, Financials, Support
 
-Appears ABOVE the top bar (very top of the page).
-Implemented in SystemAnnouncementBanner component.
-Fetches from GET /api/v1/system/announcements on every page load.
-Returns null (renders nothing) if no active announcements.
+| Screen | Route | Description |
+|---|---|---|
+| Users List | `/users` | All tenant users. Search by email. Filterable by org. Table: name, email, orgs (count), last login, verified status. |
+| User Detail (slide-over) | (triggered from list) | User detail slide-over: profile, org memberships with roles, login history (last 10 events from `login_events`). |
+| Financials Overview | `/financials` | MRR and ARR summary cards. Subscription count by plan and status. Invoice list (from `stripe_invoices`). Note: data accuracy depends on Stripe webhook wiring (Q4). |
+| Support | `/support` | Links to external support tool (Freshdesk). Ticket schema exists in DB but CC frontend will link externally rather than building a ticket UI. |
 
-One banner per active announcement, stacked vertically.
-Order: critical → high → medium → low severity.
+### CC-Web Phase 4 — Automations, Security, Audit, Settings
 
-Banner anatomy:
-  Left border (4px): announcement type color
-  Background: type color at 12% opacity
-  Icon: type-specific lucide icon (Info, AlertTriangle, Wrench, AlertOctagon, Sparkles)
-  Title: bold, 14px
-  Message: regular, 14px, truncated to 2 lines with expand option
-  Right: X dismiss button (if is_dismissable = true)
-
-Dismissal: stored in localStorage key 'wf_dismissed_announcements' as array of ids.
-Dismissed announcements not shown again in this browser session.
-
-Type colors (border + icon color):
-  info:        #7EA8BE  (sky blue)
-  warning:     #F59E0B  (amber)
-  maintenance: #E67E22  (burnt orange)
-  outage:      #E94F37  (coral red — full opacity background, white text)
-  update:      #0FA3B1  (teal)
+| Screen | Route | Description |
+|---|---|---|
+| Automations List | `/automations` | List of automation rules across all organisations. Filter by org, trigger type, status. Note: rules exist but the execution engine is not implemented (Q8). |
+| Automation Detail / Create | `/automations/new`, `/automations/{id}` | Rule CRUD: trigger selector, action selector, condition editor, active toggle. |
+| Security Events | `/security` | `security_events` table display. Filter by severity, event type, date. Colour-coded severity badges. |
+| Audit Log | `/audit` | `platform_audit_logs` table. Filter by admin user, organisation, action, date range. Expandable metadata column. |
+| Settings | `/settings` | Platform config key-value editor. Admin user management (list, invite, role change, deactivate). Super_admin only. Last-super-admin guard active. |
 
 ---
 
-## Page Layout Grid
+## Route Guards
 
-Standard page content layout (inside the admin shell):
+All routes except `/login` require authentication via the platform admin token.
 
-```
-[sidebar 240px] | [content area — fills remaining width]
-                |   [top bar 64px]
-                |   [announcement banner if active]
-                |   [workshop tabs if applicable 48px]
-                |   [page content — padding 32px desktop, 16px mobile]
-```
+On any request to an authenticated route:
+1. Check for platform admin token in storage
+2. If absent: redirect to `/login`
+3. If present: verify against `GET /api/platform/v1/me` (or decoded from JWT if applicable)
+4. If 401: clear token, redirect to `/login`
+5. If valid: render the screen
 
-Content area max-width: 1280px, centered if viewport is wider.
-Page content padding: 32px on all sides on desktop, 16px on mobile.
-
----
-
-## Mobile Navigation
-
-On mobile (<1024px):
-- Sidebar hidden by default
-- Hamburger menu icon in top bar (left side) opens sidebar as slide-over
-- Workshop tabs become a horizontal scrollable row
-- Top bar items collapse: show only notification bell and avatar
+Role guards for specific screens:
+- `/settings`: `super_admin` only — redirect `admin` and below to `/`
+- `/financials`: `super_admin`, `billing` — redirect others to `/`
+- `/users`: `super_admin`, `admin`, `support` — redirect `billing` and `readonly` to `/`
 
 ---
 
-## Component File Locations
+## Empty and Loading States
 
-All navigation components live in components/shared/:
-  AdminShell.tsx              — outer layout wrapper
-  Sidebar.tsx                 — left navigation
-  TopBar.tsx                  — top bar with breadcrumbs
-  WorkshopTabs.tsx            — workshop-level secondary nav
-  SystemAnnouncementBanner.tsx — announcement display
+Every list screen must handle:
+- **Loading:** skeleton rows while data fetches
+- **Empty:** clear empty state message with context
+- **Error:** error banner with retry action
 
-These components are NEVER rebuilt in later phases.
-If a phase prompt says to "build the sidebar" or "create the nav",
-it means to USE these existing components, not recreate them.
+Every mutation (toggle, plan change, role change) must show:
+- **Optimistic UI** is acceptable but must roll back on API error
+- **Confirmation toast** on success
+- **Error toast** on failure with the error message from the API
 
 ---
 
-## Forbidden Navigation Patterns
+## Design Conventions
 
-Never do any of these:
-- Add nav items not listed in this spec
-- Reorder nav items
-- Change icon names
-- Create a new sidebar component in a later phase
-- Move the workshop tabs into the sidebar
-- Show workshop tabs on non-workshop pages
-- Render nav items conditionally based on active route
-  (only Billing is role-gated — everything else is always rendered)
-- Use a bottom navigation bar (this is a web app, not mobile)
+- **Colour scheme:** dark sidebar (`#1a1a2e` or similar), light main area
+- **Typography:** same brand fonts as tenant admin (Sora headings, Plus Jakarta Sans body)
+- **Role badges:**
+  - `super_admin`: red/coral
+  - `admin`: blue
+  - `support`: purple
+  - `billing`: amber/orange
+  - `readonly`: grey
+- **Plan badges:** matches tenant admin plan colour conventions
+- **Mutation actions:** always require explicit confirmation for destructive operations
+  (plan downgrades, feature flag removal, admin deactivation)

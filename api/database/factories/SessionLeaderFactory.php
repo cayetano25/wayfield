@@ -12,7 +12,7 @@ class SessionLeaderFactory extends Factory
     {
         return [
             'session_id' => Session::factory(),
-            'leader_id'  => Leader::factory(),
+            'leader_id' => Leader::factory(),
             'role_label' => null,
         ];
     }

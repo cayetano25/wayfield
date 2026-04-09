@@ -44,13 +44,15 @@ class DeliverWebhookJob implements ShouldQueue
         3 => 7200,   // 2 hours
     ];
 
-    private const MAX_ATTEMPTS  = 3;
+    private const MAX_ATTEMPTS = 3;
+
     private const CIRCUIT_LIMIT = 10;
-    private const TIMEOUT_SECS  = 10;
+
+    private const TIMEOUT_SECS = 10;
 
     public function __construct(
-        private readonly int    $endpointId,
-        private readonly array  $event,
+        private readonly int $endpointId,
+        private readonly array $event,
         private readonly string $rawSecret,
     ) {}
 
@@ -63,42 +65,43 @@ class DeliverWebhookJob implements ShouldQueue
         }
 
         $deliveryUuid = (string) Str::uuid();
-        $payload      = json_encode($this->event);
-        $signature    = $dispatcher->generateSignature($this->rawSecret, $payload);
+        $payload = json_encode($this->event);
+        $signature = $dispatcher->generateSignature($this->rawSecret, $payload);
 
         // Create the delivery record before attempting — provides an audit trail
         // even if the HTTP request never completes.
         $delivery = WebhookDelivery::create([
             'webhook_endpoint_id' => $endpoint->id,
-            'organization_id'     => $endpoint->organization_id,
-            'webhook_url'         => $endpoint->url,
-            'event_type'          => $this->event['event_type'],
-            'payload_json'        => $this->event,
-            'attempt_count'       => 0,
+            'organization_id' => $endpoint->organization_id,
+            'webhook_url' => $endpoint->url,
+            'event_type' => $this->event['event_type'],
+            'payload_json' => $this->event,
+            'attempt_count' => 0,
         ]);
 
         try {
             $response = Http::timeout(self::TIMEOUT_SECS)
                 ->withHeaders([
-                    'Content-Type'            => 'application/json',
-                    'X-Wayfield-Event'        => $this->event['event_type'],
-                    'X-Wayfield-Delivery'     => $deliveryUuid,
-                    'X-Wayfield-Signature'    => $signature,
+                    'Content-Type' => 'application/json',
+                    'X-Wayfield-Event' => $this->event['event_type'],
+                    'X-Wayfield-Delivery' => $deliveryUuid,
+                    'X-Wayfield-Signature' => $signature,
                 ])
                 ->post($endpoint->url, $this->event);
 
             $delivery->update([
                 'response_status' => $response->status(),
-                'response_body'   => substr($response->body(), 0, 2000),
-                'attempt_count'   => $delivery->attempt_count + 1,
+                'response_body' => substr($response->body(), 0, 2000),
+                'attempt_count' => $delivery->attempt_count + 1,
             ]);
 
             if ($response->successful()) {
                 $delivery->update(['delivered_at' => now()]);
                 $endpoint->update([
                     'last_success_at' => now(),
-                    'failure_count'   => 0,
+                    'failure_count' => 0,
                 ]);
+
                 return;
             }
 
@@ -108,13 +111,13 @@ class DeliverWebhookJob implements ShouldQueue
         } catch (\Throwable $e) {
             Log::warning('DeliverWebhookJob: HTTP exception', [
                 'endpoint_id' => $endpoint->id,
-                'url'         => $endpoint->url,
-                'error'       => $e->getMessage(),
+                'url' => $endpoint->url,
+                'error' => $e->getMessage(),
             ]);
 
             $delivery->update([
                 'attempt_count' => $delivery->attempt_count + 1,
-                'response_body' => 'Exception: ' . $e->getMessage(),
+                'response_body' => 'Exception: '.$e->getMessage(),
             ]);
 
             $this->handleFailure($endpoint, $delivery);
@@ -126,7 +129,7 @@ class DeliverWebhookJob implements ShouldQueue
         $newFailureCount = $endpoint->failure_count + 1;
 
         $endpoint->update([
-            'failure_count'   => $newFailureCount,
+            'failure_count' => $newFailureCount,
             'last_failure_at' => now(),
         ]);
 
@@ -148,13 +151,13 @@ class DeliverWebhookJob implements ShouldQueue
 
             SecurityEvent::create([
                 'organization_id' => $endpoint->organization_id,
-                'event_type'      => 'webhook_endpoint_disabled',
-                'severity'        => 'low',
-                'metadata_json'   => [
-                    'endpoint_id'   => $endpoint->id,
-                    'url'           => $endpoint->url,
+                'event_type' => 'webhook_endpoint_disabled',
+                'severity' => 'low',
+                'metadata_json' => [
+                    'endpoint_id' => $endpoint->id,
+                    'url' => $endpoint->url,
                     'failure_count' => $newFailureCount,
-                    'reason'        => 'Automatically disabled after ' . self::CIRCUIT_LIMIT . ' consecutive delivery failures.',
+                    'reason' => 'Automatically disabled after '.self::CIRCUIT_LIMIT.' consecutive delivery failures.',
                 ],
             ]);
         }

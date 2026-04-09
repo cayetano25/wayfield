@@ -24,7 +24,7 @@ class DetectSelectionConflictService
             ->where(function ($query) use ($newSession) {
                 // Overlapping: existing session starts before new ends AND ends after new starts
                 $query->where('sessions.start_at', '<', $newSession->end_at)
-                      ->where('sessions.end_at', '>', $newSession->start_at);
+                    ->where('sessions.end_at', '>', $newSession->start_at);
             })
             ->select('sessions.title')
             ->first();

@@ -11,21 +11,21 @@ class WorkshopFactory extends Factory
     public function definition(): array
     {
         $startDate = $this->faker->dateTimeBetween('+1 month', '+3 months');
-        $endDate   = (clone $startDate)->modify('+3 days');
+        $endDate = (clone $startDate)->modify('+3 days');
 
         return [
-            'organization_id'     => Organization::factory(),
-            'workshop_type'       => $this->faker->randomElement(['session_based', 'event_based']),
-            'title'               => $this->faker->sentence(4),
-            'description'         => $this->faker->paragraph(),
-            'status'              => 'draft',
-            'timezone'            => 'America/New_York',
-            'start_date'          => $startDate->format('Y-m-d'),
-            'end_date'            => $endDate->format('Y-m-d'),
-            'join_code'           => $this->randomJoinCode(),
+            'organization_id' => Organization::factory(),
+            'workshop_type' => $this->faker->randomElement(['session_based', 'event_based']),
+            'title' => $this->faker->sentence(4),
+            'description' => $this->faker->paragraph(),
+            'status' => 'draft',
+            'timezone' => 'America/New_York',
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+            'join_code' => $this->randomJoinCode(),
             'default_location_id' => null,
             'public_page_enabled' => false,
-            'public_slug'         => null,
+            'public_slug' => null,
         ];
     }
 
@@ -37,9 +37,9 @@ class WorkshopFactory extends Factory
     public function published(): static
     {
         return $this->state([
-            'status'              => 'published',
+            'status' => 'published',
             'public_page_enabled' => true,
-            'public_slug'         => Str::slug($this->faker->sentence(3)),
+            'public_slug' => Str::slug($this->faker->sentence(3)),
         ]);
     }
 
@@ -66,8 +66,8 @@ class WorkshopFactory extends Factory
     private function randomJoinCode(): string
     {
         $charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        $length  = strlen($charset);
-        $code    = '';
+        $length = strlen($charset);
+        $code = '';
 
         for ($i = 0; $i < 8; $i++) {
             $code .= $charset[random_int(0, $length - 1)];

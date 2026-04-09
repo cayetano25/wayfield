@@ -36,8 +36,8 @@ class WorkshopNotificationMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.workshop-change-notification',
             with: [
-                'recipient'    => $this->recipient,
-                'workshop'     => $this->notification->workshop,
+                'recipient' => $this->recipient,
+                'workshop' => $this->notification->workshop,
                 'notification' => $this->notification,
             ],
         );

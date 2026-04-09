@@ -2,11 +2,13 @@
 
 use App\Mail\PasswordResetMail;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('forgot password queues reset email for known address', function () {
     Mail::fake();
@@ -33,18 +35,18 @@ test('forgot password succeeds silently for unknown email (no enumeration)', fun
 test('user can reset password with valid token', function () {
     $user = User::factory()->create(['email' => 'user@example.com']);
 
-    $token = \Illuminate\Support\Str::random(64);
+    $token = Str::random(64);
     DB::table('password_reset_tokens')->insert([
-        'email'      => $user->email,
+        'email' => $user->email,
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->addHour()->toDateTimeString(),
         'created_at' => now()->toDateTimeString(),
     ]);
 
     $this->postJson('/api/v1/auth/reset-password', [
-        'email'                 => $user->email,
-        'token'                 => $token,
-        'password'              => 'newpassword123',
+        'email' => $user->email,
+        'token' => $token,
+        'password' => 'newpassword123',
         'password_confirmation' => 'newpassword123',
     ])->assertStatus(200);
 
@@ -55,16 +57,16 @@ test('reset password fails with invalid token', function () {
     $user = User::factory()->create(['email' => 'user@example.com']);
 
     DB::table('password_reset_tokens')->insert([
-        'email'      => $user->email,
+        'email' => $user->email,
         'token_hash' => hash('sha256', 'valid-token'),
         'expires_at' => now()->addHour()->toDateTimeString(),
         'created_at' => now()->toDateTimeString(),
     ]);
 
     $this->postJson('/api/v1/auth/reset-password', [
-        'email'                 => $user->email,
-        'token'                 => 'wrong-token',
-        'password'              => 'newpassword123',
+        'email' => $user->email,
+        'token' => 'wrong-token',
+        'password' => 'newpassword123',
         'password_confirmation' => 'newpassword123',
     ])->assertStatus(422);
 });
@@ -72,18 +74,18 @@ test('reset password fails with invalid token', function () {
 test('reset password fails with expired token', function () {
     $user = User::factory()->create(['email' => 'user@example.com']);
 
-    $token = \Illuminate\Support\Str::random(64);
+    $token = Str::random(64);
     DB::table('password_reset_tokens')->insert([
-        'email'      => $user->email,
+        'email' => $user->email,
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->subHour()->toDateTimeString(),
         'created_at' => now()->subHours(2)->toDateTimeString(),
     ]);
 
     $this->postJson('/api/v1/auth/reset-password', [
-        'email'                 => $user->email,
-        'token'                 => $token,
-        'password'              => 'newpassword123',
+        'email' => $user->email,
+        'token' => $token,
+        'password' => 'newpassword123',
         'password_confirmation' => 'newpassword123',
     ])->assertStatus(422);
 });
@@ -92,18 +94,18 @@ test('reset password revokes all existing tokens', function () {
     $user = User::factory()->create(['email' => 'user@example.com']);
     $existingToken = $user->createToken('old-session')->plainTextToken;
 
-    $token = \Illuminate\Support\Str::random(64);
+    $token = Str::random(64);
     DB::table('password_reset_tokens')->insert([
-        'email'      => $user->email,
+        'email' => $user->email,
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->addHour()->toDateTimeString(),
         'created_at' => now()->toDateTimeString(),
     ]);
 
     $this->postJson('/api/v1/auth/reset-password', [
-        'email'                 => $user->email,
-        'token'                 => $token,
-        'password'              => 'newpassword123',
+        'email' => $user->email,
+        'token' => $token,
+        'password' => 'newpassword123',
         'password_confirmation' => 'newpassword123',
     ])->assertStatus(200);
 

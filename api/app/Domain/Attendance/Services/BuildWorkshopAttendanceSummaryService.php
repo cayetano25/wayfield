@@ -29,21 +29,21 @@ class BuildWorkshopAttendanceSummaryService
             $attendanceQuery = AttendanceRecord::where('session_id', $session->id);
 
             return [
-                'session_id'     => $session->id,
-                'title'          => $session->title,
-                'start_at'       => $session->start_at,
-                'end_at'         => $session->end_at,
-                'checked_in'     => (clone $attendanceQuery)->where('status', 'checked_in')->count(),
-                'no_show'        => (clone $attendanceQuery)->where('status', 'no_show')->count(),
+                'session_id' => $session->id,
+                'title' => $session->title,
+                'start_at' => $session->start_at,
+                'end_at' => $session->end_at,
+                'checked_in' => (clone $attendanceQuery)->where('status', 'checked_in')->count(),
+                'no_show' => (clone $attendanceQuery)->where('status', 'no_show')->count(),
                 'not_checked_in' => (clone $attendanceQuery)->where('status', 'not_checked_in')->count(),
-                'total_records'  => $attendanceQuery->count(),
+                'total_records' => $attendanceQuery->count(),
             ];
         });
 
         return [
-            'workshop_id'         => $workshop->id,
+            'workshop_id' => $workshop->id,
             'total_registrations' => $totalRegistrations,
-            'sessions'            => $sessionSummaries->values()->all(),
+            'sessions' => $sessionSummaries->values()->all(),
         ];
     }
 }

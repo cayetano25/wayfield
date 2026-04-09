@@ -23,9 +23,9 @@ class WebhookDispatcher
      * Each matching endpoint gets its own queued DeliverWebhookJob.
      * This method does NOT deliver synchronously.
      *
-     * @param string $eventType      e.g. 'workshop.published'
-     * @param int    $organizationId The tenant this event belongs to.
-     * @param array  $data           The event-specific payload (the 'data' object).
+     * @param  string  $eventType  e.g. 'workshop.published'
+     * @param  int  $organizationId  The tenant this event belongs to.
+     * @param  array  $data  The event-specific payload (the 'data' object).
      */
     public function dispatch(string $eventType, int $organizationId, array $data): void
     {
@@ -39,11 +39,11 @@ class WebhookDispatcher
             }
 
             $event = [
-                'event_id'        => (string) Str::uuid(),
-                'event_type'      => $eventType,
-                'created_at'      => now()->toIso8601String(),
+                'event_id' => (string) Str::uuid(),
+                'event_type' => $eventType,
+                'created_at' => now()->toIso8601String(),
                 'organization_id' => $organizationId,
-                'data'            => $data,
+                'data' => $data,
             ];
 
             // Decrypt the stored secret for use in HMAC signing inside the job.
@@ -55,8 +55,9 @@ class WebhookDispatcher
             } catch (\Throwable $e) {
                 Log::warning('WebhookDispatcher: failed to decrypt secret for endpoint', [
                     'endpoint_id' => $endpoint->id,
-                    'error'       => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
+
                 continue;
             }
 
@@ -78,9 +79,8 @@ class WebhookDispatcher
      *       abort(401);
      *   }
      *
-     * @param string $rawSecret The plain-text signing secret.
-     * @param string $payload   The JSON-encoded payload string (not decoded array).
-     *
+     * @param  string  $rawSecret  The plain-text signing secret.
+     * @param  string  $payload  The JSON-encoded payload string (not decoded array).
      * @return string Lowercase hex HMAC-SHA256 digest.
      */
     public function generateSignature(string $rawSecret, string $payload): string

@@ -5,20 +5,22 @@ use App\Models\OrganizationUser;
 use App\Models\Track;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function makeWorkshopOwner(): array
 {
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->sessionBased()->forOrganization($org->id)->published()->create();
+
     return [$user, $org, $workshop];
 }
 
@@ -27,7 +29,7 @@ test('owner can create a track', function () {
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/tracks", [
-            'title'      => 'Landscape Track',
+            'title' => 'Landscape Track',
             'sort_order' => 1,
         ])
         ->assertStatus(201)

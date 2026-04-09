@@ -22,23 +22,23 @@ class LeaderCheckInAction
         $record = AttendanceRecord::updateOrCreate(
             ['session_id' => $session->id, 'user_id' => $participant->id],
             [
-                'status'                => 'checked_in',
-                'check_in_method'       => 'leader',
-                'checked_in_at'         => now(),
+                'status' => 'checked_in',
+                'check_in_method' => 'leader',
+                'checked_in_at' => now(),
                 'checked_in_by_user_id' => $leader_user->id,
             ]
         );
 
         AuditLogService::record([
             'organization_id' => $workshop->organization_id,
-            'actor_user_id'   => $leader_user->id,
-            'entity_type'     => 'attendance_record',
-            'entity_id'       => $record->id,
-            'action'          => 'leader_check_in',
-            'metadata'        => [
-                'session_id'      => $session->id,
-                'workshop_id'     => $workshop->id,
-                'participant_id'  => $participant->id,
+            'actor_user_id' => $leader_user->id,
+            'entity_type' => 'attendance_record',
+            'entity_id' => $record->id,
+            'action' => 'leader_check_in',
+            'metadata' => [
+                'session_id' => $session->id,
+                'workshop_id' => $workshop->id,
+                'participant_id' => $participant->id,
             ],
         ]);
 

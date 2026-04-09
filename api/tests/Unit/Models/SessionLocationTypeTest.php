@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use App\Models\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class, RefreshDatabase::class);
+uses(TestCase::class, RefreshDatabase::class);
 
 test('session location_type defaults to null', function () {
     $session = Session::factory()->create(['location_type' => null]);
@@ -34,7 +35,7 @@ test('usesCoordinates returns false for non-coordinates type', function () {
 
 test('location_notes is stored and retrieved correctly', function () {
     $session = Session::factory()->create([
-        'location_type'  => 'hotel',
+        'location_type' => 'hotel',
         'location_notes' => 'Conference room B',
     ]);
     expect($session->fresh()->location_notes)->toBe('Conference room B');

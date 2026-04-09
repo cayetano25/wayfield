@@ -16,13 +16,13 @@ class OrganizationFactory extends Factory
         $name = fake()->company();
 
         return [
-            'name'                       => $name,
-            'slug'                       => Str::slug($name) . '-' . fake()->unique()->numerify('###'),
+            'name' => $name,
+            'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
             'primary_contact_first_name' => fake()->firstName(),
-            'primary_contact_last_name'  => fake()->lastName(),
-            'primary_contact_email'      => fake()->unique()->safeEmail(),
-            'primary_contact_phone'      => fake()->optional()->phoneNumber(),
-            'status'                     => 'active',
+            'primary_contact_last_name' => fake()->lastName(),
+            'primary_contact_email' => fake()->unique()->safeEmail(),
+            'primary_contact_phone' => fake()->optional()->phoneNumber(),
+            'status' => 'active',
         ];
     }
 

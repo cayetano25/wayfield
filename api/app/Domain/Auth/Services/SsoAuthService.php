@@ -38,9 +38,8 @@ class SsoAuthService
      * entity_id (client_id), sso_url (authorization endpoint), and required
      * scopes (openid, email, profile).
      *
-     * @param Organization $org       The organization initiating the SSO login.
-     * @param string       $returnUrl The Wayfield URL to redirect back to after auth.
-     *
+     * @param  Organization  $org  The organization initiating the SSO login.
+     * @param  string  $returnUrl  The Wayfield URL to redirect back to after auth.
      * @return string The IdP redirect URL.
      *
      * @throws NotImplementedException Always — SSO not yet active.
@@ -63,9 +62,8 @@ class SsoAuthService
      *
      * After attribute extraction, delegates to resolveOrCreateUser().
      *
-     * @param Organization $org          The organization that owns this SSO config.
-     * @param array        $callbackData Raw callback data (POST params or query string).
-     *
+     * @param  Organization  $org  The organization that owns this SSO config.
+     * @param  array  $callbackData  Raw callback data (POST params or query string).
      * @return User The authenticated and resolved Wayfield user.
      *
      * @throws NotImplementedException Always — SSO not yet active.
@@ -92,9 +90,8 @@ class SsoAuthService
      *    use password login unless they later set one via password reset).
      * 6. Return the resolved User.
      *
-     * @param Organization $org           The organization context.
-     * @param array        $idpAttributes Raw attribute bag from the IdP response.
-     *
+     * @param  Organization  $org  The organization context.
+     * @param  array  $idpAttributes  Raw attribute bag from the IdP response.
      * @return User The resolved or newly created user.
      *
      * @throws NotImplementedException Always — SSO not yet active.
@@ -107,7 +104,6 @@ class SsoAuthService
     /**
      * Check if an organization has SSO enabled.
      *
-     * @param Organization $org
      *
      * @return bool True if an active, enabled sso_configurations row exists.
      */
@@ -121,7 +117,6 @@ class SsoAuthService
     /**
      * Get the SSO configuration for an organization.
      *
-     * @param Organization $org
      *
      * @return SsoConfiguration|null Null if not configured.
      */

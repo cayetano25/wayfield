@@ -10,13 +10,13 @@ class TrackResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
+            'id' => $this->id,
             'workshop_id' => $this->workshop_id,
-            'title'       => $this->title,
+            'title' => $this->title,
             'description' => $this->description,
-            'sort_order'  => $this->sort_order,
-            'created_at'  => $this->created_at?->toIso8601String(),
-            'updated_at'  => $this->updated_at?->toIso8601String(),
+            'sort_order' => $this->sort_order,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

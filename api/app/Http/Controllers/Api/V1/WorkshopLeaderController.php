@@ -24,7 +24,7 @@ class WorkshopLeaderController extends Controller
             ->with([
                 'sessionLeaders' => function ($q) use ($workshop) {
                     $q->whereHas('session', fn ($s) => $s->where('workshop_id', $workshop->id))
-                      ->with('session:id,title,start_at');
+                        ->with('session:id,title,start_at');
                 },
                 'invitations' => function ($q) use ($workshop) {
                     $q->where('workshop_id', $workshop->id);
@@ -35,29 +35,29 @@ class WorkshopLeaderController extends Controller
                 $invitation = $leader->invitations->first();
 
                 return [
-                    'id'                    => $leader->id,
-                    'first_name'            => $leader->first_name,
-                    'last_name'             => $leader->last_name,
-                    'display_name'          => $leader->display_name,
-                    'bio'                   => $leader->bio,
-                    'profile_image_url'     => $leader->profile_image_url,
-                    'website_url'           => $leader->website_url,
-                    'city'                  => $leader->city,
-                    'state_or_region'       => $leader->state_or_region,
-                    'phone_number'          => $leader->phone_number,
-                    'invitation_status'     => $invitation?->status ?? 'accepted',
-                    'invitation_id'         => $invitation?->id,
+                    'id' => $leader->id,
+                    'first_name' => $leader->first_name,
+                    'last_name' => $leader->last_name,
+                    'display_name' => $leader->display_name,
+                    'bio' => $leader->bio,
+                    'profile_image_url' => $leader->profile_image_url,
+                    'website_url' => $leader->website_url,
+                    'city' => $leader->city,
+                    'state_or_region' => $leader->state_or_region,
+                    'phone_number' => $leader->phone_number,
+                    'invitation_status' => $invitation?->status ?? 'accepted',
+                    'invitation_id' => $invitation?->id,
                     'invitation_created_at' => $invitation?->created_at?->toIso8601String(),
-                    'is_confirmed'          => (bool) ($leader->pivot->is_confirmed ?? false),
-                    'assigned_sessions'     => $assignedSessions = $leader->sessionLeaders
+                    'is_confirmed' => (bool) ($leader->pivot->is_confirmed ?? false),
+                    'assigned_sessions' => $assignedSessions = $leader->sessionLeaders
                         ->map(fn ($sl) => [
-                            'id'         => $sl->session->id,
-                            'title'      => $sl->session->title,
-                            'start_at'   => $sl->session->start_at?->toIso8601String(),
+                            'id' => $sl->session->id,
+                            'title' => $sl->session->title,
+                            'start_at' => $sl->session->start_at?->toIso8601String(),
                             'role_label' => $sl->role_label,
                         ])
                         ->values(),
-                    'sessions_count'        => $assignedSessions->count(),
+                    'sessions_count' => $assignedSessions->count(),
                 ];
             });
 
@@ -74,7 +74,7 @@ class WorkshopLeaderController extends Controller
         $this->authorize('attachToWorkshop', [Leader::class, $workshop->organization]);
 
         $request->validate([
-            'leader_id'    => ['required', 'integer', 'exists:leaders,id'],
+            'leader_id' => ['required', 'integer', 'exists:leaders,id'],
             'is_confirmed' => ['boolean'],
         ]);
 
@@ -97,7 +97,7 @@ class WorkshopLeaderController extends Controller
         $workshopLeader = WorkshopLeader::updateOrCreate(
             [
                 'workshop_id' => $workshop->id,
-                'leader_id'   => $leader->id,
+                'leader_id' => $leader->id,
             ],
             ['is_confirmed' => $confirmed]
         );

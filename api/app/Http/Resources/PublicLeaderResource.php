@@ -21,15 +21,15 @@ class PublicLeaderResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                => $this->id,
-            'first_name'        => $this->first_name,
-            'last_name'         => $this->last_name,
-            'display_name'      => $this->display_name,
+            'id' => $this->id,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'display_name' => $this->display_name,
             'profile_image_url' => $this->profile_image_url,
-            'bio'               => $this->bio,
-            'website_url'       => $this->website_url,
-            'city'              => $this->city,
-            'state_or_region'   => $this->state_or_region,
+            'bio' => $this->bio,
+            'website_url' => $this->website_url,
+            'city' => $this->city,
+            'state_or_region' => $this->state_or_region,
         ];
     }
 }

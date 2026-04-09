@@ -11,9 +11,9 @@ class TrackFactory extends Factory
     {
         return [
             'workshop_id' => Workshop::factory()->sessionBased(),
-            'title'       => $this->faker->words(3, true),
+            'title' => $this->faker->words(3, true),
             'description' => $this->faker->sentence(),
-            'sort_order'  => $this->faker->numberBetween(0, 10),
+            'sort_order' => $this->faker->numberBetween(0, 10),
         ];
     }
 

@@ -3,9 +3,10 @@
 use App\Models\AdminUser;
 use App\Models\Organization;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -15,12 +16,12 @@ function makeAdmin(string $role = 'super_admin', bool $active = true): AdminUser
     $counter++;
 
     return AdminUser::create([
-        'first_name'    => 'Admin',
-        'last_name'     => "User{$counter}",
-        'email'         => "admin{$counter}@wayfield.internal",
+        'first_name' => 'Admin',
+        'last_name' => "User{$counter}",
+        'email' => "admin{$counter}@wayfield.internal",
         'password_hash' => Hash::make('password'),
-        'role'          => $role,
-        'is_active'     => $active,
+        'role' => $role,
+        'is_active' => $active,
     ]);
 }
 

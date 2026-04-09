@@ -9,20 +9,21 @@ use App\Models\SessionLeader;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeRosterFixture(): array
 {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
         ->sessionBased()
         ->create();
-    $session  = Session::factory()
+    $session = Session::factory()
         ->forWorkshop($workshop->id)
         ->published()
         ->create(['delivery_type' => 'in_person']);
@@ -31,17 +32,17 @@ function makeRosterFixture(): array
     $adminUser = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $adminUser->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $adminUser->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     // Participant registered + selected
     $participant = User::factory()->create(['phone_number' => '+15550001111']);
-    $reg         = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
+    $reg = Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
     SessionSelection::factory()->create([
-        'registration_id'  => $reg->id,
-        'session_id'       => $session->id,
+        'registration_id' => $reg->id,
+        'session_id' => $session->id,
         'selection_status' => 'selected',
     ]);
 
@@ -65,9 +66,9 @@ test('org staff can view session roster', function () {
     $staffUser = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $staffUser->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $staffUser->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     $this->actingAs($staffUser, 'sanctum')
@@ -79,7 +80,7 @@ test('assigned leader can view roster for their session', function () {
     [, , $session] = makeRosterFixture();
 
     $leaderUser = User::factory()->create();
-    $leader     = Leader::factory()->create(['user_id' => $leaderUser->id]);
+    $leader = Leader::factory()->create(['user_id' => $leaderUser->id]);
     SessionLeader::factory()->create(['session_id' => $session->id, 'leader_id' => $leader->id]);
 
     $this->actingAs($leaderUser, 'sanctum')
@@ -136,7 +137,7 @@ test('assigned leader sees participant phone numbers in their session roster', f
     [, , $session, , $participant] = makeRosterFixture();
 
     $leaderUser = User::factory()->create();
-    $leader     = Leader::factory()->create(['user_id' => $leaderUser->id]);
+    $leader = Leader::factory()->create(['user_id' => $leaderUser->id]);
     SessionLeader::factory()->create(['session_id' => $session->id, 'leader_id' => $leader->id]);
 
     $response = $this->actingAs($leaderUser, 'sanctum')
@@ -153,7 +154,7 @@ test('cross-tenant leader does not see phone numbers — different org leader ca
     // Leader from a different org gets 403 before even seeing phone numbers
     [, , $session] = makeRosterFixture();
 
-    $otherOrg       = Organization::factory()->create();
+    $otherOrg = Organization::factory()->create();
     $outsiderLeader = User::factory()->create();
     Leader::factory()->create(['user_id' => $outsiderLeader->id]);
     // This leader is not assigned to any session in the fixture
