@@ -32,8 +32,8 @@ test('session detail includes assigned leaders', function () {
 test('session detail includes leader bio, city, and state', function () {
     ['token' => $token, 'session' => $session]
         = makeSessionWithLeader([
-            'bio'             => 'Award-winning landscape photographer.',
-            'city'            => 'Portland',
+            'bio' => 'Award-winning landscape photographer.',
+            'city' => 'Portland',
             'state_or_region' => 'OR',
         ]);
 
@@ -119,13 +119,13 @@ test('billing_admin cannot see leader phone number', function () {
 
 test('participant cannot see leader phone number', function () {
     $participant = User::factory()->create(['email_verified_at' => now()]);
-    $token       = $participant->createToken('web')->plainTextToken;
+    $token = $participant->createToken('web')->plainTextToken;
 
     ['session' => $session] = makeSessionWithLeader(['phone_number' => '555-867-5309']);
 
     Registration::factory()->create([
-        'workshop_id'         => $session->workshop_id,
-        'user_id'             => $participant->id,
+        'workshop_id' => $session->workshop_id,
+        'user_id' => $participant->id,
         'registration_status' => 'registered',
     ]);
 
@@ -143,11 +143,11 @@ test('pending leader assignment is not included in session leaders', function ()
 
     $pendingLeader = Leader::factory()->create([
         'first_name' => 'Pending',
-        'last_name'  => 'Leader',
+        'last_name' => 'Leader',
     ]);
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $pendingLeader->id,
+        'session_id' => $session->id,
+        'leader_id' => $pendingLeader->id,
         'assignment_status' => 'pending',
     ]);
 
@@ -168,16 +168,16 @@ test('session with multiple accepted leaders returns all of them', function () {
 
     $leader2 = Leader::factory()->create([
         'first_name' => 'Second',
-        'last_name'  => 'Leader',
+        'last_name' => 'Leader',
     ]);
     LeaderInvitation::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader2->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader2->id,
+        'status' => 'accepted',
     ]);
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader2->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader2->id,
         'assignment_status' => 'accepted',
     ]);
 
@@ -190,17 +190,17 @@ test('session with multiple accepted leaders returns all of them', function () {
 // ─── Session with no leader ────────────────────────────────
 
 test('session with no leader assignment returns empty leaders array', function () {
-    $owner    = User::factory()->create(['email_verified_at' => now()]);
-    $org      = Organization::factory()->create();
+    $owner = User::factory()->create(['email_verified_at' => now()]);
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
-    $token    = $owner->createToken('web')->plainTextToken;
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $token = $owner->createToken('web')->plainTextToken;
 
     $this->withToken($token)
         ->getJson("/api/v1/sessions/{$session->id}")
@@ -214,7 +214,7 @@ test('user from a different org cannot view session leaders', function () {
     ['session' => $session] = makeSessionWithLeader();
 
     $outsider = User::factory()->create(['email_verified_at' => now()]);
-    $token    = $outsider->createToken('web')->plainTextToken;
+    $token = $outsider->createToken('web')->plainTextToken;
 
     $this->withToken($token)
         ->getJson("/api/v1/sessions/{$session->id}")
@@ -246,41 +246,41 @@ test('leader with no profile image returns null for profile_image_url', function
 function makeSessionWithLeader(array $leaderAttrs = [], string $role = 'owner'): array
 {
     $user = User::factory()->create(['email_verified_at' => now()]);
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
-        'timezone'        => 'America/Chicago',
+        'timezone' => 'America/Chicago',
     ]);
     $session = Session::factory()->create(['workshop_id' => $workshop->id]);
 
     $leaderUser = User::factory()->create();
-    $leader     = Leader::factory()->create(array_merge([
-        'user_id'           => $leaderUser->id,
-        'first_name'        => 'Jane',
-        'last_name'         => 'Appleseed',
-        'bio'               => 'Landscape photographer and educator.',
-        'city'              => 'Ashford',
-        'state_or_region'   => 'WA',
-        'phone_number'      => '555-100-0000',
+    $leader = Leader::factory()->create(array_merge([
+        'user_id' => $leaderUser->id,
+        'first_name' => 'Jane',
+        'last_name' => 'Appleseed',
+        'bio' => 'Landscape photographer and educator.',
+        'city' => 'Ashford',
+        'state_or_region' => 'WA',
+        'phone_number' => '555-100-0000',
         'profile_image_url' => null,
     ], $leaderAttrs));
 
     LeaderInvitation::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader->id,
+        'status' => 'accepted',
     ]);
 
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'accepted',
     ]);
 
