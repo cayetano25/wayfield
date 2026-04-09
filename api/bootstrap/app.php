@@ -28,11 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'platform.admin' => EnsurePlatformAdmin::class,
-            'platform.auth'  => EnsurePlatformToken::class,
-            'tenant.user'    => EnsureTenantUser::class,
-            'tenant.auth'    => EnsureTenantToken::class,
-            'feature'        => CheckFeatureAccess::class,
-            'auth.api_key'   => AuthenticateApiKey::class,
+            'platform.auth' => EnsurePlatformToken::class,
+            'tenant.user' => EnsureTenantUser::class,
+            'tenant.auth' => EnsureTenantToken::class,
+            'feature' => CheckFeatureAccess::class,
+            'auth.api_key' => AuthenticateApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

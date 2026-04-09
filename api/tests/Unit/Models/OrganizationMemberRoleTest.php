@@ -25,20 +25,20 @@ test('memberRole returns admin for admin user', function () {
 });
 
 test('memberRole returns null for user not in organization', function () {
-    $org      = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $outsider = User::factory()->create();
 
     expect($org->memberRole($outsider))->toBeNull();
 });
 
 test('memberRole returns null for inactive membership', function () {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'admin',
-        'is_active'       => false, // inactive — must not grant access
+        'user_id' => $user->id,
+        'role' => 'admin',
+        'is_active' => false, // inactive — must not grant access
     ]);
 
     expect($org->memberRole($user))->toBeNull();
@@ -73,7 +73,7 @@ test('isElevatedMember returns false for billing_admin', function () {
 });
 
 test('isElevatedMember returns false for non-member', function () {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
     expect($org->isElevatedMember($user))->toBeFalse();
 });
@@ -120,12 +120,12 @@ test('isSoleOwner returns true when the user is the only active owner', function
 
 test('isSoleOwner returns false when there are two active owners', function () {
     [$org, $owner1] = orgWithRole('owner');
-    $owner2         = User::factory()->create();
+    $owner2 = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $owner2->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner2->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     expect($org->isSoleOwner($owner1))->toBeFalse();
@@ -141,13 +141,13 @@ test('isSoleOwner returns false for non-owner', function () {
 
 function orgWithRole(string $role): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];

@@ -8,21 +8,28 @@ use App\Models\Workshop;
 
 class TrackPolicy
 {
+    // Allowed: owner, admin, staff, billing_admin (any active org member)
     public function view(User $user, Track $track): bool
     {
         return $this->isMember($user, $track->workshop->organization_id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function create(User $user, Workshop $workshop): bool
     {
         return $this->isOrganizerOrAbove($user, $workshop->organization_id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function update(User $user, Track $track): bool
     {
         return $this->isOrganizerOrAbove($user, $track->workshop->organization_id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function delete(User $user, Track $track): bool
     {
         return $this->isOrganizerOrAbove($user, $track->workshop->organization_id);

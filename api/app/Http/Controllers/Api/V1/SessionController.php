@@ -27,7 +27,7 @@ class SessionController extends Controller
         $this->authorize('view', $workshop);
 
         $sessions = Session::where('workshop_id', $workshop->id)
-            ->with(['workshop', 'track', 'location', 'location.address'])
+            ->with(['workshop', 'workshop.organization', 'track', 'location', 'location.address', 'leaders'])
             ->orderBy('start_at')
             ->get();
 

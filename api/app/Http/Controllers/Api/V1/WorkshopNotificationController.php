@@ -36,12 +36,8 @@ class WorkshopNotificationController extends Controller
     {
         $user = $request->user();
 
-        // Tenant check
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin', 'staff'])
-            ->exists();
+        // Tenant check — Allowed: owner, admin, staff
+        $isOrganizer = $workshop->organization->isOperationalMember($user);
 
         if ($isOrganizer) {
             $notifications = Notification::where('workshop_id', $workshop->id)
@@ -88,11 +84,8 @@ class WorkshopNotificationController extends Controller
     {
         $user = $request->user();
 
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin'])
-            ->exists();
+        // Allowed: owner, admin
+        $isOrganizer = $workshop->organization->isElevatedMember($user);
 
         if ($isOrganizer) {
             return $this->storeOrganizerNotification($request, $workshop);
@@ -120,11 +113,8 @@ class WorkshopNotificationController extends Controller
 
         $user = $request->user();
 
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin', 'staff'])
-            ->exists();
+        // Allowed: owner, admin, staff
+        $isOrganizer = $workshop->organization->isOperationalMember($user);
 
         if (! $isOrganizer) {
             $leader = Leader::where('user_id', $user->id)->first();

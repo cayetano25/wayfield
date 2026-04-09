@@ -79,7 +79,8 @@ class WorkshopController extends Controller
         $this->authorize('view', $workshop);
 
         return new OrganizerWorkshopResource(
-            $workshop->load(['defaultLocation', 'logistics', 'publicPage', 'confirmedLeaders'])
+            $workshop->loadCount(['sessions', 'registrations'])
+                ->load(['defaultLocation', 'logistics', 'publicPage', 'confirmedLeaders'])
         );
     }
 

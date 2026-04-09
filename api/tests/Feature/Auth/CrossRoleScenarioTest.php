@@ -29,17 +29,17 @@ test('Scenario A: org owner in their own org is an unrelated participant elsewhe
     $user = User::factory()->create(['email_verified_at' => now()]);
     OrganizationUser::create([
         'organization_id' => $orgA->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     // Set up: same user is a participant in Org B's workshop
-    $orgB     = Organization::factory()->create();
+    $orgB = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $orgB->id]);
     Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 
@@ -56,11 +56,11 @@ test('Scenario A: participant context does not grant organiser permissions in a 
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     // User is a participant in an external workshop
-    $orgExt      = Organization::factory()->create();
+    $orgExt = Organization::factory()->create();
     $extWorkshop = Workshop::factory()->create(['organization_id' => $orgExt->id]);
     Registration::factory()->create([
-        'workshop_id'         => $extWorkshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $extWorkshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 
@@ -79,34 +79,34 @@ test('Scenario A: participant context does not grant organiser permissions in a 
 // they are assigned to within each organisation's workshops independently."
 
 test('Scenario B: leader assigned to Org A session cannot access Org B session roster', function () {
-    $svc  = app(RoleContextService::class);
+    $svc = app(RoleContextService::class);
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $leader = Leader::factory()->create(['user_id' => $user->id]);
 
-    $orgA      = Organization::factory()->create();
-    $orgB      = Organization::factory()->create();
+    $orgA = Organization::factory()->create();
+    $orgB = Organization::factory()->create();
     $workshopA = Workshop::factory()->create(['organization_id' => $orgA->id]);
     $workshopB = Workshop::factory()->create(['organization_id' => $orgB->id]);
-    $sessionA  = Session::factory()->create(['workshop_id' => $workshopA->id]);
-    $sessionB  = Session::factory()->create(['workshop_id' => $workshopB->id]);
+    $sessionA = Session::factory()->create(['workshop_id' => $workshopA->id]);
+    $sessionB = Session::factory()->create(['workshop_id' => $workshopB->id]);
 
     // Leader accepted in both orgs
     LeaderInvitation::factory()->create([
         'organization_id' => $orgA->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader->id,
+        'status' => 'accepted',
     ]);
     LeaderInvitation::factory()->create([
         'organization_id' => $orgB->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader->id,
+        'status' => 'accepted',
     ]);
 
     // Assigned ONLY to Session A — not Session B
     SessionLeader::create([
-        'session_id'        => $sessionA->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $sessionA->id,
+        'leader_id' => $leader->id,
         'assignment_status' => 'accepted',
     ]);
 
@@ -126,21 +126,21 @@ test('Scenario B: leader assigned to Org A session cannot access Org B session r
 
 test('Scenario C: staff can view all org workshops regardless of who created them', function () {
     $staffUser = User::factory()->create(['email_verified_at' => now()]);
-    $org       = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $staffUser->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $staffUser->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     // Workshop created under a different user (owner) — staff did not create it
     $owner = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
 
@@ -155,12 +155,12 @@ test('Scenario C: staff cannot invite leaders — only owner/admin can', functio
     // Tests the same elevated-only boundary as the task's workshop-delete assertion,
     // but against an existing route with the correct policy gate.
     $staffUser = User::factory()->create(['email_verified_at' => now()]);
-    $org       = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $staffUser->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $staffUser->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
 
@@ -168,8 +168,8 @@ test('Scenario C: staff cannot invite leaders — only owner/admin can', functio
     $this->withToken($token)
         ->postJson("/api/v1/workshops/{$workshop->id}/leaders", [
             'first_name' => 'Jane',
-            'last_name'  => 'Smith',
-            'email'      => 'jane@example.com',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
         ])
         ->assertStatus(403);
 });
@@ -180,28 +180,28 @@ test('Scenario C: staff cannot invite leaders — only owner/admin can', functio
 // acting in the admin context."
 
 test('Scenario D: org admin has broader session access than leader scope alone', function () {
-    $svc  = app(RoleContextService::class);
+    $svc = app(RoleContextService::class);
     $user = User::factory()->create(['email_verified_at' => now()]);
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
 
     // User is an admin of the org
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     // User also has a leader record but is NOT assigned to this session
     $leader = Leader::factory()->create(['user_id' => $user->id]);
     LeaderInvitation::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader->id,
+        'status' => 'accepted',
     ]);
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
     // No session_leaders row for this session
 
     // Admin context overrides leader-scope restriction
@@ -221,15 +221,15 @@ test('Scenario D: org admin has broader session access than leader scope alone',
 // and participant history remain intact."
 
 test('Scenario E: existing participant history is preserved when user gains org membership', function () {
-    $svc  = app(RoleContextService::class);
+    $svc = app(RoleContextService::class);
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     // User joined a workshop as a participant
-    $orgExt   = Organization::factory()->create();
+    $orgExt = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $orgExt->id]);
-    $reg      = Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+    $reg = Registration::factory()->create([
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 
@@ -237,9 +237,9 @@ test('Scenario E: existing participant history is preserved when user gains org 
     $ownOrg = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $ownOrg->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     // Both contexts exist simultaneously on the same users record
@@ -257,12 +257,12 @@ test('Scenario E: existing participant history is preserved when user gains org 
 
 test('sole owner cannot be downgraded — isSoleOwner guard is active', function () {
     $owner = User::factory()->create(['email_verified_at' => now()]);
-    $org   = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $owner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     // Guard confirms this is the sole active owner
@@ -272,9 +272,9 @@ test('sole owner cannot be downgraded — isSoleOwner guard is active', function
     $owner2 = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $owner2->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $owner2->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     expect($org->isSoleOwner($owner))->toBeFalse();
     expect($org->isSoleOwner($owner2))->toBeFalse();
@@ -282,21 +282,21 @@ test('sole owner cannot be downgraded — isSoleOwner guard is active', function
 
 test('sole owner guard ignores inactive owner rows', function () {
     // An inactive former owner must not count toward the active owner tally
-    $activeOwner   = User::factory()->create(['email_verified_at' => now()]);
+    $activeOwner = User::factory()->create(['email_verified_at' => now()]);
     $inactiveOwner = User::factory()->create();
-    $org           = Organization::factory()->create();
+    $org = Organization::factory()->create();
 
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $activeOwner->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $activeOwner->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $inactiveOwner->id,
-        'role'            => 'owner',
-        'is_active'       => false, // deactivated — must not count
+        'user_id' => $inactiveOwner->id,
+        'role' => 'owner',
+        'is_active' => false, // deactivated — must not count
     ]);
 
     // Active owner is still sole active owner despite the inactive row

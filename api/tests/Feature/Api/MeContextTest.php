@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 test('/me returns empty contexts for a brand new user with no memberships', function () {
-    $user  = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)
@@ -24,12 +24,12 @@ test('/me returns empty contexts for a brand new user with no memberships', func
 
 test('/me returns org role for owner', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
-    $org  = Organization::factory()->create(['name' => 'Test Org']);
+    $org = Organization::factory()->create(['name' => 'Test Org']);
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
     $token = $user->createToken('web')->plainTextToken;
 
@@ -57,9 +57,9 @@ test('/me returns multiple org roles for user with membership in multiple orgs',
         'role' => 'staff', 'is_active' => true,
     ]);
 
-    $token    = $user->createToken('web')->plainTextToken;
+    $token = $user->createToken('web')->plainTextToken;
     $response = $this->withToken($token)->getJson('/api/v1/me');
-    $roles    = $response->json('contexts.organization_roles');
+    $roles = $response->json('contexts.organization_roles');
 
     expect($roles)->toHaveCount(2);
     $roleValues = array_column($roles, 'role');
@@ -67,9 +67,9 @@ test('/me returns multiple org roles for user with membership in multiple orgs',
 });
 
 test('/me returns is_leader true and leader_id when user has an accepted leader record', function () {
-    $user   = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now()]);
     $leader = Leader::factory()->create(['user_id' => $user->id]);
-    $token  = $user->createToken('web')->plainTextToken;
+    $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)
         ->getJson('/api/v1/me')
@@ -80,12 +80,12 @@ test('/me returns is_leader true and leader_id when user has an accepted leader 
 
 test('/me does not include inactive org memberships in contexts', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'staff',
-        'is_active'       => false, // inactive — must be excluded
+        'user_id' => $user->id,
+        'role' => 'staff',
+        'is_active' => false, // inactive — must be excluded
     ]);
     $token = $user->createToken('web')->plainTextToken;
 
@@ -95,7 +95,7 @@ test('/me does not include inactive org memberships in contexts', function () {
 });
 
 test('/me still returns existing user fields alongside the new contexts key', function () {
-    $user  = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)

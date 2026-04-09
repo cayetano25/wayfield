@@ -33,8 +33,8 @@ test('orgRole resolves billing_admin correctly', function () {
 });
 
 test('orgRole returns null for non-member', function () {
-    $svc      = app(RoleContextService::class);
-    $org      = Organization::factory()->create();
+    $svc = app(RoleContextService::class);
+    $org = Organization::factory()->create();
     $outsider = User::factory()->create();
     expect($svc->orgRole($outsider, $org))->toBeNull();
 });
@@ -42,13 +42,13 @@ test('orgRole returns null for non-member', function () {
 // ─── isParticipant() ──────────────────────────────────────
 
 test('isParticipant returns true for registered user', function () {
-    $svc      = app(RoleContextService::class);
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $svc = app(RoleContextService::class);
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
     Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 
@@ -56,22 +56,22 @@ test('isParticipant returns true for registered user', function () {
 });
 
 test('isParticipant returns false for non-registered user', function () {
-    $svc      = app(RoleContextService::class);
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $svc = app(RoleContextService::class);
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
 
     expect($svc->isParticipant($user, $workshop))->toBeFalse();
 });
 
 test('isParticipant returns false for cancelled registration', function () {
-    $svc      = app(RoleContextService::class);
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $svc = app(RoleContextService::class);
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
     Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'canceled', // not 'registered'
     ]);
 
@@ -124,11 +124,11 @@ test('isAssignedLeaderForSession returns false for pending assignment', function
 });
 
 test('isAssignedLeaderForSession returns false for non-assigned leader', function () {
-    $svc      = app(RoleContextService::class);
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $svc = app(RoleContextService::class);
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
     // No leader record for this user at all.
     expect($svc->isAssignedLeaderForSession($user, $session))->toBeFalse();
 });
@@ -142,12 +142,12 @@ test('canManageSession returns true for org admin even without session assignmen
     $user = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
 
     expect($svc->canManageSession($user, $session))->toBeTrue();
 });
@@ -159,11 +159,11 @@ test('canManageSession returns true for assigned leader', function () {
 });
 
 test('canManageSession returns false for unrelated user', function () {
-    $svc      = app(RoleContextService::class);
-    $org      = Organization::factory()->create();
-    $user     = User::factory()->create();
+    $svc = app(RoleContextService::class);
+    $org = Organization::factory()->create();
+    $user = User::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
 
     expect($svc->canManageSession($user, $session))->toBeFalse();
 });
@@ -171,15 +171,15 @@ test('canManageSession returns false for unrelated user', function () {
 // ─── allContexts() ────────────────────────────────────────
 
 test('allContexts returns org roles and leader status', function () {
-    $svc  = app(RoleContextService::class);
+    $svc = app(RoleContextService::class);
     $user = User::factory()->create();
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
 
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'admin',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'admin',
+        'is_active' => true,
     ]);
 
     $contexts = $svc->allContexts($user);
@@ -194,13 +194,13 @@ test('allContexts returns org roles and leader status', function () {
 
 function makeOrgMember(string $role): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];
@@ -208,22 +208,22 @@ function makeOrgMember(string $role): array
 
 function makeSessionParticipant(string $workshopType, bool $withSelection): array
 {
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
-        'workshop_type'   => $workshopType,
+        'workshop_type' => $workshopType,
     ]);
     $session = Session::factory()->create(['workshop_id' => $workshop->id]);
-    $reg     = Registration::factory()->create([
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+    $reg = Registration::factory()->create([
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
     if ($withSelection) {
         SessionSelection::factory()->create([
-            'registration_id'  => $reg->id,
-            'session_id'       => $session->id,
+            'registration_id' => $reg->id,
+            'session_id' => $session->id,
             'selection_status' => 'selected',
         ]);
     }
@@ -233,20 +233,20 @@ function makeSessionParticipant(string $workshopType, bool $withSelection): arra
 
 function rcsAssignedLeader(string $assignmentStatus): array
 {
-    $user     = User::factory()->create();
-    $org      = Organization::factory()->create();
+    $user = User::factory()->create();
+    $org = Organization::factory()->create();
     $workshop = Workshop::factory()->create(['organization_id' => $org->id]);
-    $session  = Session::factory()->create(['workshop_id' => $workshop->id]);
+    $session = Session::factory()->create(['workshop_id' => $workshop->id]);
 
     $leader = Leader::factory()->create(['user_id' => $user->id]);
     LeaderInvitation::factory()->create([
         'organization_id' => $org->id,
-        'leader_id'       => $leader->id,
-        'status'          => 'accepted',
+        'leader_id' => $leader->id,
+        'status' => 'accepted',
     ]);
     SessionLeader::create([
-        'session_id'        => $session->id,
-        'leader_id'         => $leader->id,
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
         'assignment_status' => $assignmentStatus,
     ]);
 

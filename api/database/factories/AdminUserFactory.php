@@ -18,12 +18,12 @@ class AdminUserFactory extends Factory
     public function definition(): array
     {
         return [
-            'first_name'  => fake()->firstName(),
-            'last_name'   => fake()->lastName(),
-            'email'       => fake()->unique()->safeEmail(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            'email' => fake()->unique()->safeEmail(),
             'password_hash' => static::$password ??= Hash::make('password'),
-            'role'        => 'support',
-            'is_active'   => true,
+            'role' => 'support',
+            'is_active' => true,
         ];
     }
 

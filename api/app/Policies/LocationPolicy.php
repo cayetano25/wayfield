@@ -8,16 +8,21 @@ use App\Models\User;
 
 class LocationPolicy
 {
+    // Allowed: owner, admin, staff, billing_admin (any active org member)
     public function viewAny(User $user, Organization $organization): bool
     {
         return $this->isMember($user, $organization->id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function create(User $user, Organization $organization): bool
     {
         return $this->isOrganizerOrAbove($user, $organization->id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function update(User $user, Location $location): bool
     {
         if ($location->organization_id === null) {
@@ -27,6 +32,8 @@ class LocationPolicy
         return $this->isOrganizerOrAbove($user, $location->organization_id);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function delete(User $user, Location $location): bool
     {
         if ($location->organization_id === null) {

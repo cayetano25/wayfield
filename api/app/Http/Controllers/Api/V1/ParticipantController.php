@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
-use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\User;
 use App\Models\Workshop;
@@ -24,12 +23,8 @@ class ParticipantController extends Controller
     {
         $this->authorize('viewParticipants', $workshop);
 
-        $orgUser = $request->user()->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->first();
-
-        $showPhone = in_array($orgUser?->role, ['owner', 'admin', 'staff']);
+        // Phone numbers visible to: owner, admin, staff (not billing_admin)
+        $showPhone = $workshop->organization->isOperationalMember($request->user());
 
         $participants = Registration::where('workshop_id', $workshop->id)
             ->where('registration_status', 'registered')
@@ -80,16 +75,8 @@ class ParticipantController extends Controller
     {
         $actor = $request->user();
 
-        $membership = OrganizationUser::where('organization_id', $organization->id)
-            ->where('user_id', $actor->id)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $membership) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
-
-        if (! in_array($membership->role, ['owner', 'admin', 'staff'])) {
+        // Allowed: owner, admin, staff
+        if (! $organization->isOperationalMember($actor)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -111,11 +98,11 @@ class ParticipantController extends Controller
             ->limit(10)
             ->get()
             ->map(fn (User $u) => [
-            'user_id' => $u->id,
-            'first_name' => $u->first_name,
-            'last_name' => $u->last_name,
-            'email' => $u->email,
-        ]);
+                'user_id' => $u->id,
+                'first_name' => $u->first_name,
+                'last_name' => $u->last_name,
+                'email' => $u->email,
+            ]);
 
         return response()->json($results);
     }

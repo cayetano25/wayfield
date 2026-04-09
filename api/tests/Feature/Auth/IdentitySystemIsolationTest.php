@@ -11,7 +11,7 @@ uses(RefreshDatabase::class);
 // ─── Tenant token is rejected on platform routes ──────────
 
 test('tenant user token is rejected on platform routes', function () {
-    $user  = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)
@@ -24,7 +24,7 @@ test('tenant user token is rejected on platform routes', function () {
 
 test('platform admin token is rejected on tenant routes', function () {
     $admin = AdminUser::factory()->create([
-        'role'      => 'admin',
+        'role' => 'admin',
         'is_active' => true,
     ]);
     $token = $admin->createToken('platform')->plainTextToken;
@@ -38,7 +38,7 @@ test('platform admin token is rejected on tenant routes', function () {
 // ─── Correct token on correct route ──────────────────────
 
 test('valid tenant token authenticates on tenant routes', function () {
-    $user  = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)
@@ -48,7 +48,7 @@ test('valid tenant token authenticates on tenant routes', function () {
 
 test('valid platform token authenticates on platform routes', function () {
     $admin = AdminUser::factory()->create([
-        'role'      => 'admin',
+        'role' => 'admin',
         'is_active' => true,
     ]);
     $token = $admin->createToken('platform')->plainTextToken;
@@ -63,7 +63,7 @@ test('valid platform token authenticates on platform routes', function () {
 
 test('inactive platform admin token is rejected on platform routes', function () {
     $admin = AdminUser::factory()->create([
-        'role'      => 'support',
+        'role' => 'support',
         'is_active' => false,
     ]);
     $token = $admin->createToken('platform')->plainTextToken;

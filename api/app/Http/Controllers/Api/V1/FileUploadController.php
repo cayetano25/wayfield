@@ -161,7 +161,8 @@ class FileUploadController extends Controller
 
     private function userIsOrgAdminForLeader(User $user, Leader $leader): bool
     {
-        // Check if user is owner/admin in any organization that has this leader.
+        // Allowed: owner, admin — in any organization where this leader is registered.
+        // Uses a subquery because the check spans multiple organizations via organizationLeaders.
         return $leader->organizationLeaders()
             ->whereHas('organization.organizationUsers', function ($q) use ($user) {
                 $q->where('user_id', $user->id)

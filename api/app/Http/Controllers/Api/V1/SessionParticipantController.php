@@ -6,7 +6,6 @@ use App\Domain\Attendance\Actions\OrganizerRemoveParticipantFromSessionAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
-use App\Models\OrganizationUser;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionSelection;
@@ -34,16 +33,8 @@ class SessionParticipantController extends Controller
     ): JsonResponse {
         $actor = $request->user();
 
-        $membership = OrganizationUser::where('organization_id', $workshop->organization_id)
-            ->where('user_id', $actor->id)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $membership) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
-
-        if (! in_array($membership->role, ['owner', 'admin', 'staff'])) {
+        // Allowed: owner, admin, staff
+        if (! $workshop->organization->isOperationalMember($actor)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -141,22 +132,12 @@ class SessionParticipantController extends Controller
     ): JsonResponse {
         $actor = $request->user();
 
-        // a) Verify actor is an active member of the workshop's organization.
-        $membership = OrganizationUser::where('organization_id', $workshop->organization_id)
-            ->where('user_id', $actor->id)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $membership) {
+        // Allowed: owner, admin, staff — leaders and billing_admin are excluded
+        if (! $workshop->organization->isOperationalMember($actor)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        // b) Verify role is owner, admin, or staff. Leaders and billing_admin are excluded.
-        if (! in_array($membership->role, ['owner', 'admin', 'staff'])) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
-
-        // c) Verify the session belongs to this workshop.
+        // Verify the session belongs to this workshop.
         if ($session->workshop_id !== $workshop->id) {
             return response()->json(['message' => 'Session not found in this workshop.'], 404);
         }
