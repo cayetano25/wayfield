@@ -2,6 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Leader;
+use App\Models\Organization;
+use App\Models\User;
 use App\Services\Sessions\SessionLocationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -30,8 +33,43 @@ class OrganizerSessionResource extends JsonResource
             'notes' => $this->notes,
             'is_published' => $this->is_published,
             'header_image_url' => $this->header_image_url,
+            'leaders' => $this->whenLoaded('leaders', function () use ($request): array {
+                // Resolve phone visibility once for the entire collection to avoid N+1.
+                // Allowed: owner, admin, staff. Denied: billing_admin, participants, public.
+                $showPhone = $this->resolveShowPhone($request);
+
+                return $this->resource->leaders
+                    ->map(fn (Leader $leader) => (new SessionLeaderResource($leader))->withShowPhone($showPhone))
+                    ->values()
+                    ->all();
+            }),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Determines once whether the requesting user may see leader phone numbers.
+     * Requires workshop.organization to be loaded on the session.
+     */
+    private function resolveShowPhone(Request $request): bool
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        /** @var Organization|null $org */
+        $org = $this->resource->workshop?->organization ?? null;
+
+        if (! $org instanceof Organization) {
+            return false;
+        }
+
+        // Allowed: owner, admin, staff
+        // Denied:  billing_admin, non-members
+        return $org->isOperationalMember($user);
     }
 }

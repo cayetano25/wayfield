@@ -92,4 +92,21 @@ class Organization extends Model
     {
         return $this->hasMany(FeatureFlag::class);
     }
+
+    /**
+     * Returns true if the given user is an active operational member of this organisation.
+     *
+     * Allowed: owner, admin, staff
+     * Denied:  billing_admin, non-members, unauthenticated
+     *
+     * Used for phone-number visibility and other operational-staff gates.
+     */
+    public function isOperationalMember(User $user): bool
+    {
+        return $this->organizationUsers()
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin', 'staff'])
+            ->exists();
+    }
 }

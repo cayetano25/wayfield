@@ -75,7 +75,7 @@ class Leader extends Model
     public function sessions(): BelongsToMany
     {
         return $this->belongsToMany(Session::class, 'session_leaders')
-            ->withPivot(['role_label'])
+            ->withPivot(['role_label', 'assignment_status'])
             ->withTimestamps();
     }
 

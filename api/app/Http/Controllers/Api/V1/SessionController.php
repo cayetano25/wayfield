@@ -54,7 +54,16 @@ class SessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        return new OrganizerSessionResource($session->load(['workshop', 'track', 'location', 'location.address']));
+        $session->loadMissing([
+            'leaders',
+            'workshop',
+            'workshop.organization',
+            'track',
+            'location',
+            'location.address',
+        ]);
+
+        return new OrganizerSessionResource($session);
     }
 
     public function update(

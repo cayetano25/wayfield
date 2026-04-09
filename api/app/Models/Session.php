@@ -90,7 +90,8 @@ class Session extends Model
     public function leaders(): BelongsToMany
     {
         return $this->belongsToMany(Leader::class, 'session_leaders')
-            ->withPivot(['role_label'])
+            ->withPivot(['role_label', 'assignment_status'])
+            ->wherePivot('assignment_status', 'accepted')
             ->withTimestamps();
     }
 
