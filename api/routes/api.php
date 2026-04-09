@@ -129,11 +129,19 @@ Route::prefix('v1')->group(function () {
         Route::post('me/password', [ProfileController::class, 'changePassword']);
         Route::get('me/organizations', [ProfileController::class, 'organizations']);
 
-        // Onboarding
+        // Onboarding — step endpoints under /onboarding/*
+        Route::prefix('onboarding')->group(function () {
+            Route::get('status',   [OnboardingController::class, 'status']);
+            Route::patch('profile', [OnboardingController::class, 'updateProfile']);
+            Route::post('complete', [OnboardingController::class, 'complete']);
+        });
+
+        // Legacy onboarding route (kept for backwards compatibility)
         Route::post('me/onboarding/complete', [OnboardingController::class, 'complete']);
 
         // Organizations
-        Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index']);
+        Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index'])
+            ->middleware('onboarding.complete');
         Route::get('organizations', [OrganizationController::class, 'index']);
         Route::post('organizations', [OrganizationController::class, 'store']);
         Route::get('organizations/{organization}', [OrganizationController::class, 'show']);

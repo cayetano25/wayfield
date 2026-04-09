@@ -19,6 +19,7 @@ class User extends Authenticatable
     protected $fillable = [
         'first_name',
         'last_name',
+        'pronouns',
         'email',
         'phone_number',
         'password_hash',
@@ -110,8 +111,22 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;
+    }
+
+    /**
+     * Returns true when the user has completed the onboarding intent step.
+     * Per AR-3: only users with onboarding_completed_at set are considered done.
+     */
+    public function hasCompletedOnboarding(): bool
+    {
+        return $this->onboarding_completed_at !== null;
     }
 }

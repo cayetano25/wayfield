@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\CheckFeatureAccess;
+use App\Http\Middleware\EnsureOnboardingComplete;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsurePlatformToken;
 use App\Http\Middleware\EnsureTenantToken;
@@ -27,12 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'platform.admin' => EnsurePlatformAdmin::class,
-            'platform.auth' => EnsurePlatformToken::class,
-            'tenant.user' => EnsureTenantUser::class,
-            'tenant.auth' => EnsureTenantToken::class,
-            'feature' => CheckFeatureAccess::class,
-            'auth.api_key' => AuthenticateApiKey::class,
+            'platform.admin'      => EnsurePlatformAdmin::class,
+            'platform.auth'       => EnsurePlatformToken::class,
+            'tenant.user'         => EnsureTenantUser::class,
+            'tenant.auth'         => EnsureTenantToken::class,
+            'feature'             => CheckFeatureAccess::class,
+            'auth.api_key'        => AuthenticateApiKey::class,
+            'onboarding.complete' => EnsureOnboardingComplete::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
