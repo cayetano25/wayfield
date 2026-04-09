@@ -265,9 +265,6 @@ export default function SessionDetailPage() {
               </div>
             </Card>
 
-            {/* Leaders */}
-            <SessionLeaderCard leaders={session.leaders ?? []} />
-
             {/* Description */}
             {session.description && (
               <Card className="p-5">
@@ -275,6 +272,9 @@ export default function SessionDetailPage() {
                 <p className="text-sm text-medium-gray leading-relaxed">{session.description}</p>
               </Card>
             )}
+
+            {/* Leaders */}
+            <SessionLeaderCard leaders={session.leaders ?? []} />
 
             {/* Location */}
             {session.location?.type && (

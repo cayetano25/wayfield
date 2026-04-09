@@ -9,6 +9,7 @@ import { Eye, EyeOff, Check, CalendarDays, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError, apiPost } from '@/lib/api/client';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 const passwordSchema = z
   .string()
@@ -79,6 +80,7 @@ export default function RegisterPage() {
   }
 
   return (
+    <AuthCard>
     <div>
       <h2 className="font-heading text-xl font-semibold text-dark mb-6">Create your account</h2>
 
@@ -216,5 +218,6 @@ export default function RegisterPage() {
         </Button>
       </form>
     </div>
+    </AuthCard>
   );
 }
