@@ -68,6 +68,11 @@ test('session can be set to coordinates location type', function () {
         ->assertJsonPath('location.longitude', -103.4876917)
         ->assertJsonPath('location.name', 'Black Hills Sunrise Ridge')
         ->assertJsonPath('location.notes', 'At the rear of the parking lot');
+
+    // Criterion 3: a locations row was created and linked on the session
+    $fresh = $session->fresh();
+    expect($fresh->location_id)->not->toBeNull();
+    expect($fresh->location_type)->toBe('coordinates');
 });
 
 test('coordinates location includes a Google Maps URL', function () {
@@ -118,7 +123,7 @@ test('coordinates type requires latitude and longitude', function () {
 test('session can be set to address location type', function () {
     ['token' => $token, 'session' => $session] = makeSessionScenario();
 
-    $this->withToken($token)
+    $response = $this->withToken($token)
         ->patchJson("/api/v1/sessions/{$session->id}", [
             'location_type' => 'address',
             'location_notes' => 'Behind the post office',
@@ -132,8 +137,24 @@ test('session can be set to address location type', function () {
         ])
         ->assertStatus(200)
         ->assertJsonPath('location.type', 'address')
-        ->assertJsonPath('location.notes', 'Behind the post office')
-        ->assertJsonPath('location.address.locality', 'Hill City');
+        ->assertJsonPath('location.notes', 'Behind the post office');
+
+    // Criterion 5: both an addresses row AND a locations row were created and linked
+    $fresh = $session->fresh();
+    expect($fresh->location_id)->not->toBeNull();
+    expect($fresh->location_type)->toBe('address');
+    expect($fresh->location->address_id)->not->toBeNull();
+
+    // Criterion 6: full address object from AddressService::toApiResponse()
+    $addr = $response->json('location.address');
+    expect($addr)->toHaveKey('country_code', 'US')
+        ->toHaveKey('country_name')
+        ->toHaveKey('formatted_address')
+        ->toHaveKey('validation_status')
+        ->toHaveKey('address_line_1', '123 Main St')
+        ->toHaveKey('locality', 'Hill City')
+        ->toHaveKey('administrative_area', 'SD')
+        ->toHaveKey('postal_code', '57745');
 });
 
 test('address type requires address object', function () {

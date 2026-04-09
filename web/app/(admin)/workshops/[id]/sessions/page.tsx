@@ -540,7 +540,12 @@ function SessionSlideOver({
           <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button form="session-form" type="submit" loading={saving}>
+          <Button
+            form="session-form"
+            type="submit"
+            loading={saving}
+            disabled={saving || !isSessionLocationValid(locationData)}
+          >
             {editingSession ? 'Save Changes' : 'Create Session'}
           </Button>
         </div>
