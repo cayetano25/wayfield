@@ -22,6 +22,7 @@ use App\Policies\RosterPolicy;
 use App\Policies\SessionPolicy;
 use App\Policies\TrackPolicy;
 use App\Policies\WorkshopPolicy;
+use App\Services\Sessions\SessionLocationService;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
@@ -41,7 +42,7 @@ class AppServiceProvider extends AuthServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->singleton(SessionLocationService::class);
     }
 
     public function boot(): void
