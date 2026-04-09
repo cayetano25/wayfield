@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { ClipboardList, UserCheck, UserX, UserPlus } from 'lucide-react';
+import { ClipboardList, UserCheck, UserX } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -11,7 +11,6 @@ import { apiGet, apiPost } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import { AddParticipantModal } from '@/components/participants/AddParticipantModal';
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
@@ -246,7 +245,7 @@ function RosterTable({
                 <td className="px-4 py-3 sticky left-0 bg-inherit">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center shrink-0 select-none">
-                      {`${entry.first_name[0] ?? ''}${entry.last_name[0] ?? ''}`.toUpperCase()}
+                      {`${entry.first_name?.[0] ?? ''}${entry.last_name?.[0] ?? ''}`.toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium text-dark">
@@ -326,7 +325,6 @@ export default function WorkshopAttendancePage() {
   const [summaryData, setSummaryData] = useState<SessionSummary[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [actioning, setActioning] = useState<Set<number>>(new Set());
-  const [addParticipantOpen, setAddParticipantOpen] = useState(false);
 
   // Initial load: workshop + sessions + summary
   useEffect(() => {
@@ -360,8 +358,23 @@ export default function WorkshopAttendancePage() {
   const loadRoster = useCallback(async (sessionId: number) => {
     setLoadingRoster(true);
     try {
-      const res = await apiGet<RosterEntry[]>(`/sessions/${sessionId}/roster`);
-      setRoster(res ?? []);
+      type ApiRosterItem = {
+        user: { id: number; first_name: string; last_name: string; email: string; phone_number: string | null };
+        attendance: { status: AttendanceStatus; check_in_method: CheckInMethod | null; checked_in_at: string | null };
+      };
+      const res = await apiGet<{ data: ApiRosterItem[] }>(`/sessions/${sessionId}/roster`);
+      const raw: ApiRosterItem[] = Array.isArray(res) ? res : (res as { data: ApiRosterItem[] }).data ?? [];
+      const entries: RosterEntry[] = raw.map((item) => ({
+        user_id:          item.user.id,
+        first_name:       item.user.first_name,
+        last_name:        item.user.last_name,
+        email:            item.user.email,
+        phone_number:     item.user.phone_number,
+        status:           item.attendance.status,
+        checked_in_at:    item.attendance.checked_in_at,
+        check_in_method:  item.attendance.check_in_method,
+      }));
+      setRoster(entries);
     } catch {
       toast.error('Failed to load roster');
       setRoster([]);
@@ -442,16 +455,6 @@ export default function WorkshopAttendancePage() {
         {selectedSessionId && total > 0 && (
           <span className="text-sm text-medium-gray">{total} registered</span>
         )}
-        {selectedSessionId && workshop && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setAddParticipantOpen(true)}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Add Participant
-          </Button>
-        )}
       </div>
 
       {/* Roster section */}
@@ -499,26 +502,6 @@ export default function WorkshopAttendancePage() {
       {/* Summary chart — across all sessions */}
       {summaryData.length > 0 && <AttendanceChart data={summaryData} />}
 
-      {/* Add Participant modal */}
-      {workshop && selectedSessionId && (() => {
-        const selectedSession = sessions.find((s) => s.id === selectedSessionId);
-        return (
-          <AddParticipantModal
-            open={addParticipantOpen}
-            onClose={() => setAddParticipantOpen(false)}
-            workshopId={workshop.id}
-            sessionId={selectedSessionId}
-            sessionTitle={selectedSession?.title ?? ''}
-            organizationId={workshop.organization_id}
-            joinCode={workshop.join_code}
-            capacity={selectedSession?.capacity ?? null}
-            confirmedCount={roster.length}
-            onSuccess={() => {
-              if (selectedSessionId) loadRoster(selectedSessionId);
-            }}
-          />
-        );
-      })()}
     </div>
   );
 }

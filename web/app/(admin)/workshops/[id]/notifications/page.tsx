@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Bell, AlertCircle, Info, Clock, ChevronDown } from 'lucide-react';
+import { Bell, AlertCircle, Info, Clock, ChevronDown, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { NotificationDetailSlideOver, SlideOverNotification } from '@/components/notifications/NotificationDetailSlideOver';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -37,8 +38,10 @@ interface SentNotification {
   notification_type: NotificationType;
   delivery_scope: DeliveryScope;
   session_id: number | null;
+  session_title?: string | null;
   recipient_count: number | null;
   sent_at: string | null;
+  sent_by?: { first_name: string; last_name: string } | null;
   created_at: string;
 }
 
@@ -305,7 +308,13 @@ function ComposeSection({
 
 /* ─── History section ────────────────────────────────────────────────── */
 
-function HistorySection({ notifications }: { notifications: SentNotification[] }) {
+function HistorySection({
+  notifications,
+  onView,
+}: {
+  notifications: SentNotification[];
+  onView: (n: SentNotification) => void;
+}) {
   return (
     <div className="bg-white rounded-xl border border-border-gray overflow-hidden">
       <div className="px-5 py-4 border-b border-border-gray">
@@ -339,15 +348,21 @@ function HistorySection({ notifications }: { notifications: SentNotification[] }
                 <th className="text-right px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
                   Recipients
                 </th>
+                <th className="w-12 px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border-gray">
               {notifications.map((n, index) => (
                 <tr key={`notification-${n.id}-${index}`} className="hover:bg-surface/50 transition-colors">
                   <td className="px-4 py-3 max-w-[160px]">
-                    <span className="block truncate font-medium text-dark" title={n.title}>
+                    <button
+                      type="button"
+                      onClick={() => onView(n)}
+                      className="block truncate font-medium text-dark hover:text-primary transition-colors text-left w-full"
+                      title={n.title}
+                    >
                       {n.title}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <TypeBadge type={n.notification_type} />
@@ -362,6 +377,16 @@ function HistorySection({ notifications }: { notifications: SentNotification[] }
                   </td>
                   <td className="px-4 py-3 text-right text-medium-gray text-xs tabular-nums">
                     {n.recipient_count ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onView(n)}
+                      title="View details"
+                      className="p-1.5 rounded-lg text-light-gray hover:text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -388,6 +413,7 @@ export default function WorkshopNotificationsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [history, setHistory] = useState<SentNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedNotification, setSelectedNotification] = useState<SlideOverNotification | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -439,19 +465,30 @@ export default function WorkshopNotificationsPage() {
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
-        {/* Compose — 60% */}
-        <ComposeSection
-          workshopId={id}
-          sessions={sessions}
-          isOwnerAdmin={isOwnerAdmin}
-          onSent={handleSent}
-        />
+    <>
+      <div className="max-w-[1280px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
+          {/* Compose — 60% */}
+          <ComposeSection
+            workshopId={id}
+            sessions={sessions}
+            isOwnerAdmin={isOwnerAdmin}
+            onSent={handleSent}
+          />
 
-        {/* History — 40% */}
-        <HistorySection notifications={history} />
+          {/* History — 40% */}
+          <HistorySection
+            notifications={history}
+            onView={(n) => setSelectedNotification(n)}
+          />
+        </div>
       </div>
-    </div>
+
+      <NotificationDetailSlideOver
+        notification={selectedNotification}
+        workshopId={id}
+        onClose={() => setSelectedNotification(null)}
+      />
+    </>
   );
 }

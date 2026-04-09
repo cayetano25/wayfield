@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Search, X, CalendarDays, Trash2 } from 'lucide-react';
+import { Search, X, Plus, ChevronDown } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
-import { apiGet, apiDelete } from '@/lib/api/client';
+import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
 import { getWorkshopParticipants } from '@/lib/api/workshops';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,15 @@ interface Workshop {
   id: number;
   title: string;
   timezone: string;
+  organization_id: number;
+  join_code: string;
+}
+
+interface Session {
+  id: number;
+  title: string;
+  start_at: string;
+  capacity: number | null;
 }
 
 interface SelectedSession {
@@ -140,22 +149,79 @@ function RemoveSessionModal({
   );
 }
 
+/* ─── Session add selector ───────────────────────────────────────────── */
+
+function SessionAddSelector({
+  sessions,
+  selectedSessionIds,
+  onAdd,
+}: {
+  sessions: Session[];
+  selectedSessionIds: Set<number>;
+  onAdd: (session: Session) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const available = sessions.filter((s) => !selectedSessionIds.has(s.id));
+
+  if (available.length === 0) {
+    return (
+      <p className="text-xs text-light-gray italic">Enrolled in all sessions</p>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        Add to Session
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-6 z-20 w-72 bg-white border border-border-gray rounded-lg shadow-lg overflow-hidden">
+            {available.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => { onAdd(s); setOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-surface transition-colors border-b border-border-gray last:border-b-0"
+              >
+                {s.title}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── Participant slide-over ─────────────────────────────────────────── */
 
 function ParticipantSlideOver({
   open,
   participant,
   workshop,
+  sessions,
   showPhone,
   onClose,
   onRemoveSession,
+  onAddToSession,
 }: {
   open: boolean;
   participant: Participant | null;
   workshop: Workshop | null;
+  sessions: Session[];
   showPhone: boolean;
   onClose: () => void;
   onRemoveSession: (target: RemoveSessionTarget) => void;
+  onAddToSession: (participant: Participant, session: Session) => void;
 }) {
   const timezone = workshop?.timezone ?? 'UTC';
 
@@ -235,21 +301,22 @@ function ParticipantSlideOver({
 
             {/* Selected sessions */}
             <div className="px-6 py-5">
-              <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-3">
-                Selected Sessions
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-medium text-medium-gray uppercase tracking-wide">
+                  Selected Sessions
+                </p>
+              </div>
 
               {(participant.sessions ?? []).length === 0 ? (
-                <p className="text-sm text-light-gray">No sessions selected.</p>
+                <p className="text-sm text-light-gray mb-3">No sessions selected.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 mb-3">
                   {(participant.sessions ?? []).map((session) => (
                     <div
                       key={session.id}
-                      className="flex items-center gap-3 rounded-lg border border-border-gray bg-surface px-3 py-2.5"
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border-gray bg-surface px-3 py-2"
                     >
-                      <CalendarDays className="w-4 h-4 text-medium-gray shrink-0" />
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-dark truncate">{session.title}</p>
                         <p className="text-xs text-medium-gray">
                           {formatInTimeZone(new Date(session.start_at), timezone, 'MMM d · h:mm a')}
@@ -267,15 +334,20 @@ function ParticipantSlideOver({
                             participantName: fullName,
                           })
                         }
-                        className="flex items-center gap-1.5 text-xs font-medium text-danger/70 hover:text-danger hover:bg-danger/5 px-2 py-1 rounded transition-colors shrink-0"
+                        className="p-1 rounded text-light-gray hover:text-danger hover:bg-danger/5 transition-colors shrink-0"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Remove
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
+
+              <SessionAddSelector
+                sessions={sessions}
+                selectedSessionIds={new Set((participant.sessions ?? []).map((s) => s.id))}
+                onAdd={(session) => onAddToSession(participant, session)}
+              />
             </div>
           </div>
         )}
@@ -308,6 +380,7 @@ export default function WorkshopParticipantsPage() {
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -321,11 +394,13 @@ export default function WorkshopParticipantsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [wRes, pRes] = await Promise.all([
+      const [wRes, pRes, sRes] = await Promise.all([
         apiGet<Workshop>(`/workshops/${id}`),
         getWorkshopParticipants(Number(id)) as Promise<Participant[]>,
+        apiGet<Session[]>(`/workshops/${id}/sessions`),
       ]);
       setWorkshop(wRes);
+      setSessions(sRes ?? []);
       const normalized = ((pRes as Participant[]) ?? []).map((p) => ({
         ...p,
         sessions: p.sessions ?? [],
@@ -375,6 +450,39 @@ export default function WorkshopParticipantsPage() {
       }).catch(() => {});
     }
     setRemoveTarget(null);
+  }
+
+  async function handleAddToSession(participant: Participant, session: Session) {
+    if (!workshop) return;
+    try {
+      await apiPost(`/workshops/${workshop.id}/sessions/${session.id}/participants`, {
+        user_id: participant.user_id,
+      });
+      toast.success(`${participant.first_name} ${participant.last_name} added to ${session.title}`);
+      // Refresh participants and update the slide-over
+      const res = await (getWorkshopParticipants(Number(id)) as Promise<Participant[]>);
+      const normalized = (res ?? []).map((p) => ({
+        ...p,
+        sessions: p.sessions ?? [],
+        sessions_count: p.sessions_count ?? 0,
+      }));
+      setParticipants(normalized);
+      const fresh = normalized.find((p) => p.user_id === participant.user_id);
+      if (fresh) setSlideParticipant(fresh);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        const msg = (err.message ?? '').toLowerCase();
+        if (msg.includes('capacity')) {
+          toast.error('This session is at full capacity.');
+        } else if (msg.includes('already')) {
+          toast.error('Participant is already enrolled in this session.');
+        } else {
+          toast.error(err.message || 'Could not add participant to session.');
+        }
+      } else {
+        toast.error('Failed to add participant to session.');
+      }
+    }
   }
 
   if (loading) {
@@ -487,9 +595,11 @@ export default function WorkshopParticipantsPage() {
         open={slideOpen}
         participant={slideParticipant}
         workshop={workshop}
+        sessions={sessions}
         showPhone={showPhone}
         onClose={() => setSlideOpen(false)}
         onRemoveSession={(target) => setRemoveTarget(target)}
+        onAddToSession={handleAddToSession}
       />
 
       {/* Remove session confirm modal */}

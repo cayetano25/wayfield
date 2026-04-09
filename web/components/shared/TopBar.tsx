@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, Megaphone, ChevronRight, CheckCheck, Menu } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { usePage } from '@/contexts/PageContext';
@@ -16,6 +17,7 @@ interface InAppNotification {
   title: string;
   message: string;
   notification_type: 'informational' | 'urgent' | 'reminder';
+  workshop_id: number | null;
   read_at: string | null;
   created_at: string;
 }
@@ -43,12 +45,19 @@ function NotificationDropdown({
   notifications,
   onMarkRead,
   onMarkAllRead,
+  onNavigate,
 }: {
   notifications: InAppNotification[];
-  onMarkRead: (id: number) => void;
+  onMarkRead: (id: number) => Promise<void>;
   onMarkAllRead: () => void;
+  onNavigate: (workshopId: number | null) => void;
 }) {
   const unread = notifications.filter((n) => !n.read_at);
+
+  async function handleItemClick(n: InAppNotification) {
+    if (!n.read_at) await onMarkRead(n.id);
+    onNavigate(n.workshop_id);
+  }
 
   return (
     <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl border border-border-gray shadow-lg z-50 overflow-hidden">
@@ -79,9 +88,7 @@ function NotificationDropdown({
               className={`px-4 py-3 cursor-pointer hover:bg-surface transition-colors ${
                 !n.read_at ? 'bg-primary/[0.03]' : ''
               }`}
-              onClick={() => {
-                if (!n.read_at) onMarkRead(n.id);
-              }}
+              onClick={() => handleItemClick(n)}
             >
               <div className="flex items-start gap-3">
                 {/* Unread dot */}
@@ -127,6 +134,7 @@ interface TopBarProps {
 export function TopBar({ onMenuOpen }: TopBarProps) {
   const { user } = useUser();
   const { title, breadcrumbs } = usePage();
+  const router = useRouter();
 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -136,8 +144,11 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
 
   // Fetch on mount
   useEffect(() => {
-    apiGet<InAppNotification[]>('/me/notifications')
-      .then((data) => setNotifications((data ?? []).slice(0, 5)))
+    apiGet<{ data?: InAppNotification[] } | InAppNotification[]>('/me/notifications')
+      .then((res) => {
+        const list = Array.isArray(res) ? res : ((res as { data?: InAppNotification[] }).data ?? []);
+        setNotifications(list.slice(0, 5));
+      })
       .catch(() => {/* silent — non-critical */});
   }, []);
 
@@ -154,7 +165,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  const markRead = useCallback(async (recipientId: number) => {
+  const markRead = useCallback(async (recipientId: number): Promise<void> => {
     try {
       await apiPatch(`/me/notifications/${recipientId}/read`);
       setNotifications((prev) =>
@@ -162,6 +173,13 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
       );
     } catch {/* silent */}
   }, []);
+
+  const handleNavigate = useCallback((workshopId: number | null) => {
+    setDropdownOpen(false);
+    if (workshopId) {
+      router.push(`/workshops/${workshopId}/notifications`);
+    }
+  }, [router]);
 
   const markAllRead = useCallback(async () => {
     const unread = notifications.filter((n) => !n.read_at);
@@ -237,6 +255,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
               notifications={notifications}
               onMarkRead={markRead}
               onMarkAllRead={markAllRead}
+              onNavigate={handleNavigate}
             />
           )}
         </div>
