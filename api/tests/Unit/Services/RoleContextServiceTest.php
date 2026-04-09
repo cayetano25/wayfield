@@ -113,13 +113,13 @@ test('isParticipantInSession returns true for event-based workshop with just reg
 
 test('isAssignedLeaderForSession returns true for accepted assignment', function () {
     $svc = app(RoleContextService::class);
-    ['user' => $user, 'session' => $session] = makeAssignedLeader('accepted');
+    ['user' => $user, 'session' => $session] = rcsAssignedLeader('accepted');
     expect($svc->isAssignedLeaderForSession($user, $session))->toBeTrue();
 });
 
 test('isAssignedLeaderForSession returns false for pending assignment', function () {
     $svc = app(RoleContextService::class);
-    ['user' => $user, 'session' => $session] = makeAssignedLeader('pending');
+    ['user' => $user, 'session' => $session] = rcsAssignedLeader('pending');
     expect($svc->isAssignedLeaderForSession($user, $session))->toBeFalse();
 });
 
@@ -154,7 +154,7 @@ test('canManageSession returns true for org admin even without session assignmen
 
 test('canManageSession returns true for assigned leader', function () {
     $svc = app(RoleContextService::class);
-    ['user' => $user, 'session' => $session] = makeAssignedLeader('accepted');
+    ['user' => $user, 'session' => $session] = rcsAssignedLeader('accepted');
     expect($svc->canManageSession($user, $session))->toBeTrue();
 });
 
@@ -231,7 +231,7 @@ function makeSessionParticipant(string $workshopType, bool $withSelection): arra
     return compact('user', 'workshop', 'session', 'reg');
 }
 
-function makeAssignedLeader(string $assignmentStatus): array
+function rcsAssignedLeader(string $assignmentStatus): array
 {
     $user     = User::factory()->create();
     $org      = Organization::factory()->create();

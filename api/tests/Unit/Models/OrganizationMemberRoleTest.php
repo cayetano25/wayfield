@@ -13,13 +13,13 @@ uses(TestCase::class, RefreshDatabase::class);
 // ─── memberRole() ─────────────────────────────────────────
 
 test('memberRole returns owner for owner user', function () {
-    [$org, $user] = makeOrgWithRole('owner');
+    [$org, $user] = orgWithRole('owner');
 
     expect($org->memberRole($user))->toBe('owner');
 });
 
 test('memberRole returns admin for admin user', function () {
-    [$org, $user] = makeOrgWithRole('admin');
+    [$org, $user] = orgWithRole('admin');
 
     expect($org->memberRole($user))->toBe('admin');
 });
@@ -45,7 +45,7 @@ test('memberRole returns null for inactive membership', function () {
 });
 
 test('memberRole returns billing_admin role correctly', function () {
-    [$org, $user] = makeOrgWithRole('billing_admin');
+    [$org, $user] = orgWithRole('billing_admin');
 
     expect($org->memberRole($user))->toBe('billing_admin');
 });
@@ -53,22 +53,22 @@ test('memberRole returns billing_admin role correctly', function () {
 // ─── isElevatedMember() ───────────────────────────────────
 
 test('isElevatedMember returns true for owner', function () {
-    [$org, $user] = makeOrgWithRole('owner');
+    [$org, $user] = orgWithRole('owner');
     expect($org->isElevatedMember($user))->toBeTrue();
 });
 
 test('isElevatedMember returns true for admin', function () {
-    [$org, $user] = makeOrgWithRole('admin');
+    [$org, $user] = orgWithRole('admin');
     expect($org->isElevatedMember($user))->toBeTrue();
 });
 
 test('isElevatedMember returns false for staff', function () {
-    [$org, $user] = makeOrgWithRole('staff');
+    [$org, $user] = orgWithRole('staff');
     expect($org->isElevatedMember($user))->toBeFalse();
 });
 
 test('isElevatedMember returns false for billing_admin', function () {
-    [$org, $user] = makeOrgWithRole('billing_admin');
+    [$org, $user] = orgWithRole('billing_admin');
     expect($org->isElevatedMember($user))->toBeFalse();
 });
 
@@ -82,14 +82,14 @@ test('isElevatedMember returns false for non-member', function () {
 
 test('isOperationalMember returns true for owner, admin, staff', function () {
     foreach (['owner', 'admin', 'staff'] as $role) {
-        [$org, $user] = makeOrgWithRole($role);
+        [$org, $user] = orgWithRole($role);
         expect($org->isOperationalMember($user))
             ->toBeTrue("Expected true for role: {$role}");
     }
 });
 
 test('isOperationalMember returns false for billing_admin', function () {
-    [$org, $user] = makeOrgWithRole('billing_admin');
+    [$org, $user] = orgWithRole('billing_admin');
     expect($org->isOperationalMember($user))->toBeFalse();
 });
 
@@ -97,7 +97,7 @@ test('isOperationalMember returns false for billing_admin', function () {
 
 test('hasBillingAccess returns true for owner and billing_admin', function () {
     foreach (['owner', 'billing_admin'] as $role) {
-        [$org, $user] = makeOrgWithRole($role);
+        [$org, $user] = orgWithRole($role);
         expect($org->hasBillingAccess($user))
             ->toBeTrue("Expected true for role: {$role}");
     }
@@ -105,7 +105,7 @@ test('hasBillingAccess returns true for owner and billing_admin', function () {
 
 test('hasBillingAccess returns false for admin and staff', function () {
     foreach (['admin', 'staff'] as $role) {
-        [$org, $user] = makeOrgWithRole($role);
+        [$org, $user] = orgWithRole($role);
         expect($org->hasBillingAccess($user))
             ->toBeFalse("Expected false for role: {$role}");
     }
@@ -114,12 +114,12 @@ test('hasBillingAccess returns false for admin and staff', function () {
 // ─── isSoleOwner() ────────────────────────────────────────
 
 test('isSoleOwner returns true when the user is the only active owner', function () {
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = orgWithRole('owner');
     expect($org->isSoleOwner($owner))->toBeTrue();
 });
 
 test('isSoleOwner returns false when there are two active owners', function () {
-    [$org, $owner1] = makeOrgWithRole('owner');
+    [$org, $owner1] = orgWithRole('owner');
     $owner2         = User::factory()->create();
     OrganizationUser::create([
         'organization_id' => $org->id,
@@ -133,13 +133,13 @@ test('isSoleOwner returns false when there are two active owners', function () {
 });
 
 test('isSoleOwner returns false for non-owner', function () {
-    [$org, $user] = makeOrgWithRole('admin');
+    [$org, $user] = orgWithRole('admin');
     expect($org->isSoleOwner($user))->toBeFalse();
 });
 
 // ─── Helper ───────────────────────────────────────────────
 
-function makeOrgWithRole(string $role): array
+function orgWithRole(string $role): array
 {
     $org  = Organization::factory()->create();
     $user = User::factory()->create();

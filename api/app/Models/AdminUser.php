@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\AdminUserFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
 class AdminUser extends Authenticatable
 {
-    use HasApiTokens;
+    /** @use HasFactory<AdminUserFactory> */
+    use HasApiTokens, HasFactory;
 
     protected $table = 'admin_users';
 
@@ -51,6 +54,9 @@ class AdminUser extends Authenticatable
 
     public const ROLES = ['super_admin', 'admin', 'support', 'billing', 'readonly'];
 
+    /** Roles that can mutate tenant data via platform actions (feature flags, plan changes). */
+    public const MUTATING_ROLES = ['super_admin', 'admin', 'billing'];
+
     /** Roles that can manage billing and Stripe data. */
     public const ROLES_WITH_BILLING = ['super_admin', 'billing'];
 
@@ -67,6 +73,16 @@ class AdminUser extends Authenticatable
     public function hasRole(string ...$roles): bool
     {
         return in_array($this->role, $roles, true);
+    }
+
+    /**
+     * Returns true if this admin can perform mutations (feature flags, plan changes).
+     * Allowed: super_admin, admin, billing
+     * Denied:  support, readonly
+     */
+    public function canMutate(): bool
+    {
+        return in_array($this->role, self::MUTATING_ROLES, true);
     }
 
     public function canManageBilling(): bool
