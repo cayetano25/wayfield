@@ -7,6 +7,7 @@ use App\Domain\Notifications\Actions\CreateOrganizerNotificationAction;
 use App\Domain\Notifications\Exceptions\CustomDeliveryNotImplementedException;
 use App\Domain\Notifications\Exceptions\LeaderMessagingScopeException;
 use App\Domain\Notifications\Exceptions\LeaderMessagingWindowException;
+use App\Exceptions\LeaderMessagingDeniedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreateLeaderNotificationRequest;
 use App\Http\Requests\Api\V1\CreateOrganizerNotificationRequest;
@@ -224,6 +225,10 @@ class WorkshopNotificationController extends Controller
                 $session,
                 $formRequest->validated()
             );
+        } catch (LeaderMessagingDeniedException $e) {
+            $status = $e->getErrorCode() === 'messaging_window' ? 422 : 403;
+
+            return response()->json($e->getResponseData(), $status);
         } catch (LeaderMessagingScopeException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (LeaderMessagingWindowException $e) {

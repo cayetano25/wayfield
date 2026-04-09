@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionLeader;
 use App\Models\SessionSelection;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
 use Carbon\Carbon;
@@ -40,6 +41,9 @@ uses(RefreshDatabase::class);
 function makeMessagingFixture(): array
 {
     $org = Organization::factory()->create();
+
+    // Leader messaging requires Starter plan or higher.
+    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()
