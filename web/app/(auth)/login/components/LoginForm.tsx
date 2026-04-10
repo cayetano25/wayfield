@@ -6,11 +6,12 @@ import Link from 'next/link'
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { ApiError, apiPost } from '@/lib/api/client'
 import { setStoredUser, setToken, type AdminUser } from '@/lib/auth/session'
+import { getPostLoginRedirect, type UserContexts } from '@/lib/utils/routing'
 import { SocialLoginButtons } from './SocialLoginButtons'
 
 interface LoginResponse {
   token: string
-  user: AdminUser
+  user: AdminUser & { contexts: UserContexts }
 }
 
 interface FormErrors {
@@ -83,7 +84,7 @@ export function LoginForm() {
       })
       setToken(res.token)
       setStoredUser(res.user)
-      router.push('/dashboard')
+      router.push(getPostLoginRedirect(res.user))
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
