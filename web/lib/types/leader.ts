@@ -1,3 +1,43 @@
+/* ─── Leader dashboard types ─────────────────────────────────────────── */
+
+export interface LeaderMessagingWindow {
+  is_open: boolean;
+  opens_at: string | null;
+  closes_at: string | null;
+}
+
+export interface LeaderDashboardSession {
+  session_id: number;
+  workshop_id: number;
+  workshop_title: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  location_display: string | null;
+  checked_in_count: number;
+  enrolled_count: number;
+  capacity: number | null;
+  is_live: boolean;
+  messaging_window: LeaderMessagingWindow;
+}
+
+export interface LeaderPendingInvitation {
+  invitation_id: number;
+  organization_name: string;
+  workshop_title: string;
+  workshop_dates: string;
+  token: string;
+}
+
+export interface LeaderDashboard {
+  pending_invitations: LeaderPendingInvitation[];
+  today: { sessions: LeaderDashboardSession[] };
+  this_week: LeaderDashboardSession[];
+  upcoming: LeaderDashboardSession[];
+}
+
+/* ─── Session leader (roster) ────────────────────────────────────────── */
+
 export interface SessionLeader {
   id: number;
   first_name: string;
