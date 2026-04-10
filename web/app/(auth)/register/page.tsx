@@ -16,8 +16,8 @@ export default function RegisterPage() {
        * Scrollable for multi-step content
        */}
       <div className="w-full md:w-[45%] lg:w-[44%] flex flex-col bg-white overflow-y-auto">
-        <div className="flex flex-1 items-start justify-center px-8 py-10">
-          <div className="w-full max-w-[420px] pt-6">
+        <div className="flex flex-1 items-center justify-center px-8 py-10">
+          <div className="w-full max-w-[420px]">
             <RegistrationFlow />
           </div>
         </div>
