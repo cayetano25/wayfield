@@ -24,6 +24,7 @@ class WorkshopController extends Controller
     public function __construct(
         private readonly EnforceFeatureGateService $featureGate,
     ) {}
+
     public function index(Request $request, Organization $organization): AnonymousResourceCollection
     {
         $this->authorize('view', $organization);

@@ -25,8 +25,8 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
-            'starts_at'          => 'datetime',
-            'ends_at'            => 'datetime',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
             'current_period_end' => 'datetime',
         ];
     }

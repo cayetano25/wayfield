@@ -2,11 +2,11 @@
 
 use App\Models\Organization;
 use App\Models\OrganizationUser;
+use App\Models\Registration;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Stripe\Checkout\Session as StripeCheckoutSession;
 use Stripe\Webhook;
 
 uses(RefreshDatabase::class);
@@ -15,15 +15,15 @@ uses(RefreshDatabase::class);
 
 function billingOrg(string $plan = 'free', string $role = 'owner'): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     Subscription::factory()->forOrganization($org->id)->active()->$plan()->create();
 
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];
@@ -39,9 +39,9 @@ test('owner can create a checkout session for starter plan', function () {
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'starter',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     // 422 means auth passed but Stripe is not configured (expected in test env).
@@ -54,9 +54,9 @@ test('staff cannot create a checkout session', function () {
     [$org, $user] = billingOrg('free', 'staff');
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'starter',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     $response->assertStatus(403);
@@ -66,9 +66,9 @@ test('admin cannot create a checkout session', function () {
     [$org, $user] = billingOrg('free', 'admin');
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'starter',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     $response->assertStatus(403);
@@ -81,9 +81,9 @@ test('billing_admin can initiate a checkout session', function () {
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'starter',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     // 422 = billing_admin passed the auth check but Stripe isn't configured.
@@ -96,9 +96,9 @@ test('free plan cannot be submitted to checkout endpoint', function () {
     [$org, $user] = billingOrg('free', 'owner');
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'free',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     $response->assertStatus(422);
@@ -108,9 +108,9 @@ test('enterprise plan cannot be submitted to checkout endpoint', function () {
     [$org, $user] = billingOrg('free', 'owner');
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'enterprise',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     $response->assertStatus(422);
@@ -123,9 +123,9 @@ test('checkout returns 422 when no Stripe price is configured for the plan', fun
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id'    => $org->id,
+        'org_id' => $org->id,
         'plan_code' => 'starter',
-        'billing'   => 'monthly',
+        'billing' => 'monthly',
     ]);
 
     $response->assertStatus(422);
@@ -153,21 +153,21 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
         ->active()
         ->create();
 
-    $webhookSecret = 'whsec_test_secret_' . uniqid();
+    $webhookSecret = 'whsec_test_secret_'.uniqid();
     config(['services.stripe.webhook_secret' => $webhookSecret]);
 
     $payload = json_encode([
-        'id'   => 'evt_test_' . uniqid(),
+        'id' => 'evt_test_'.uniqid(),
         'type' => 'checkout.session.completed',
         'data' => [
             'object' => [
-                'id'           => 'cs_test_' . uniqid(),
-                'customer'     => 'cus_test_123',
+                'id' => 'cs_test_'.uniqid(),
+                'customer' => 'cus_test_123',
                 'subscription' => 'sub_test_123',
-                'metadata'     => [
+                'metadata' => [
                     'organization_id' => (string) $org->id,
-                    'plan_code'       => 'starter',
-                    'billing'         => 'monthly',
+                    'plan_code' => 'starter',
+                    'billing' => 'monthly',
                 ],
             ],
         ],
@@ -192,15 +192,15 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
     $response->assertOk();
 
     $this->assertDatabaseHas('subscriptions', [
-        'id'               => $subscription->id,
-        'plan_code'        => 'starter',
-        'status'           => 'active',
-        'billing_cycle'    => 'monthly',
+        'id' => $subscription->id,
+        'plan_code' => 'starter',
+        'status' => 'active',
+        'billing_cycle' => 'monthly',
     ]);
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,
-        'action'          => 'organization.plan_upgraded',
+        'action' => 'organization.plan_upgraded',
     ]);
 });
 
@@ -215,11 +215,11 @@ test('limit-hit on workshop creation returns plan_limit_reached error shape', fu
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/workshops", [
         'workshop_type' => 'session_based',
-        'title'         => 'Third Workshop',
-        'description'   => 'Should fail',
-        'timezone'      => 'America/New_York',
-        'start_date'    => now()->addMonth()->format('Y-m-d'),
-        'end_date'      => now()->addMonth()->addDays(3)->format('Y-m-d'),
+        'title' => 'Third Workshop',
+        'description' => 'Should fail',
+        'timezone' => 'America/New_York',
+        'start_date' => now()->addMonth()->format('Y-m-d'),
+        'end_date' => now()->addMonth()->addDays(3)->format('Y-m-d'),
     ]);
 
     $response->assertStatus(403);
@@ -257,8 +257,8 @@ test('limit-hit on participant join returns plan_limit_reached error shape', fun
     ]);
 
     // Fill the workshop to its participant limit (75 for free)
-    \App\Models\Registration::factory()->count(75)->create([
-        'workshop_id'         => $workshop->id,
+    Registration::factory()->count(75)->create([
+        'workshop_id' => $workshop->id,
         'registration_status' => 'registered',
     ]);
 
