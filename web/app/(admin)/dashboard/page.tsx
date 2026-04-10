@@ -951,7 +951,7 @@ export default function DashboardPage() {
             <Button
               variant="secondary"
               size="md"
-              onClick={() => router.push('/admin/reports')}
+              onClick={() => router.push('/reports')}
               className="sm:w-auto"
             >
               <BarChart3 className="w-4 h-4" />
