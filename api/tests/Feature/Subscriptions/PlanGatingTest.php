@@ -236,7 +236,7 @@ test('free plan cannot access attendance report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'feature_not_available'])
+        ->assertJsonFragment(['error' => 'plan_required'])
         ->assertJsonFragment(['required_plan' => 'starter']);
 });
 
@@ -246,7 +246,7 @@ test('free plan cannot access workshops report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/workshops")
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'feature_not_available']);
+        ->assertJsonFragment(['error' => 'plan_required']);
 });
 
 test('starter plan can access attendance report', function () {
@@ -255,7 +255,7 @@ test('starter plan can access attendance report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertOk()
-        ->assertJsonStructure(['data']);
+        ->assertJsonStructure(['summary', 'by_workshop', 'by_session', 'trend']);
 });
 
 test('pro plan can access attendance report', function () {

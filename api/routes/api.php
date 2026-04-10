@@ -34,7 +34,11 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RegistrationController;
+use App\Http\Controllers\Api\V1\LeaderDashboardController;
+use App\Http\Controllers\Api\V1\ParticipantDashboardController;
+use App\Http\Controllers\Api\V1\PublicDiscoverController;
 use App\Http\Controllers\Api\V1\ReportingController;
+use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
@@ -72,6 +76,7 @@ Route::prefix('v1')->group(function () {
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
+        Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
 
     // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
@@ -122,6 +127,12 @@ Route::prefix('v1')->group(function () {
             Route::post('disable', [TwoFactorController::class, 'disable']);
             Route::get('recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
         });
+
+        // Participant personal dashboard — open to any authenticated user
+        Route::get('me/dashboard', [ParticipantDashboardController::class, 'show']);
+
+        // Leader personal dashboard
+        Route::get('leader/dashboard', [LeaderDashboardController::class, 'show']);
 
         // Profile
         Route::get('me', [ProfileController::class, 'show']);
@@ -273,22 +284,23 @@ Route::prefix('v1')->group(function () {
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
 
         // ─── Reporting (Phase 8) ─────────────────────────────────────────────
-        // Attendance and workshop reports require Starter+ (reporting feature).
         // Usage report is available to all plans.
-        Route::get(
-            'organizations/{organization}/reports/attendance',
-            [ReportingController::class, 'attendance']
-        )->middleware('feature:reporting');
-
-        Route::get(
-            'organizations/{organization}/reports/workshops',
-            [ReportingController::class, 'workshops']
-        )->middleware('feature:reporting');
-
         Route::get(
             'organizations/{organization}/reports/usage',
             [ReportingController::class, 'usage']
         );
+
+        // ─── Enhanced Reports (Phase 15) ─────────────────────────────────────
+        // All report endpoints require Starter+ — gated in ReportsController
+        // (plan code always resolved from DB, never from request).
+        Route::prefix('organizations/{organization}/reports')
+            ->middleware('onboarding.complete')
+            ->group(function () {
+                Route::get('attendance',   [ReportsController::class, 'attendance']);
+                Route::get('workshops',    [ReportsController::class, 'workshops']);
+                Route::get('participants', [ReportsController::class, 'participants']);
+                Route::get('export',       [ReportsController::class, 'export']);
+            });
 
         // ─── Webhooks (Phase 9) ───────────────────────────────────────────────
         Route::get('organizations/{organization}/webhooks', [WebhookController::class, 'index']);

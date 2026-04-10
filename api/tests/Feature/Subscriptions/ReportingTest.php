@@ -49,25 +49,27 @@ test('attendance report returns data for all org workshops', function () {
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertOk()
         ->assertJsonStructure([
-            'data' => [
+            'summary' => [
+                'total_registered',
+                'total_checked_in',
+                'total_no_show',
+                'attendance_rate',
+                'no_show_rate',
+                'date_range',
+            ],
+            'by_workshop' => [
                 '*' => [
                     'workshop_id',
                     'workshop_title',
-                    'workshop_status',
                     'start_date',
-                    'end_date',
-                    'sessions' => [
-                        '*' => [
-                            'session_id',
-                            'session_title',
-                            'total_records',
-                            'checked_in_count',
-                            'no_show_count',
-                            'not_checked_in_count',
-                        ],
-                    ],
+                    'registered',
+                    'checked_in',
+                    'no_show',
+                    'attendance_rate',
                 ],
             ],
+            'by_session',
+            'trend',
         ]);
 });
 
@@ -84,7 +86,7 @@ test('attendance report only returns data for the requesting org', function () {
         ->assertOk();
 
     // Only the org's workshop should be present
-    $data = $response->json('data');
+    $data = $response->json('by_workshop');
     $workshopIds = collect($data)->pluck('workshop_id')->all();
 
     expect($workshopIds)->toContain($workshop->id);
@@ -101,7 +103,7 @@ test('attendance report supports workshop_id filter', function () {
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance?workshop_id={$w1->id}")
         ->assertOk();
 
-    $data = $response->json('data');
+    $data = $response->json('by_workshop');
     $workshopIds = collect($data)->pluck('workshop_id')->all();
 
     expect($workshopIds)->toContain($w1->id);
@@ -123,15 +125,13 @@ test('attendance report correctly counts checked_in and no_show', function () {
     AttendanceRecord::factory()->create(['session_id' => $session->id, 'user_id' => $u3->id, 'status' => 'not_checked_in']);
 
     $response = $this->actingAs($owner, 'sanctum')
-        ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
+        ->getJson("/api/v1/organizations/{$org->id}/reports/attendance?workshop_id={$workshop->id}")
         ->assertOk();
 
-    $sessionData = $response->json('data.0.sessions.0');
+    $sessionData = $response->json('by_session.0');
 
-    expect($sessionData['checked_in_count'])->toBe(1);
-    expect($sessionData['no_show_count'])->toBe(1);
-    expect($sessionData['not_checked_in_count'])->toBe(1);
-    expect($sessionData['total_records'])->toBe(3);
+    expect($sessionData['checked_in'])->toBe(1);
+    expect($sessionData['no_show'])->toBe(1);
 });
 
 // ─── Workshops report ─────────────────────────────────────────────────────────
@@ -162,7 +162,11 @@ test('workshops report returns summary for all org workshops', function () {
                     'start_date',
                     'end_date',
                     'session_count',
-                    'registration_count',
+                    'leader_count',
+                    'registered_count',
+                    'capacity_total',
+                    'capacity_utilization',
+                    'attendance_rate',
                 ],
             ],
         ]);
