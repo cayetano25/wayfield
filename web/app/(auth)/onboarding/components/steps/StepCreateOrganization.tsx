@@ -5,10 +5,10 @@ import { AlertCircle } from 'lucide-react'
 import { ApiError } from '@/lib/api/client'
 import { completeOnboarding } from '@/lib/api/auth'
 import { generateSlug } from '@/lib/utils/slug'
-import { useRouter } from 'next/navigation'
 
 interface Props {
   onBack: () => void
+  onOrgCreated: (orgId: number) => void
 }
 
 const labelStyle: React.CSSProperties = {
@@ -35,8 +35,7 @@ const inputBaseStyle: React.CSSProperties = {
   transition: 'border-color 150ms, box-shadow 150ms',
 }
 
-export function StepCreateOrganization({ onBack }: Props) {
-  const router = useRouter()
+export function StepCreateOrganization({ onBack, onOrgCreated }: Props) {
   const [orgName, setOrgName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
@@ -81,7 +80,12 @@ export function StepCreateOrganization({ onBack }: Props) {
     setError(null)
     try {
       const res = await completeOnboarding({ intent: 'create_organization', organization_name: orgName.trim(), organization_slug: slug.trim() })
-      router.push(res.redirect ?? '/dashboard')
+      if (res.organization_id) {
+        onOrgCreated(res.organization_id)
+      } else {
+        // Fallback if backend doesn't return org_id yet
+        onOrgCreated(0)
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 422 && err.errors) {
         if (err.errors.organization_slug) {

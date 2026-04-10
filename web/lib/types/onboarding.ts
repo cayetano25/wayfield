@@ -6,7 +6,7 @@ export type OnboardingIntent =
   | 'accept_invitation'
   | 'exploring'
 
-export type OnboardingStep = 1 | 2 | 3 | 4
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5
 
 export interface StepOneData {
   first_name: string

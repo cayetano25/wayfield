@@ -14,5 +14,6 @@ export function createCheckoutSession(params: {
   billing: BillingCycle
   org_id: number
 }): Promise<CheckoutSessionResponse> {
-  return apiPost<CheckoutSessionResponse>('/billing/checkout', params)
+  const { org_id, ...body } = params
+  return apiPost<CheckoutSessionResponse>(`/organizations/${org_id}/billing/checkout`, body)
 }

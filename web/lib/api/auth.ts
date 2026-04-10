@@ -27,8 +27,8 @@ export async function updateOnboardingProfile(data: StepTwoData): Promise<void> 
 
 export async function completeOnboarding(
   data: { intent: OnboardingIntent } & StepFourData,
-): Promise<{ redirect: string; message: string }> {
-  return apiPost<{ redirect: string; message: string }>('/onboarding/complete', data)
+): Promise<{ redirect: string; message: string; organization_id?: number }> {
+  return apiPost<{ redirect: string; message: string; organization_id?: number }>('/onboarding/complete', data)
 }
 
 export async function getOnboardingStatus(): Promise<{

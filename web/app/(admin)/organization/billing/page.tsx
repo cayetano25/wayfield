@@ -1,175 +1,191 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { ExternalLink, FileText, ArrowUpRight } from 'lucide-react';
-import { useSetPage } from '@/contexts/PageContext';
-import { useUser } from '@/contexts/UserContext';
-import { apiGet, apiPost, ApiError } from '@/lib/api/client';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { useEffect, useState, useRef, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+// useRouter is used in CheckoutResultHandler; useSearchParams requires Suspense
+import toast from 'react-hot-toast'
+import { ExternalLink, FileText, TrendingUp } from 'lucide-react'
+import { useSetPage } from '@/contexts/PageContext'
+import { useUser } from '@/contexts/UserContext'
+import { apiGet, apiPost, ApiError } from '@/lib/api/client'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { PricingPage } from '@/components/pricing/PricingPage'
 
 interface PlanLimits {
-  max_workshops: number | null;
-  max_participants_per_workshop: number | null;
-  max_managers: number | null;
+  max_workshops: number | null
+  max_participants_per_workshop: number | null
+  max_managers: number | null
 }
 
 interface PlanUsage {
-  active_workshops: number;
-  total_participants: number;
-  managers: number;
+  active_workshops: number
+  total_participants: number
+  managers: number
 }
 
 interface Invoice {
-  id: string;
-  amount_cents: number;
-  currency: string;
-  status: 'paid' | 'open' | 'void' | 'uncollectible';
-  period_start: string;
-  period_end: string;
-  paid_at: string | null;
-  pdf_url: string | null;
+  id: string
+  amount_cents: number
+  currency: string
+  status: 'paid' | 'open' | 'void' | 'uncollectible'
+  period_start: string
+  period_end: string
+  paid_at: string | null
+  pdf_url: string | null
 }
 
 interface SubscriptionData {
-  plan_code: 'free' | 'starter' | 'pro' | 'enterprise';
-  plan_name: string;
-  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete';
-  current_period_start: string | null;
-  current_period_end: string | null;
-  renewal_date: string | null;
-  limits: PlanLimits;
-  usage: PlanUsage;
-  invoices: Invoice[];
+  plan_code: 'free' | 'starter' | 'pro' | 'enterprise'
+  plan_name: string
+  billing_cycle: 'monthly' | 'annual' | null
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete'
+  current_period_start: string | null
+  current_period_end: string | null
+  renewal_date: string | null
+  limits: PlanLimits
+  usage: PlanUsage
+  invoices: Invoice[]
 }
 
-const BILLING_ROLES = ['owner', 'billing_admin'];
+const BILLING_ROLES = ['owner', 'billing_admin']
+
+const PLAN_DISPLAY: Record<string, string> = {
+  free: 'Foundation',
+  starter: 'Creator',
+  pro: 'Studio',
+  enterprise: 'Enterprise',
+}
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '—'
   try {
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso))
   } catch {
-    return '—';
+    return '—'
   }
 }
 
 function formatCurrency(cents: number, currency: string): string {
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100)
   } catch {
-    return `$${(cents / 100).toFixed(2)}`;
+    return `$${(cents / 100).toFixed(2)}`
   }
 }
 
 interface UsageBarProps {
-  label: string;
-  used: number;
-  max: number | null;
+  label: string
+  used: number
+  max: number | null
 }
 
 function UsageBar({ label, used, max }: UsageBarProps) {
-  const unlimited = max === null;
-  const pct = unlimited ? 0 : Math.min((used / max) * 100, 100);
-
-  const fillClass =
-    pct >= 100 || pct >= 90
-      ? 'bg-danger'
-      : pct >= 75
-      ? 'bg-secondary'
-      : 'bg-primary';
+  const unlimited = max === null
+  const pct = unlimited ? 0 : Math.min((used / max) * 100, 100)
+  const barColor = pct >= 90 ? '#E94F37' : pct >= 80 ? '#E67E22' : '#0FA3B1'
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-dark font-medium">{label}</span>
-        <span className="text-sm text-medium-gray font-mono">
-          {used}
-          {unlimited ? '' : ` / ${max}`}
-          {unlimited && <span className="text-xs ml-1 text-light-gray">unlimited</span>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#6B7280' }}>
+          {unlimited ? (
+            <>{used} <span style={{ fontSize: '11px', color: '#9CA3AF' }}>unlimited</span></>
+          ) : (
+            `${used} / ${max}`
+          )}
         </span>
       </div>
       {!unlimited && (
-        <div className="h-2 bg-surface rounded-full overflow-hidden">
+        <div style={{ height: '6px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
           <div
-            className={`h-full rounded-full transition-all ${fillClass}`}
-            style={{ width: `${pct}%` }}
+            style={{
+              height: '100%',
+              width: `${pct}%`,
+              background: barColor,
+              borderRadius: '9999px',
+              transition: 'width 300ms ease',
+            }}
           />
         </div>
       )}
     </div>
-  );
+  )
 }
 
 function invoiceStatusVariant(status: Invoice['status']): 'status-active' | 'status-draft' | 'status-archived' {
-  if (status === 'paid') return 'status-active';
-  if (status === 'open') return 'status-draft';
-  return 'status-archived';
+  if (status === 'paid') return 'status-active'
+  if (status === 'open') return 'status-draft'
+  return 'status-archived'
 }
 
-const UPGRADE_MAP: Partial<Record<string, { label: string; target: string }>> = {
-  free: { label: 'Upgrade to Starter', target: 'starter' },
-  starter: { label: 'Upgrade to Pro', target: 'pro' },
-};
+// Isolated component so useSearchParams is inside a Suspense boundary
+function CheckoutResultHandler() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const toastShown = useRef(false)
+
+  useEffect(() => {
+    if (toastShown.current) return
+    const success = searchParams.get('success')
+    const canceled = searchParams.get('canceled')
+    if (success === '1') {
+      toastShown.current = true
+      toast.success('Plan upgraded successfully!')
+      router.replace('/organization/billing')
+    } else if (canceled === '1') {
+      toastShown.current = true
+      toast('Checkout canceled. Your plan was not changed.', { icon: '↩' })
+      router.replace('/organization/billing')
+    }
+  }, [searchParams, router])
+
+  return null
+}
 
 export default function OrganizationBillingPage() {
   useSetPage('Billing', [
     { label: 'Organization' },
     { label: 'Billing' },
-  ]);
+  ])
 
-  const { currentOrg } = useUser();
-  const role = currentOrg?.role ?? '';
-  const canAccess = BILLING_ROLES.includes(role);
+  const { currentOrg } = useUser()
+  const role = currentOrg?.role ?? ''
+  const canAccess = BILLING_ROLES.includes(role)
 
-  const [data, setData] = useState<SubscriptionData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [data, setData] = useState<SubscriptionData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
+
+  const pricingRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!currentOrg) return;
-    if (!canAccess) {
-      setLoading(false);
-      return;
-    }
+    if (!currentOrg) return
+    if (!canAccess) { setLoading(false); return }
     apiGet<SubscriptionData>(`/organizations/${currentOrg.id}/subscription`)
       .then((res) => setData(res))
       .catch(() => toast.error('Failed to load billing information'))
-      .finally(() => setLoading(false));
-  }, [currentOrg, canAccess]);
+      .finally(() => setLoading(false))
+  }, [currentOrg, canAccess])
 
-  async function handleUpgrade() {
-    if (!currentOrg) return;
-    setUpgradeLoading(true);
+  async function handleManage() {
+    if (!currentOrg) return
+    setPortalLoading(true)
     try {
-      const res = await apiPost<{ checkout_url: string }>(
-        `/organizations/${currentOrg.id}/billing/checkout`,
-      );
-      window.location.href = res.checkout_url;
+      const res = await apiPost<{ portal_url: string }>(`/organizations/${currentOrg.id}/billing/portal`)
+      window.location.href = res.portal_url
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not start checkout');
-      setUpgradeLoading(false);
+      toast.error(err instanceof ApiError ? err.message : 'Could not open billing portal')
+      setPortalLoading(false)
     }
   }
 
-  async function handleManage() {
-    if (!currentOrg) return;
-    setPortalLoading(true);
-    try {
-      const res = await apiPost<{ portal_url: string }>(
-        `/organizations/${currentOrg.id}/billing/portal`,
-      );
-      window.location.href = res.portal_url;
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not open billing portal');
-      setPortalLoading(false);
-    }
+  function scrollToPricing() {
+    pricingRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   if (!canAccess) {
@@ -181,7 +197,7 @@ export default function OrganizationBillingPage() {
           </p>
         </Card>
       </div>
-    );
+    )
   }
 
   if (loading || !data) {
@@ -193,100 +209,119 @@ export default function OrganizationBillingPage() {
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
-  const upgrade = UPGRADE_MAP[data.plan_code];
-  const hasSubscription = data.plan_code !== 'free';
+  const hasSubscription = data.plan_code !== 'free'
+  const displayName = PLAN_DISPLAY[data.plan_code] ?? data.plan_name
+  const statusBadgeVariant =
+    data.status === 'active' || data.status === 'trialing'
+      ? 'status-active'
+      : data.status === 'past_due'
+        ? 'status-draft'
+        : 'status-archived'
 
   return (
     <div className="max-w-[1280px] mx-auto space-y-6">
-      {/* Current plan */}
+      {/* Stripe redirect query param handler */}
+      <Suspense fallback={null}>
+        <CheckoutResultHandler />
+      </Suspense>
+
+      {/* ── Current Plan Card ── */}
       <Card>
-        <div className="px-6 py-5 border-b border-border-gray">
-          <h2 className="font-heading text-base font-semibold text-dark">Current Plan</h2>
-        </div>
-        <div className="px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Badge variant={`plan-${data.plan_code}` as `plan-${typeof data.plan_code}`}>
-                {data.plan_name}
-              </Badge>
-              <Badge
-                variant={data.status === 'active' || data.status === 'trialing' ? 'status-active' : 'status-archived'}
-              >
+        <div
+          style={{
+            padding: '24px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '24px',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}
+        >
+          {/* Left: plan info */}
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '10px',
+                color: '#9CA3AF',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: '6px',
+              }}
+            >
+              Your Current Plan
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#2E2E2E',
+                marginBottom: '8px',
+              }}
+            >
+              {displayName}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <Badge variant={statusBadgeVariant}>
                 {data.status.replace('_', ' ')}
               </Badge>
             </div>
-            {data.current_period_start && data.current_period_end && (
-              <p className="text-sm text-medium-gray">
-                Current period:{' '}
-                <span className="text-dark">
-                  {formatDate(data.current_period_start)} – {formatDate(data.current_period_end)}
-                </span>
-              </p>
-            )}
-            {data.renewal_date && (
-              <p className="text-sm text-medium-gray">
-                Renews on:{' '}
-                <span className="text-dark font-medium">{formatDate(data.renewal_date)}</span>
+            {data.billing_cycle && data.current_period_end && (
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#6B7280' }}>
+                Billed {data.billing_cycle} · Renews {formatDate(data.current_period_end)}
               </p>
             )}
           </div>
-          {hasSubscription && (
-            <Button variant="secondary" onClick={handleManage} loading={portalLoading}>
-              <ExternalLink className="w-4 h-4" />
-              Manage billing
-            </Button>
-          )}
-        </div>
-      </Card>
 
-      {/* Usage */}
-      <Card>
-        <div className="px-6 py-5 border-b border-border-gray">
-          <h2 className="font-heading text-base font-semibold text-dark">Usage</h2>
-        </div>
-        <div className="px-6 py-6 space-y-5">
-          <UsageBar
-            label="Active Workshops"
-            used={data.usage.active_workshops}
-            max={data.limits.max_workshops}
-          />
-          <UsageBar
-            label="Participants (per workshop)"
-            used={data.usage.total_participants}
-            max={data.limits.max_participants_per_workshop}
-          />
-          <UsageBar
-            label="Organization Managers"
-            used={data.usage.managers}
-            max={data.limits.max_managers}
-          />
-        </div>
-      </Card>
-
-      {/* Upgrade CTA */}
-      {upgrade && (
-        <Card>
-          <div className="px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="font-heading text-base font-semibold text-dark mb-1">
-                Ready to grow?
-              </h2>
-              <p className="text-sm text-medium-gray">
-                Unlock more workshops, participants, and advanced features.
-              </p>
-            </div>
-            <Button onClick={handleUpgrade} loading={upgradeLoading}>
-              <ArrowUpRight className="w-4 h-4" />
-              {upgrade.label}
-            </Button>
+          {/* Right: action button */}
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            {hasSubscription ? (
+              <Button variant="secondary" onClick={handleManage} loading={portalLoading}>
+                <ExternalLink className="w-4 h-4" />
+                Manage billing
+              </Button>
+            ) : (
+              <Button onClick={scrollToPricing}>
+                <TrendingUp className="w-4 h-4" />
+                Upgrade
+              </Button>
+            )}
           </div>
-        </Card>
-      )}
+        </div>
 
-      {/* Invoice history */}
+        {/* Usage row */}
+        <div
+          style={{
+            borderTop: '1px solid #F3F4F6',
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '11px',
+              color: '#9CA3AF',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: '4px',
+            }}
+          >
+            Usage this period
+          </div>
+          <UsageBar label="Active Workshops" used={data.usage.active_workshops} max={data.limits.max_workshops} />
+          <UsageBar label="Total Participants" used={data.usage.total_participants} max={data.limits.max_participants_per_workshop} />
+          <UsageBar label="Organization Managers" used={data.usage.managers} max={data.limits.max_managers} />
+        </div>
+      </Card>
+
+      {/* ── Invoice History ── */}
       {data.invoices && data.invoices.length > 0 && (
         <Card>
           <div className="px-6 py-5 border-b border-border-gray">
@@ -295,21 +330,11 @@ export default function OrganizationBillingPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border-gray">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden sm:table-cell">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden md:table-cell">
-                  Period
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">
-                  Paid
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-widest text-light-gray">
-                  PDF
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden sm:table-cell">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden md:table-cell">Period</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">Paid</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-widest text-light-gray">PDF</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-gray">
@@ -354,6 +379,15 @@ export default function OrganizationBillingPage() {
           </table>
         </Card>
       )}
+
+      {/* ── Pricing Section ── */}
+      <div ref={pricingRef} id="pricing">
+        <PricingPage
+          context="billing"
+          currentPlanCode={data.plan_code}
+          orgId={currentOrg?.id}
+        />
+      </div>
     </div>
-  );
+  )
 }
