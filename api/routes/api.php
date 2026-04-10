@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ExternalApiController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use App\Http\Controllers\Api\V1\FileUploadController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
+use App\Http\Controllers\Api\V1\LeaderDashboardController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
 use App\Http\Controllers\Api\V1\LocationController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ParticipantController;
+use App\Http\Controllers\Api\V1\ParticipantDashboardController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
@@ -31,12 +33,10 @@ use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\PublicDiscoverController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RegistrationController;
-use App\Http\Controllers\Api\V1\LeaderDashboardController;
-use App\Http\Controllers\Api\V1\ParticipantDashboardController;
-use App\Http\Controllers\Api\V1\PublicDiscoverController;
 use App\Http\Controllers\Api\V1\ReportingController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\RosterController;
@@ -142,7 +142,7 @@ Route::prefix('v1')->group(function () {
 
         // Onboarding — step endpoints under /onboarding/*
         Route::prefix('onboarding')->group(function () {
-            Route::get('status',   [OnboardingController::class, 'status']);
+            Route::get('status', [OnboardingController::class, 'status']);
             Route::patch('profile', [OnboardingController::class, 'updateProfile']);
             Route::post('complete', [OnboardingController::class, 'complete']);
         });
@@ -296,10 +296,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('organizations/{organization}/reports')
             ->middleware('onboarding.complete')
             ->group(function () {
-                Route::get('attendance',   [ReportsController::class, 'attendance']);
-                Route::get('workshops',    [ReportsController::class, 'workshops']);
+                Route::get('attendance', [ReportsController::class, 'attendance']);
+                Route::get('workshops', [ReportsController::class, 'workshops']);
                 Route::get('participants', [ReportsController::class, 'participants']);
-                Route::get('export',       [ReportsController::class, 'export']);
+                Route::get('export', [ReportsController::class, 'export']);
             });
 
         // ─── Webhooks (Phase 9) ───────────────────────────────────────────────

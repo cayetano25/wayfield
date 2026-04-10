@@ -1,7 +1,6 @@
 <?php
 
 use App\Mail\EmailVerificationMail;
-use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -13,10 +12,10 @@ uses(RefreshDatabase::class);
 function validRegistrationPayload(array $overrides = []): array
 {
     return array_merge([
-        'first_name'            => 'Jane',
-        'last_name'             => 'Doe',
-        'email'                 => 'jane@example.com',
-        'password'              => 'Password1!',
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
     ], $overrides);
 }
@@ -40,8 +39,8 @@ test('user can register with valid data', function () {
 
     // auth_methods row created with provider = email
     $this->assertDatabaseHas('auth_methods', [
-        'user_id'        => $user->id,
-        'provider'       => 'email',
+        'user_id' => $user->id,
+        'provider' => 'email',
         'provider_email' => 'jane@example.com',
     ]);
 
@@ -51,8 +50,8 @@ test('user can register with valid data', function () {
     // audit log written
     $this->assertDatabaseHas('audit_logs', [
         'actor_user_id' => $user->id,
-        'entity_type'   => 'user',
-        'action'        => 'user.registered',
+        'entity_type' => 'user',
+        'action' => 'user.registered',
     ]);
 });
 
@@ -89,26 +88,26 @@ test('registration fails with duplicate email', function () {
 
 test('registration fails when password lacks uppercase', function () {
     $this->postJson('/api/v1/auth/register', validRegistrationPayload([
-        'password'              => 'password1!',
+        'password' => 'password1!',
         'password_confirmation' => 'password1!',
     ]))->assertStatus(422)
-       ->assertJsonValidationErrors(['password']);
+        ->assertJsonValidationErrors(['password']);
 });
 
 test('registration fails when password lacks numbers', function () {
     $this->postJson('/api/v1/auth/register', validRegistrationPayload([
-        'password'              => 'Password!',
+        'password' => 'Password!',
         'password_confirmation' => 'Password!',
     ]))->assertStatus(422)
-       ->assertJsonValidationErrors(['password']);
+        ->assertJsonValidationErrors(['password']);
 });
 
 test('registration fails when password_confirmation does not match', function () {
     $this->postJson('/api/v1/auth/register', validRegistrationPayload([
-        'password'              => 'Password1!',
+        'password' => 'Password1!',
         'password_confirmation' => 'WrongPass2!',
     ]))->assertStatus(422)
-       ->assertJsonValidationErrors(['password']);
+        ->assertJsonValidationErrors(['password']);
 });
 
 test('registered user has onboarding_completed_at null', function () {

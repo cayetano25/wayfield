@@ -4,7 +4,6 @@ use App\Models\Leader;
 use App\Models\LeaderInvitation;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
-use App\Models\Registration;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Workshop;
@@ -29,22 +28,22 @@ function unboardedUser(): User
  */
 function orgWithOwner(): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create(); // already onboarded by factory default
 
     OrganizationUser::create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => 'owner',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'owner',
+        'is_active' => true,
     ]);
 
     Subscription::create([
         'organization_id' => $org->id,
-        'plan_code'       => 'free',
-        'status'          => 'active',
-        'starts_at'       => now(),
-        'ends_at'         => null,
+        'plan_code' => 'free',
+        'status' => 'active',
+        'starts_at' => now(),
+        'ends_at' => null,
     ]);
 
     return [$user, $org];
@@ -101,7 +100,7 @@ test('profile step saves phone and timezone', function () {
     $this->actingAs($user)
         ->patchJson('/api/v1/onboarding/profile', [
             'phone_number' => '+1 555 0100',
-            'timezone'     => 'America/Chicago',
+            'timezone' => 'America/Chicago',
         ])->assertOk();
 
     $profile = $user->fresh()->profile;
@@ -116,11 +115,11 @@ test('profile step saves address and links it to user_profile', function () {
     $this->actingAs($user)
         ->patchJson('/api/v1/onboarding/profile', [
             'address' => [
-                'country_code'   => 'US',
+                'country_code' => 'US',
                 'address_line_1' => '123 Main St',
-                'locality'       => 'Springfield',
+                'locality' => 'Springfield',
                 'administrative_area' => 'IL',
-                'postal_code'    => '62701',
+                'postal_code' => '62701',
             ],
         ])->assertOk();
 
@@ -129,9 +128,9 @@ test('profile step saves address and links it to user_profile', function () {
     expect($profile->address_id)->not->toBeNull();
 
     $this->assertDatabaseHas('addresses', [
-        'id'             => $profile->address_id,
+        'id' => $profile->address_id,
         'address_line_1' => '123 Main St',
-        'locality'       => 'Springfield',
+        'locality' => 'Springfield',
     ]);
 });
 
@@ -157,18 +156,18 @@ test('profile step rejects invalid timezone', function () {
 // ─── Complete step (Step 3 / intent) ─────────────────────────────────────────
 
 test('onboarding complete with join_workshop intent creates registration', function () {
-    $user     = unboardedUser();
+    $user = unboardedUser();
     $workshop = Workshop::factory()->published()->create();
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'    => 'join_workshop',
+            'intent' => 'join_workshop',
             'join_code' => $workshop->join_code,
         ])->assertOk();
 
     $this->assertDatabaseHas('registrations', [
-        'workshop_id'         => $workshop->id,
-        'user_id'             => $user->id,
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
         'registration_status' => 'registered',
     ]);
 
@@ -180,7 +179,7 @@ test('onboarding complete with join_workshop rejects invalid join_code', functio
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'    => 'join_workshop',
+            'intent' => 'join_workshop',
             'join_code' => 'BADCODE9',
         ])->assertNotFound();
 });
@@ -190,7 +189,7 @@ test('onboarding complete with create_organization creates org and makes user ow
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'            => 'create_organization',
+            'intent' => 'create_organization',
             'organization_name' => 'My Photo Studio',
             'organization_slug' => 'my-photo-studio',
         ])->assertOk();
@@ -198,7 +197,7 @@ test('onboarding complete with create_organization creates org and makes user ow
     $this->assertDatabaseHas('organizations', ['slug' => 'my-photo-studio']);
     $this->assertDatabaseHas('organization_users', [
         'user_id' => $user->id,
-        'role'    => 'owner',
+        'role' => 'owner',
     ]);
     expect($user->fresh()->hasCompletedOnboarding())->toBeTrue();
 });
@@ -209,30 +208,30 @@ test('create_organization rejects duplicate slug', function () {
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'            => 'create_organization',
+            'intent' => 'create_organization',
             'organization_name' => 'Another Studio',
             'organization_slug' => 'taken-slug',
         ])->assertStatus(422)
-          ->assertJsonValidationErrors(['organization_slug']);
+        ->assertJsonValidationErrors(['organization_slug']);
 });
 
 test('onboarding complete with accept_invitation links leader record and accepts invitation', function () {
-    $user   = unboardedUser();
-    $org    = Organization::factory()->create();
+    $user = unboardedUser();
+    $org = Organization::factory()->create();
     $leader = Leader::factory()->create(['user_id' => null]);
 
     $rawToken = Str::random(40);
     $invitation = LeaderInvitation::factory()->create([
-        'organization_id'      => $org->id,
-        'leader_id'            => $leader->id,
-        'status'               => 'pending',
+        'organization_id' => $org->id,
+        'leader_id' => $leader->id,
+        'status' => 'pending',
         'invitation_token_hash' => hash('sha256', $rawToken),
-        'expires_at'           => now()->addDays(7),
+        'expires_at' => now()->addDays(7),
     ]);
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'           => 'accept_invitation',
+            'intent' => 'accept_invitation',
             'invitation_token' => $rawToken,
         ])->assertOk();
 
@@ -246,7 +245,7 @@ test('accept_invitation with invalid token still completes onboarding', function
 
     $this->actingAs($user)
         ->postJson('/api/v1/onboarding/complete', [
-            'intent'           => 'accept_invitation',
+            'intent' => 'accept_invitation',
             'invitation_token' => 'invalid-token-value',
         ])->assertOk(); // graceful — still completes onboarding
 
