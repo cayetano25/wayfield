@@ -52,14 +52,14 @@ class RegistrationController extends Controller
                     $workshop,
                 );
             } catch (PlanLimitExceededException $e) {
-                return response()->json([
-                    'error' => 'plan_limit_exceeded',
-                    'message' => $e->getMessage(),
-                    'limit_key' => $e->limitKey,
-                    'current' => $e->current,
-                    'max' => $e->max,
-                    'required_plan' => $e->requiredPlan,
-                ], 403);
+                return response()->json(
+                    $this->featureGate->planLimitErrorArray(
+                        $workshop->organization,
+                        $e,
+                        'participants_per_workshop',
+                    ),
+                    403
+                );
             }
         }
 

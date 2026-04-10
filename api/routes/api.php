@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\Api\V1\BillingController;
+use App\Http\Controllers\Api\V1\PlansController;
 use App\Http\Controllers\Api\V1\ApiKeyController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -78,6 +80,13 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
         Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
+
+    // ─── Plans (public — no auth required) ───────────────────────────────────
+    Route::get('plans', [PlansController::class, 'index']);
+
+    // ─── Stripe webhook (no auth — signature verification inside controller) ─
+    Route::post('billing/webhook', [BillingController::class, 'webhook'])
+        ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
     // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
     Route::get('sso/{organization:slug}/login', [SsoController::class, 'login']);
@@ -279,6 +288,11 @@ Route::prefix('v1')->group(function () {
         // ─── Subscription / Entitlements (Phase 8) ───────────────────────────
         Route::get('organizations/{organization}/subscription', [SubscriptionController::class, 'show']);
         Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
+
+        // ─── Billing / Stripe Checkout (Phase 15) ─────────────────────────────
+        Route::post('billing/checkout', [BillingController::class, 'checkout']);
+        Route::post('billing/portal', [BillingController::class, 'portal']);
+        Route::get('billing/status', [BillingController::class, 'status']);
 
         // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
