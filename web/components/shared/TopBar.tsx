@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Megaphone, ChevronRight, CheckCheck, Menu } from 'lucide-react';
+import { Bell, Megaphone, ChevronRight, CheckCheck, Menu, User, Backpack, LogOut } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+import type { AdminUser } from '@/lib/auth/session';
 import { usePage } from '@/contexts/PageContext';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/lib/api/client';
@@ -30,11 +31,99 @@ const typeColors: Record<InAppNotification['notification_type'], string> = {
   reminder:      'bg-secondary/10 text-secondary',
 };
 
-function UserAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
+function UserAvatar({
+  firstName,
+  lastName,
+  imageUrl,
+  size = 'sm',
+}: {
+  firstName: string;
+  lastName: string;
+  imageUrl?: string | null;
+  size?: 'sm' | 'md';
+}) {
+  const dim = size === 'md' ? 'w-9 h-9 text-sm' : 'w-8 h-8 text-xs';
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={`${firstName} ${lastName}`}
+        className={`${dim} rounded-full object-cover shrink-0`}
+      />
+    );
+  }
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
   return (
-    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-semibold">
+    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-semibold shrink-0`}>
       {initials}
+    </div>
+  );
+}
+
+function UserMenuDropdown({
+  user,
+  onClose,
+  onLogout,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onLogout: () => Promise<void>;
+}) {
+  return (
+    <div className="absolute top-full left-0 mt-2 w-[220px] bg-white rounded-lg border border-[#E5E7EB] shadow-lg z-50 overflow-hidden">
+      {/* Identity header — not clickable */}
+      <div className="px-4 py-3 flex items-center gap-3 border-b border-[#F3F4F6]">
+        <UserAvatar
+          firstName={user.first_name}
+          lastName={user.last_name}
+          imageUrl={user.profile_image_url}
+          size="md"
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#374151] truncate">
+            {user.first_name} {user.last_name}
+          </p>
+          <p className="text-xs text-[#6B7280] truncate">{user.email}</p>
+        </div>
+      </div>
+
+      {/* Menu items */}
+      <div className="py-1">
+        <Link
+          href="/admin/profile"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+        >
+          <User className="w-4 h-4 shrink-0 text-[#6B7280]" />
+          Profile Settings
+        </Link>
+
+        <Link
+          href="/my-workshops"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F9FAFB] transition-colors"
+        >
+          <Backpack className="w-4 h-4 shrink-0 text-[#6B7280] mt-0.5" />
+          <div>
+            <p className="text-sm text-[#374151]">My Workshops</p>
+            <p className="text-[11px] text-[#9CA3AF]">Workshops I&apos;m attending</p>
+          </div>
+        </Link>
+      </div>
+
+      <div className="border-t border-[#F3F4F6]" />
+
+      {/* Sign out */}
+      <div className="py-1">
+        <button
+          type="button"
+          onClick={() => { onClose(); void onLogout(); }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#EF4444] hover:bg-[#F9FAFB] transition-colors"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          Sign Out
+        </button>
+      </div>
     </div>
   );
 }
@@ -132,13 +221,16 @@ interface TopBarProps {
 }
 
 export function TopBar({ onMenuOpen }: TopBarProps) {
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const { title, breadcrumbs } = usePage();
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
@@ -152,7 +244,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
       .catch(() => {/* silent — non-critical */});
   }, []);
 
-  // Close on outside click
+  // Close notification dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -164,6 +256,26 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
+
+  // Close user menu on outside click or Escape
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setUserMenuOpen(false);
+    }
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [userMenuOpen]);
 
   const markRead = useCallback(async (recipientId: number): Promise<void> => {
     try {
@@ -261,11 +373,29 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         </div>
 
         {user && (
-          <div className="flex items-center gap-2.5 ml-2 pl-3 border-l border-border-gray">
-            <span className="text-sm font-medium text-dark hidden sm:block">
-              {user.first_name} {user.last_name}
-            </span>
-            <UserAvatar firstName={user.first_name} lastName={user.last_name} />
+          <div ref={userMenuRef} className="relative ml-2 pl-3 border-l border-border-gray">
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((o) => !o)}
+              className="flex items-center gap-2.5 rounded-lg hover:bg-surface transition-colors p-1 -m-1"
+            >
+              <span className="text-sm font-medium text-dark hidden sm:block">
+                {user.first_name} {user.last_name}
+              </span>
+              <UserAvatar
+                firstName={user.first_name}
+                lastName={user.last_name}
+                imageUrl={user.profile_image_url}
+              />
+            </button>
+
+            {userMenuOpen && (
+              <UserMenuDropdown
+                user={user}
+                onClose={() => setUserMenuOpen(false)}
+                onLogout={logout}
+              />
+            )}
           </div>
         )}
       </div>
