@@ -124,10 +124,11 @@ test('valid invitation token can be resolved', function () {
     $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('status', 'pending')
+        ->assertJsonPath('is_expired', false)
         ->assertJsonPath('is_actionable', true);
 });
 
-test('expired invitation token returns 422', function () {
+test('expired invitation token returns 200 with is_expired true', function () {
     $rawToken = Str::random(64);
     $invitation = LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
@@ -136,8 +137,9 @@ test('expired invitation token returns 422', function () {
     ]);
 
     $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
-        ->assertStatus(422)
-        ->assertJsonPath('message', 'This invitation is no longer actionable.');
+        ->assertStatus(200)
+        ->assertJsonPath('is_expired', true)
+        ->assertJsonPath('status', 'expired');
 });
 
 test('invalid token for a valid id returns 404', function () {
@@ -163,11 +165,12 @@ test('leader can accept invitation and profile is created', function () {
     $rawToken = Str::random(64);
     $invitation = LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
@@ -177,8 +180,9 @@ test('leader can accept invitation and profile is created', function () {
             'city' => 'Austin',
         ])
         ->assertStatus(200)
-        ->assertJsonPath('first_name', 'Jane')
-        ->assertJsonPath('last_name', 'Doe');
+        ->assertJsonPath('message', 'Invitation accepted.')
+        ->assertJsonPath('leader.first_name', 'Jane')
+        ->assertJsonPath('leader.last_name', 'Doe');
 
     $this->assertDatabaseHas('leaders', [
         'user_id' => $user->id,
@@ -196,11 +200,12 @@ test('accepting invitation creates organization_leaders association', function (
     $org = Organization::factory()->create();
     $invitation = LeaderInvitation::factory()->forOrganization($org->id)->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
@@ -227,11 +232,12 @@ test('accepting a workshop-scoped invitation creates confirmed workshop_leaders 
         ->forWorkshop($workshop->id)
         ->create([
             'invitation_token_hash' => hash('sha256', $rawToken),
+            'invited_email' => 'jane@example.com',
             'expires_at' => now()->addDays(7),
             'status' => 'pending',
         ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
@@ -253,11 +259,12 @@ test('expired invitation cannot be accepted', function () {
     $rawToken = Str::random(64);
     $invitation = LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->subDay(),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
@@ -275,11 +282,12 @@ test('wrong token for correct id is rejected', function () {
     $rawToken = Str::random(64);
     $invitation = LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     // Correct ID, wrong token
     $this->actingAs($user, 'sanctum')
@@ -294,11 +302,12 @@ test('accept requires first_name and last_name', function () {
     $rawToken = Str::random(64);
     $invitation = LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [])
@@ -360,11 +369,12 @@ test('invitation accepted is logged to audit_logs', function () {
     $org = Organization::factory()->create();
     $invitation = LeaderInvitation::factory()->forOrganization($org->id)->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
+        'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [

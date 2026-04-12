@@ -73,6 +73,9 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:5,1');
         Route::get('verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('verification.verify');
+        // Used by the invitation frontend to determine auth scenario (new vs. returning user).
+        Route::get('check-email', [AuthController::class, 'checkEmail'])
+            ->middleware('throttle:10,1');
     });
 
     // ─── Public endpoints (no auth required) ─────────────────────────────────
@@ -290,9 +293,9 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
 
         // ─── Billing / Stripe Checkout (Phase 15) ─────────────────────────────
-        Route::post('billing/checkout', [BillingController::class, 'checkout']);
-        Route::post('billing/portal', [BillingController::class, 'portal']);
-        Route::get('billing/status', [BillingController::class, 'status']);
+        Route::post('organizations/{organization}/billing/checkout', [BillingController::class, 'checkout']);
+        Route::post('organizations/{organization}/billing/portal', [BillingController::class, 'portal']);
+        Route::get('organizations/{organization}/billing/status', [BillingController::class, 'status']);
 
         // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
