@@ -1,6 +1,6 @@
 import { ApiError } from './client'
 import { getToken } from '@/lib/auth/session'
-import type { LeaderInvitationData, AcceptResult, DeclineResult } from '@/lib/types/invitations'
+import type { LeaderInvitationData, AcceptResult, DeclineResult, OrgInvitationData, AcceptOrgResult, DeclineOrgResult } from '@/lib/types/invitations'
 import { InvitationNotFoundError } from '@/lib/types/invitations'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
@@ -101,6 +101,104 @@ export async function declineLeaderInvitation(token: string): Promise<DeclineRes
   }
 
   return res.json() as Promise<DeclineResult>
+}
+
+/**
+ * GET /api/v1/org-invitations/{token}
+ * Public — no auth.
+ * Throws InvitationNotFoundError if 404.
+ */
+export async function resolveOrgInvitation(token: string): Promise<OrgInvitationData> {
+  const res = await fetch(`${BASE_URL}/org-invitations/${encodeURIComponent(token)}`, {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (res.status === 404) {
+    throw new InvitationNotFoundError()
+  }
+
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`
+    try {
+      const json = await res.json()
+      message = json.message ?? message
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, message)
+  }
+
+  return res.json() as Promise<OrgInvitationData>
+}
+
+/**
+ * POST /api/v1/org-invitations/{token}/accept
+ * Requires auth.
+ */
+export async function acceptOrgInvitation(token: string): Promise<AcceptOrgResult> {
+  const authToken = getToken()
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  }
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
+  const res = await fetch(`${BASE_URL}/org-invitations/${encodeURIComponent(token)}/accept`, {
+    method: 'POST',
+    headers,
+  })
+
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`
+    let errors: Record<string, string[]> | undefined
+    try {
+      const json = await res.json()
+      message = json.message ?? message
+      errors = json.errors
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, message, errors)
+  }
+
+  return res.json() as Promise<AcceptOrgResult>
+}
+
+/**
+ * POST /api/v1/org-invitations/{token}/decline
+ * No auth required.
+ */
+export async function declineOrgInvitation(token: string): Promise<DeclineOrgResult> {
+  const authToken = getToken()
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  }
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
+  const res = await fetch(`${BASE_URL}/org-invitations/${encodeURIComponent(token)}/decline`, {
+    method: 'POST',
+    headers,
+  })
+
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`
+    let errors: Record<string, string[]> | undefined
+    try {
+      const json = await res.json()
+      message = json.message ?? message
+      errors = json.errors
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, message, errors)
+  }
+
+  return res.json() as Promise<DeclineOrgResult>
 }
 
 /**
