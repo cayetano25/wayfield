@@ -7,7 +7,6 @@ use App\Models\OrganizationLeader;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -50,7 +49,7 @@ function makeInvitationWithWorkshop(array $overrides = []): array
 test('resolve endpoint returns full invitation context including workshop', function () {
     [$invitation, $rawToken, $org, $workshop] = makeInvitationWithWorkshop();
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('invitation_id', $invitation->id)
         ->assertJsonPath('status', 'pending')
@@ -83,7 +82,7 @@ test('resolve endpoint returns is_expired true for expired invitation', function
         'status' => 'pending',
     ]);
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('is_expired', true)
         ->assertJsonPath('status', 'expired');
@@ -92,7 +91,7 @@ test('resolve endpoint returns is_expired true for expired invitation', function
 test('resolve endpoint returns 404 for invalid token', function () {
     [$invitation] = makeInvitation();
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/".Str::random(64))
+    $this->getJson("/api/v1/leader-invitations/".Str::random(64))
         ->assertStatus(404)
         ->assertJsonPath('error', 'invitation_not_found');
 });
@@ -100,7 +99,7 @@ test('resolve endpoint returns 404 for invalid token', function () {
 test('resolve endpoint returns current status for already-accepted invitation', function () {
     [$invitation, $rawToken] = makeInvitation(['status' => 'accepted', 'responded_at' => now()]);
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('status', 'accepted')
         ->assertJsonPath('is_expired', false);
@@ -109,7 +108,7 @@ test('resolve endpoint returns current status for already-accepted invitation', 
 test('resolve endpoint returns null workshop for org-level invitation', function () {
     [$invitation, $rawToken] = makeInvitation(['workshop_id' => null]);
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('workshop', null);
 });
@@ -161,7 +160,7 @@ test('check-email is rate limited after 10 requests', function () {
 test('accept requires authenticated user', function () {
     [$invitation, $rawToken] = makeInvitation();
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
         'first_name' => 'Jane',
         'last_name' => 'Doe',
     ])->assertStatus(401);
@@ -172,7 +171,7 @@ test('accept succeeds when user email matches invited_email', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -188,7 +187,7 @@ test('accept returns 403 when logged-in user email does not match invited_email'
     $wrongUser = User::factory()->create(['email' => 'someone.else@example.com']);
 
     $this->actingAs($wrongUser, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -203,7 +202,7 @@ test('accept creates leader record when none exists', function () {
     expect(Leader::where('user_id', $user->id)->exists())->toBeFalse();
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -229,7 +228,7 @@ test('accept links existing leader record to user', function () {
     ]);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -249,7 +248,7 @@ test('accept creates organization_leaders row', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -271,7 +270,7 @@ test('accept creates workshop_leaders row when workshop_id is set', function () 
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -291,7 +290,7 @@ test('accept updates invitation status to accepted', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -311,7 +310,7 @@ test('accept writes audit log entry', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -334,7 +333,7 @@ test('accept returns 422 for already-accepted invitation', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -350,7 +349,7 @@ test('accept returns 422 for expired invitation', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -362,7 +361,7 @@ test('accept returns 422 for expired invitation', function () {
 test('decline succeeds without authentication', function () {
     [$invitation, $rawToken] = makeInvitation();
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200)
         ->assertJsonPath('message', 'Invitation declined.');
 });
@@ -370,7 +369,7 @@ test('decline succeeds without authentication', function () {
 test('decline updates status to declined', function () {
     [$invitation, $rawToken] = makeInvitation();
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200);
 
     $invitation->refresh();
@@ -382,7 +381,7 @@ test('decline writes audit log entry', function () {
     $org = Organization::factory()->create();
     [$invitation, $rawToken] = makeInvitation(['organization_id' => $org->id]);
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200);
 
     $this->assertDatabaseHas('audit_logs', [
@@ -398,7 +397,7 @@ test('decline returns 422 for already-accepted invitation', function () {
         'responded_at' => now(),
     ]);
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(422);
 });
 
@@ -410,7 +409,7 @@ test('decline is allowed for expired invitation', function () {
         'status' => 'pending',
     ]);
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200)
         ->assertJsonPath('message', 'Invitation declined.');
 
@@ -421,7 +420,7 @@ test('decline is allowed for expired invitation', function () {
 test('decline response includes organization_name and workshop_title', function () {
     [$invitation, $rawToken, $org, $workshop] = makeInvitationWithWorkshop();
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200)
         ->assertJsonPath('organization_name', $org->name)
         ->assertJsonPath('workshop_title', $workshop->title);

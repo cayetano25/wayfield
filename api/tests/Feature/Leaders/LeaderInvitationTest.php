@@ -121,7 +121,7 @@ test('valid invitation token can be resolved', function () {
         'status' => 'pending',
     ]);
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('status', 'pending')
         ->assertJsonPath('is_expired', false)
@@ -136,7 +136,7 @@ test('expired invitation token returns 200 with is_expired true', function () {
         'status' => 'pending',
     ]);
 
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}")
+    $this->getJson("/api/v1/leader-invitations/{$rawToken}")
         ->assertStatus(200)
         ->assertJsonPath('is_expired', true)
         ->assertJsonPath('status', 'expired');
@@ -149,13 +149,8 @@ test('invalid token for a valid id returns 404', function () {
         'status' => 'pending',
     ]);
 
-    // Correct ID, wrong token — must be rejected
-    $this->getJson("/api/v1/leader-invitations/{$invitation->id}/".Str::random(64))
-        ->assertStatus(404);
-});
-
-test('invalid id returns 404', function () {
-    $this->getJson('/api/v1/leader-invitations/99999/'.Str::random(64))
+    // Wrong token — must be rejected
+    $this->getJson("/api/v1/leader-invitations/".Str::random(64))
         ->assertStatus(404);
 });
 
@@ -173,7 +168,7 @@ test('leader can accept invitation and profile is created', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
             'bio' => 'Landscape photographer.',
@@ -208,7 +203,7 @@ test('accepting invitation creates organization_leaders association', function (
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -240,7 +235,7 @@ test('accepting a workshop-scoped invitation creates confirmed workshop_leaders 
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -267,7 +262,7 @@ test('expired invitation cannot be accepted', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -289,9 +284,9 @@ test('wrong token for correct id is rejected', function () {
 
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
-    // Correct ID, wrong token
+    // Wrong token
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/".Str::random(64).'/accept', [
+        ->postJson("/api/v1/leader-invitations/".Str::random(64).'/accept', [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
@@ -310,7 +305,7 @@ test('accept requires first_name and last_name', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [])
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['first_name', 'last_name']);
 });
@@ -325,7 +320,7 @@ test('leader can decline invitation', function () {
         'status' => 'pending',
     ]);
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(200)
         ->assertJsonPath('message', 'Invitation declined.');
 
@@ -339,7 +334,7 @@ test('already-declined invitation cannot be declined again', function () {
         'invitation_token_hash' => hash('sha256', $rawToken),
     ]);
 
-    $this->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/decline")
+    $this->postJson("/api/v1/leader-invitations/{$rawToken}/decline")
         ->assertStatus(422);
 });
 
@@ -377,7 +372,7 @@ test('invitation accepted is logged to audit_logs', function () {
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/{$invitation->id}/{$rawToken}/accept", [
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
