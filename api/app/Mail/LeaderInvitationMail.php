@@ -34,11 +34,10 @@ class LeaderInvitationMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        // URL format: /leader-invitations/{id}/{rawToken}/accept
-        // The ID is the non-secret lookup key; the raw token is the secret.
-        // The backend resolves by ID then verifies with hash_equals().
+        // URL format: /leader-invitations/{rawToken}/accept
+        // The raw token is the only secret needed — the backend resolves by SHA-256 hash lookup.
         $base = config('app.frontend_url')
-            .'/leader-invitations/'.$this->invitation->id.'/'.$this->rawToken;
+            .'/leader-invitations/'.$this->rawToken;
 
         $acceptUrl = $base.'/accept';
         $declineUrl = $base.'/decline';

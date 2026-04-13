@@ -110,10 +110,10 @@ Route::prefix('v1')->group(function () {
     });
 
     // ─── Leader invitation resolve/decline (public-but-tokenized) ────────────
-    // URL shape: /leader-invitations/{id}/{token}
-    // {id} is the non-secret lookup key; {token} is the raw secret verified with hash_equals().
-    Route::get('leader-invitations/{id}/{token}', [LeaderInvitationController::class, 'show']);
-    Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
+    // URL shape: /leader-invitations/{token}
+    // {token} is the raw secret — SHA-256 hashed and looked up via indexed column.
+    Route::get('leader-invitations/{token}', [LeaderInvitationController::class, 'show']);
+    Route::post('leader-invitations/{token}/decline', [LeaderInvitationController::class, 'decline']);
 
     // ─── Org member invitation resolution (public-but-tokenized) ─────────────
     // URL shape: /org-invitations/{token}
@@ -247,7 +247,7 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{workshop}/my-schedule', [MyScheduleController::class, 'show']);
 
         // ─── Leader invitation acceptance (requires auth) ─────────────────────
-        Route::post('leader-invitations/{id}/{token}/accept', [LeaderInvitationController::class, 'accept']);
+        Route::post('leader-invitations/{token}/accept', [LeaderInvitationController::class, 'accept']);
 
         // ─── Leader admin (organizer) ─────────────────────────────────────────
         Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);

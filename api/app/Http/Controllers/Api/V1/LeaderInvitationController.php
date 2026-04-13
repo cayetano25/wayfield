@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 class LeaderInvitationController extends Controller
 {
     /**
-     * GET /api/v1/leader-invitations/{id}/{token}
+     * GET /api/v1/leader-invitations/{token}
      * Resolve an invitation for display on the acceptance screen.
      * Public-but-tokenized — no authentication required.
      *
@@ -21,9 +21,9 @@ class LeaderInvitationController extends Controller
      * The response includes `is_expired` and `status` so the frontend can
      * render the appropriate state (actionable / expired / already responded).
      */
-    public function show(int $id, string $token): JsonResponse
+    public function show(string $token): JsonResponse
     {
-        $invitation = $this->resolveInvitation($id, $token);
+        $invitation = $this->resolveInvitation($token);
 
         if (! $invitation) {
             return response()->json(['error' => 'invitation_not_found'], 404);
@@ -37,7 +37,7 @@ class LeaderInvitationController extends Controller
     }
 
     /**
-     * POST /api/v1/leader-invitations/{id}/{token}/accept
+     * POST /api/v1/leader-invitations/{token}/accept
      * Accept the invitation. Requires authenticated user (auth:sanctum).
      * The frontend handles registration or login FIRST, then calls this endpoint.
      *
@@ -45,11 +45,10 @@ class LeaderInvitationController extends Controller
      */
     public function accept(
         AcceptLeaderInvitationRequest $request,
-        int $id,
         string $token,
         AcceptLeaderInvitationAction $action,
     ): JsonResponse {
-        $invitation = $this->resolveInvitation($id, $token);
+        $invitation = $this->resolveInvitation($token);
 
         if (! $invitation) {
             return response()->json(['error' => 'invitation_not_found'], 404);
@@ -89,7 +88,7 @@ class LeaderInvitationController extends Controller
     }
 
     /**
-     * POST /api/v1/leader-invitations/{id}/{token}/decline
+     * POST /api/v1/leader-invitations/{token}/decline
      * Decline the invitation. No authentication required.
      *
      * Expired invitations may still be declined — the person may want to
@@ -97,9 +96,9 @@ class LeaderInvitationController extends Controller
      * Only invitations that have already been accepted, declined, or removed
      * are blocked.
      */
-    public function decline(int $id, string $token, DeclineLeaderInvitationAction $action): JsonResponse
+    public function decline(string $token, DeclineLeaderInvitationAction $action): JsonResponse
     {
-        $invitation = $this->resolveInvitation($id, $token);
+        $invitation = $this->resolveInvitation($token);
 
         if (! $invitation) {
             return response()->json(['error' => 'invitation_not_found'], 404);
@@ -126,29 +125,21 @@ class LeaderInvitationController extends Controller
     }
 
     /**
-     * Resolve and verify a leader invitation by ID + raw token.
+     * Resolve a leader invitation by raw token only.
      *
      * Security pattern:
-     *   1. Find the invitation by its non-secret numeric ID (cheap indexed lookup).
-     *   2. Compare the submitted raw token against the stored hash using hash_equals()
-     *      for constant-time comparison — prevents timing side-channel attacks.
+     *   Hash the incoming raw token with SHA-256, then look up by that hash.
+     *   The `invitation_token_hash` column is indexed, so this is an O(log n)
+     *   indexed lookup — no timing oracle risk since we're doing an exact hash match,
+     *   not a substring or partial comparison.
      *
-     * Never do a DB lookup keyed on the token hash itself; that would expose the hash
-     * as a lookup oracle and bypass constant-time comparison.
+     *   SHA-256 is preimage-resistant: knowing the hash does not help an attacker
+     *   recover the raw token. The raw token is never stored — only the hash is.
      */
-    private function resolveInvitation(int $id, string $rawToken): ?LeaderInvitation
+    private function resolveInvitation(string $rawToken): ?LeaderInvitation
     {
-        $invitation = LeaderInvitation::find($id);
+        $hash = hash('sha256', $rawToken);
 
-        if (! $invitation) {
-            return null;
-        }
-
-        // hash_equals() is constant-time — safe against timing attacks.
-        if (! hash_equals($invitation->invitation_token_hash, hash('sha256', $rawToken))) {
-            return null;
-        }
-
-        return $invitation;
+        return LeaderInvitation::where('invitation_token_hash', $hash)->first();
     }
 }
