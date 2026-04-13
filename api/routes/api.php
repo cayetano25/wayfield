@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OfflineSyncController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\OrgInvitationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ParticipantController;
@@ -114,6 +115,17 @@ Route::prefix('v1')->group(function () {
     Route::get('leader-invitations/{id}/{token}', [LeaderInvitationController::class, 'show']);
     Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
 
+    // ─── Org member invitation resolution (public-but-tokenized) ─────────────
+    // URL shape: /org-invitations/{token}
+    // {token} is the raw secret — hashed and compared via hash_equals().
+    Route::prefix('org-invitations/{token}')->group(function () {
+        Route::get('', [OrgInvitationController::class, 'show']);
+        Route::post('decline', [OrgInvitationController::class, 'decline']);
+        // Accept requires authentication — the user must be logged in first.
+        Route::middleware(['auth:sanctum', 'tenant.auth'])
+            ->post('accept', [OrgInvitationController::class, 'accept']);
+    });
+
     // ─── Address / country config (authenticated) ─────────────────────────────
     // Country config is static — safe to expose to any authenticated user.
     Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
@@ -174,6 +186,13 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/users', [OrganizationUserController::class, 'index']);
         Route::post('organizations/{organization}/users', [OrganizationUserController::class, 'store']);
         Route::patch('organizations/{organization}/users/{organizationUser}', [OrganizationUserController::class, 'update']);
+
+        // ─── Org member invitations ───────────────────────────────────────────
+        Route::prefix('organizations/{organization}/invitations')->group(function () {
+            Route::get('', [OrgInvitationController::class, 'index']);
+            Route::post('', [OrgInvitationController::class, 'store']);
+            Route::delete('{invitation}', [OrgInvitationController::class, 'destroy']);
+        });
 
         // Locations
         Route::get('organizations/{organization}/locations', [LocationController::class, 'index']);
