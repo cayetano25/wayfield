@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, MapPin, CheckCircle2 } from 'lucide-react';
+import { CalendarDays, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { apiPost } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
@@ -32,7 +32,15 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
   const { next_session, sessions } = workshop;
   const allCheckedIn =
     sessions.length > 0 && sessions.every((s) => s.attendance_status === 'checked_in');
-  const noSessionsSelected = sessions.length === 0;
+
+  const isSessionBased = workshop.workshop_type === 'session_based';
+  const noSessionsSelected = isSessionBased && workshop.total_selected === 0;
+  const partialSelection =
+    isSessionBased &&
+    workshop.total_selected > 0 &&
+    workshop.total_selected < workshop.total_selectable;
+
+  const selectSessionsHref = `/workshops/${workshop.workshop_id}/select-sessions`;
 
   async function handleCheckIn() {
     if (!next_session) return;
@@ -110,21 +118,38 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
             </p>
           </div>
         ) : noSessionsSelected ? (
-          /* No sessions selected */
-          <div className="py-2">
-            <p className="font-sans" style={{ fontSize: 14, color: '#6B7280' }}>
-              No sessions selected yet —{' '}
-              <Link
-                href={`/workshops/${workshop.workshop_id}/sessions`}
-                className="font-semibold hover:underline"
-                style={{ color: '#0FA3B1' }}
+          /* ── Amber prompt: no sessions selected yet ── */
+          <div
+            className="flex items-start gap-3 rounded-lg"
+            style={{
+              borderLeft: '3px solid #E67E22',
+              backgroundColor: '#FFFBF5',
+              padding: '12px 14px',
+            }}
+          >
+            <AlertTriangle
+              className="shrink-0 mt-0.5"
+              size={16}
+              style={{ color: '#E67E22' }}
+            />
+            <div>
+              <p
+                className="font-sans font-medium"
+                style={{ fontSize: 14, color: '#2E2E2E', marginBottom: 4 }}
               >
-                Select your sessions
+                You haven&apos;t selected your sessions yet.
+              </p>
+              <Link
+                href={selectSessionsHref}
+                className="font-sans font-bold hover:underline"
+                style={{ fontSize: 14, color: '#0FA3B1' }}
+              >
+                Select sessions →
               </Link>
-            </p>
+            </div>
           </div>
         ) : next_session ? (
-          /* Next session */
+          /* ── Next session ── */
           <div>
             <p
               className="font-sans font-semibold uppercase mb-2"
@@ -168,6 +193,31 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                 </Button>
               </Link>
             </div>
+
+            {/* ── Soft nudge when partial selection ── */}
+            {partialSelection && (
+              <div
+                className="flex items-center justify-between rounded-lg mt-4"
+                style={{
+                  backgroundColor: '#F0FDFF',
+                  padding: '10px 14px',
+                  border: '1px solid #BAE6F0',
+                }}
+              >
+                <p className="font-sans" style={{ fontSize: 13, color: '#374151' }}>
+                  You&apos;ve selected{' '}
+                  <strong>{workshop.total_selected}</strong> of{' '}
+                  <strong>{workshop.total_selectable}</strong> available sessions.
+                </p>
+                <Link
+                  href={selectSessionsHref}
+                  className="font-sans font-semibold hover:underline shrink-0 ml-3"
+                  style={{ fontSize: 13, color: '#0FA3B1' }}
+                >
+                  Add more →
+                </Link>
+              </div>
+            )}
           </div>
         ) : null}
       </div>
