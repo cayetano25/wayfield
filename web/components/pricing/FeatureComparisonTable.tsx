@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Check } from 'lucide-react'
 import type { Plan } from '@/lib/types/billing'
 
@@ -214,9 +215,9 @@ export function FeatureComparisonTable({ plans, currentPlanCode }: FeatureCompar
           </thead>
           <tbody>
             {SECTIONS.map((section, sectionIdx) => (
-              <>
+              <React.Fragment key={`section-${sectionIdx}`}>
                 {/* Section header */}
-                <tr key={`section-${sectionIdx}`}>
+                <tr>
                   <td
                     colSpan={5}
                     style={{
@@ -262,7 +263,7 @@ export function FeatureComparisonTable({ plans, currentPlanCode }: FeatureCompar
                     </tr>
                   )
                 })}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

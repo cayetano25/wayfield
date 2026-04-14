@@ -9,9 +9,17 @@ import { setStoredUser, setToken, type AdminUser } from '@/lib/auth/session'
 import { getPostLoginRedirect, type UserContexts } from '@/lib/utils/routing'
 import { SocialLoginButtons } from './SocialLoginButtons'
 
+interface Membership {
+  organization_id: number
+  organization_name: string
+  organization_slug: string
+  role: string
+}
+
 interface LoginResponse {
   token: string
-  user: AdminUser & { contexts: UserContexts }
+  user: AdminUser
+  memberships: Membership[]
 }
 
 interface FormErrors {
@@ -83,8 +91,16 @@ export function LoginForm() {
         platform: 'web',
       })
       setToken(res.token)
-      setStoredUser(res.user)
-      router.push(getPostLoginRedirect(res.user))
+      const userWithContexts = {
+        ...res.user,
+        contexts: {
+          organization_roles: res.memberships.map((m) => m.role),
+          is_leader: false,
+          leader_id: null,
+        } satisfies UserContexts,
+      }
+      setStoredUser(userWithContexts)
+      router.push(getPostLoginRedirect(userWithContexts))
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {

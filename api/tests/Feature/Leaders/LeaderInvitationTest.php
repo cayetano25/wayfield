@@ -150,7 +150,7 @@ test('invalid token for a valid id returns 404', function () {
     ]);
 
     // Wrong token — must be rejected
-    $this->getJson("/api/v1/leader-invitations/".Str::random(64))
+    $this->getJson('/api/v1/leader-invitations/'.Str::random(64))
         ->assertStatus(404);
 });
 
@@ -286,28 +286,36 @@ test('wrong token for correct id is rejected', function () {
 
     // Wrong token
     $this->actingAs($user, 'sanctum')
-        ->postJson("/api/v1/leader-invitations/".Str::random(64).'/accept', [
+        ->postJson('/api/v1/leader-invitations/'.Str::random(64).'/accept', [
             'first_name' => 'Jane',
             'last_name' => 'Doe',
         ])
         ->assertStatus(404);
 });
 
-test('accept requires first_name and last_name', function () {
+test('accept without first_name/last_name falls back to existing user name', function () {
+    // Existing users already have first_name/last_name on their users record.
+    // The AcceptLeaderInvitationAction falls back to those when the fields
+    // are not provided in the request — so omitting them is valid.
     $rawToken = Str::random(64);
-    $invitation = LeaderInvitation::factory()->create([
+    LeaderInvitation::factory()->create([
         'invitation_token_hash' => hash('sha256', $rawToken),
         'invited_email' => 'jane@example.com',
         'expires_at' => now()->addDays(7),
         'status' => 'pending',
     ]);
 
-    $user = User::factory()->create(['email' => 'jane@example.com']);
+    $user = User::factory()->create([
+        'email' => 'jane@example.com',
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+    ]);
 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/leader-invitations/{$rawToken}/accept", [])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors(['first_name', 'last_name']);
+        ->assertStatus(200)
+        ->assertJsonPath('leader.first_name', 'Jane')
+        ->assertJsonPath('leader.last_name', 'Doe');
 });
 
 // ─── Decline ──────────────────────────────────────────────────────────────────

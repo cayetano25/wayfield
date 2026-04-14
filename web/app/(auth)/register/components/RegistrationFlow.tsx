@@ -46,7 +46,7 @@ export function RegistrationFlow() {
     setError(null)
     try {
       await updateOnboardingProfile(data)
-      router.push('/onboarding')
+      router.push('/verify-email')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message || 'Something went wrong. Please try again.')
@@ -59,7 +59,7 @@ export function RegistrationFlow() {
   }
 
   function handleSkipProfile() {
-    router.push('/onboarding')
+    router.push('/verify-email')
   }
 
   return (

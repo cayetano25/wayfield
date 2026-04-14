@@ -13,7 +13,7 @@ test('plans endpoint returns all four plans in order', function () {
     $response = $this->getJson('/api/v1/plans');
 
     $response->assertOk();
-    $plans = $response->json('plans');
+    $plans = $response->json();
 
     expect($plans)->toHaveCount(4);
     expect(array_column($plans, 'code'))->toBe(['free', 'starter', 'pro', 'enterprise']);
@@ -23,7 +23,7 @@ test('plans endpoint returns correct display names', function () {
     $response = $this->getJson('/api/v1/plans');
 
     $response->assertOk();
-    $plans = collect($response->json('plans'))->keyBy('code');
+    $plans = collect($response->json())->keyBy('code');
 
     expect($plans['free']['display_name'])->toBe('Foundation');
     expect($plans['starter']['display_name'])->toBe('Creator');
@@ -35,7 +35,7 @@ test('plans endpoint includes limits and features for each plan', function () {
     $response = $this->getJson('/api/v1/plans');
 
     $response->assertOk();
-    $plans = collect($response->json('plans'))->keyBy('code');
+    $plans = collect($response->json())->keyBy('code');
 
     foreach (['free', 'starter', 'pro', 'enterprise'] as $code) {
         expect($plans[$code])->toHaveKey('limits');
@@ -53,25 +53,25 @@ test('plans endpoint does not require authentication', function () {
 // ─── custom_branding feature gate ─────────────────────────────────────────────
 
 test('custom_branding is false for free plan', function () {
-    $plans = collect($this->getJson('/api/v1/plans')->json('plans'))->keyBy('code');
+    $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
     expect($plans['free']['features']['custom_branding'])->toBeFalse();
 });
 
 test('custom_branding is false for starter plan', function () {
-    $plans = collect($this->getJson('/api/v1/plans')->json('plans'))->keyBy('code');
+    $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
     expect($plans['starter']['features']['custom_branding'])->toBeFalse();
 });
 
 test('custom_branding is true for pro plan', function () {
-    $plans = collect($this->getJson('/api/v1/plans')->json('plans'))->keyBy('code');
+    $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
     expect($plans['pro']['features']['custom_branding'])->toBeTrue();
 });
 
 test('custom_branding is true for enterprise plan', function () {
-    $plans = collect($this->getJson('/api/v1/plans')->json('plans'))->keyBy('code');
+    $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
     expect($plans['enterprise']['features']['custom_branding'])->toBeTrue();
 });

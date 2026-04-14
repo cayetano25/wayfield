@@ -6,8 +6,6 @@ import type { AdminUser } from '@/lib/auth/session';
 
 const NAV_LINKS = [
   { label: 'Discover', href: '/discover' },
-  { label: 'Ateliers', href: '#' },
-  { label: 'Community', href: '#' },
 ];
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {

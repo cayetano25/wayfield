@@ -37,7 +37,7 @@ interface AssignedSession {
 type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'removed';
 
 interface Leader {
-  id: number;
+  id: number; // negative when invitation has no linked leader record yet (pending-only)
   first_name: string;
   last_name: string;
   display_name: string | null;
@@ -49,6 +49,7 @@ interface Leader {
   city: string | null;
   state_or_region: string | null;
   address?: AddressFormData | null;
+  invited_email?: string | null; // present for pending invitations without a linked leader
   invitation_status: InvitationStatus;
   invitation_id: number | null;
   invitation_created_at: string | null;
@@ -91,7 +92,7 @@ function LeaderAvatar({
   leader: Pick<Leader, 'first_name' | 'last_name' | 'profile_image_url'>;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const initials = `${leader.first_name[0] ?? ''}${leader.last_name[0] ?? ''}`.toUpperCase();
+  const initials = (`${leader.first_name[0] ?? ''}${leader.last_name[0] ?? ''}`).toUpperCase() || '?';
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-11 h-11 text-sm',
@@ -128,6 +129,7 @@ function LeaderCard({
 }) {
   const location = [leader.city, leader.state_or_region].filter(Boolean).join(', ');
   const sessionCount = (leader.assigned_sessions ?? []).length;
+  const displayName = `${leader.first_name} ${leader.last_name}`.trim() || leader.invited_email || 'Invited Leader';
 
   return (
     <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -135,7 +137,7 @@ function LeaderCard({
         <LeaderAvatar leader={leader} size="md" />
         <div className="flex-1 min-w-0">
           <p className="font-heading font-semibold text-dark text-sm leading-snug truncate">
-            {leader.first_name} {leader.last_name}
+            {displayName}
           </p>
           <p className="text-[13px] text-medium-gray mt-0.5 truncate">
             {sessionCount === 0
@@ -452,6 +454,10 @@ function LeaderSlideOver({
     }
   }
 
+  // Negative id means a pending invitation with no linked leader record yet.
+  // Profile editing, address, and session assignment don't apply until the invitation is accepted.
+  const isPendingOnly = !!leader && leader.id < 0;
+
   const assignedSessionIds = new Set((leader?.assigned_sessions ?? []).map((s) => s.id));
   const timezone = workshop?.timezone ?? 'UTC';
 
@@ -502,26 +508,32 @@ function LeaderSlideOver({
             {/* Profile header */}
             <div className="px-6 py-5 border-b border-border-gray">
               <div className="flex items-start gap-4">
-                <div className="shrink-0">
-                  <ImageUploader
-                    currentUrl={leader.profile_image_url}
-                    entityType="leader"
-                    entityId={leader.id}
-                    fieldName="profile_image_url"
-                    shape="circle"
-                    width={80}
-                    height={80}
-                    onUploadComplete={(url) => onUpdated()}
-                    onRemove={async () => {
-                      await apiPatch(`/leaders/${leader.id}`, { profile_image_url: null });
-                      onUpdated();
-                    }}
-                  />
-                </div>
+                {!isPendingOnly && (
+                  <div className="shrink-0">
+                    <ImageUploader
+                      currentUrl={leader.profile_image_url}
+                      entityType="leader"
+                      entityId={leader.id}
+                      fieldName="profile_image_url"
+                      shape="circle"
+                      width={80}
+                      height={80}
+                      onUploadComplete={(url) => onUpdated()}
+                      onRemove={async () => {
+                        await apiPatch(`/leaders/${leader.id}`, { profile_image_url: null });
+                        onUpdated();
+                      }}
+                    />
+                  </div>
+                )}
+                {isPendingOnly && <LeaderAvatar leader={leader} size="lg" />}
                 <div className="flex-1 min-w-0 pt-1">
                   <h3 className="font-heading font-semibold text-dark text-base leading-snug">
-                    {fullName}
+                    {fullName || leader.invited_email || 'Invited Leader'}
                   </h3>
+                  {leader.invited_email && !fullName && (
+                    <p className="text-sm text-medium-gray mt-0.5">Pending invitation</p>
+                  )}
                   {leader.display_name && (
                     <p className="text-sm text-medium-gray mt-0.5">{leader.display_name}</p>
                   )}
@@ -536,8 +548,16 @@ function LeaderSlideOver({
                 </div>
               </div>
 
+              {/* Email shown for pending-only invitations (no linked profile yet) */}
+              {isPendingOnly && leader.invited_email && (
+                <div className="flex items-center gap-2 mt-4">
+                  <span className="text-xs text-medium-gray shrink-0">Invited:</span>
+                  <span className="text-sm text-dark">{leader.invited_email}</span>
+                </div>
+              )}
+
               {/* Contact — phone visible to organizers; email/address never rendered */}
-              {leader.phone_number && (
+              {!isPendingOnly && leader.phone_number && (
                 <div className="flex items-center gap-2 mt-4">
                   <Phone className="w-3.5 h-3.5 text-medium-gray shrink-0" />
                   <span className="text-sm text-dark">{leader.phone_number}</span>
@@ -585,35 +605,38 @@ function LeaderSlideOver({
             </div>
 
             {/* Bio */}
-            {leader.bio && (
+            {!isPendingOnly && leader.bio && (
               <div className="px-6 py-5 border-b border-border-gray">
                 <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-2">Bio</p>
                 <p className="text-sm text-dark leading-relaxed">{leader.bio}</p>
               </div>
             )}
 
-            {/* Address (private) */}
-            <div className="px-6 py-5 border-b border-border-gray">
-              <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-3">Address</p>
-              <AddressForm
-                value={leaderAddress}
-                onChange={setLeaderAddress}
-                defaultCountryCode={leaderAddress?.country_code ?? 'US'}
-                privacyNote="Leader address is private and never shown to participants."
-              />
-              <div className="mt-4">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={savingAddress}
-                  onClick={handleSaveAddress}
-                >
-                  Save Address
-                </Button>
+            {/* Address (private) — only for accepted leaders with a real record */}
+            {!isPendingOnly && (
+              <div className="px-6 py-5 border-b border-border-gray">
+                <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-3">Address</p>
+                <AddressForm
+                  value={leaderAddress}
+                  onChange={setLeaderAddress}
+                  defaultCountryCode={leaderAddress?.country_code ?? 'US'}
+                  privacyNote="Leader address is private and never shown to participants."
+                />
+                <div className="mt-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={savingAddress}
+                    onClick={handleSaveAddress}
+                  >
+                    Save Address
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Assigned sessions */}
+            {/* Assigned sessions — only for accepted leaders */}
+            {!isPendingOnly && (
             <div className="px-6 py-5">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-medium text-medium-gray uppercase tracking-wide">
@@ -661,6 +684,7 @@ function LeaderSlideOver({
                 onAssign={handleAssign}
               />
             </div>
+            )}
           </div>
         )}
       </div>

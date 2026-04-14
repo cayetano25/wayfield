@@ -137,7 +137,7 @@ export function WorkshopsReportTab({ orgId }: WorkshopsReportProps) {
           <h2 className="font-heading font-semibold" style={{ fontSize: 15, color: '#2E2E2E' }}>All Workshops</h2>
           {!loading && (
             <span className="font-sans text-xs" style={{ color: '#9CA3AF' }}>
-              {report?.workshops.length ?? 0} workshops
+              {report?.workshops?.length ?? 0} workshops
             </span>
           )}
         </div>

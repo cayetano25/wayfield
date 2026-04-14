@@ -143,10 +143,12 @@ test('this_week excludes today and sessions beyond 7 days', function () {
 test('is_live is true when now is between start_at and end_at', function () {
     [$user, $leader] = makeLeaderUser();
 
-    // Session currently live (started 1 hour ago, ends in 1 hour)
+    // Span the full current UTC day so start_at is always today regardless of the
+    // time the test runs (avoids the midnight-hour failure where subHour() puts
+    // start_at on yesterday's date and the dashboard categorises it as past).
     [, $liveSession] = makeLeaderSession($leader, [
-        'start_at' => now()->subHour(),
-        'end_at' => now()->addHour(),
+        'start_at' => now()->startOfDay(),
+        'end_at' => now()->endOfDay(),
     ]);
 
     $response = $this->actingAs($user, 'sanctum')

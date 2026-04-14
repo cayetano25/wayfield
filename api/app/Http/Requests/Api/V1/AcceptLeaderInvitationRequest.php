@@ -14,8 +14,8 @@ class AcceptLeaderInvitationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => ['nullable', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
             'bio' => ['nullable', 'string'],
             'website_url' => ['nullable', 'string', 'url', 'max:500'],
             'phone_number' => ['nullable', 'string', 'max:50'],

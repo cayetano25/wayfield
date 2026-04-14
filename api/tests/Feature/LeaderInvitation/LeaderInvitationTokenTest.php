@@ -91,7 +91,7 @@ test('resolve endpoint returns is_expired true for expired invitation', function
 test('resolve endpoint returns 404 for invalid token', function () {
     [$invitation] = makeInvitation();
 
-    $this->getJson("/api/v1/leader-invitations/".Str::random(64))
+    $this->getJson('/api/v1/leader-invitations/'.Str::random(64))
         ->assertStatus(404)
         ->assertJsonPath('error', 'invitation_not_found');
 });
@@ -354,6 +354,21 @@ test('accept returns 422 for expired invitation', function () {
             'last_name' => 'Doe',
         ])
         ->assertStatus(422);
+});
+
+test('accept with no body falls back to user first_name and last_name', function () {
+    [$invitation, $rawToken] = makeInvitation(['invited_email' => 'jane@example.com']);
+    $user = User::factory()->create([
+        'email' => 'jane@example.com',
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+    ]);
+
+    $this->actingAs($user, 'sanctum')
+        ->postJson("/api/v1/leader-invitations/{$rawToken}/accept")
+        ->assertStatus(200)
+        ->assertJsonPath('leader.first_name', 'Jane')
+        ->assertJsonPath('leader.last_name', 'Doe');
 });
 
 // ─── POST decline ─────────────────────────────────────────────────────────────

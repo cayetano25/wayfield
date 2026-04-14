@@ -29,8 +29,15 @@ export function OnboardingFlow() {
   useEffect(() => {
     getOnboardingStatus()
       .then((status) => {
+        if (!status.user.email_verified) {
+          router.replace('/verify-email')
+          return
+        }
         if (status.onboarding_completed) {
-          router.replace('/dashboard')
+          // Let the proxy resolve the correct destination based on user context.
+          // Redirect to /discover as a safe default; users with org roles will
+          // be sent to /dashboard by the proxy on their next protected-route hit.
+          router.replace('/discover')
         }
       })
       .catch(() => {
@@ -43,7 +50,7 @@ export function OnboardingFlow() {
     setSelectedIntent(intent)
 
     if (intent === 'exploring') {
-      router.push('/dashboard')
+      router.push('/discover')
       return
     }
 

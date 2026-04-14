@@ -73,7 +73,7 @@ final class CompleteOnboardingAction
 
         if ($existing) {
             return [
-                'redirect' => "/participant/workshops/{$workshop->id}",
+                'redirect' => '/my-workshops',
                 'message' => 'You are already registered for this workshop.',
                 'organization_id' => null,
             ];
@@ -88,7 +88,7 @@ final class CompleteOnboardingAction
         ]);
 
         return [
-            'redirect' => "/participant/workshops/{$workshop->id}",
+            'redirect' => '/my-workshops',
             'message' => "You've joined {$workshop->title}!",
             'organization_id' => null,
             'workshop_id' => $workshop->id,
