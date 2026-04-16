@@ -86,23 +86,23 @@ final class AddressNormalizer
         // Prefer structured parameters when we have enough data
         if (! empty($street) && ! empty($address->locality)) {
             return array_filter([
-                'street'         => implode(', ', $street),
-                'city'           => $address->locality,
-                'state'          => $address->administrative_area,
-                'postalcode'     => $address->postal_code,
-                'country'        => $address->country_code,
-                'format'         => 'json',
+                'street' => implode(', ', $street),
+                'city' => $address->locality,
+                'state' => $address->administrative_area,
+                'postalcode' => $address->postal_code,
+                'country' => $address->country_code,
+                'format' => 'json',
                 'addressdetails' => 1,
-                'limit'          => 1,
+                'limit' => 1,
             ], fn ($v) => $v !== null && $v !== '');
         }
 
         // Fallback: free-text query from the normalized canonical string
         return [
-            'q'              => $this->normalize($address),
-            'format'         => 'json',
+            'q' => $this->normalize($address),
+            'format' => 'json',
             'addressdetails' => 1,
-            'limit'          => 1,
+            'limit' => 1,
         ];
     }
 
@@ -114,7 +114,7 @@ final class AddressNormalizer
         if ($value === null || $value === '') {
             return '';
         }
-        $trimmed   = trim($value);
+        $trimmed = trim($value);
         $collapsed = preg_replace('/\s+/', ' ', $trimmed);
 
         return strtoupper($collapsed ?? $trimmed);

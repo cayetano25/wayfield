@@ -32,8 +32,8 @@ class GeocodeAddressesPending extends Command
     public function handle(): int
     {
         $maxAttempts = config('services.geocoding.max_attempts', 3);
-        $limit       = (int) $this->option('limit');
-        $dryRun      = (bool) $this->option('dry-run');
+        $limit = (int) $this->option('limit');
+        $dryRun = (bool) $this->option('dry-run');
 
         $addresses = Address::query()
             ->whereNull('latitude')

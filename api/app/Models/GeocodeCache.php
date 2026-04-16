@@ -27,13 +27,13 @@ class GeocodeCache extends Model
     ];
 
     protected $casts = [
-        'latitude'         => 'float',
-        'longitude'        => 'float',
-        'confidence'       => 'integer',
-        'expires_at'       => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'confidence' => 'integer',
+        'expires_at' => 'datetime',
         'last_resolved_at' => 'datetime',
-        'created_at'       => 'datetime',
-        'updated_at'       => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**

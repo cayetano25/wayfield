@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Address;
 use App\Models\Leader;
 use App\Models\LeaderInvitation;
 use App\Models\Location;
@@ -10,6 +11,7 @@ use App\Models\Registration;
 use App\Models\Session;
 use App\Models\Track;
 use App\Models\Workshop;
+use App\Observers\AddressObserver;
 use App\Policies\AttendancePolicy;
 use App\Policies\LeaderInvitationPolicy;
 use App\Policies\LeaderPolicy;
@@ -51,7 +53,7 @@ class AppServiceProvider extends AuthServiceProvider
         $this->registerPolicies();
 
         // Geocoding: dispatch GeocodeAddressJob on address create/update
-        \App\Models\Address::observe(\App\Observers\AddressObserver::class);
+        Address::observe(AddressObserver::class);
 
         // Phase 5: Attendance, Roster, and Notification gate defines.
         // These are defined as named gates (not tied to a single model-policy mapping)

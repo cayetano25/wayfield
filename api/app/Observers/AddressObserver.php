@@ -58,13 +58,13 @@ class AddressObserver
         // Reset geocoding state so the job runs fresh.
         // updateQuietly bypasses observers — no infinite loop.
         $address->updateQuietly([
-            'latitude'          => null,
-            'longitude'         => null,
+            'latitude' => null,
+            'longitude' => null,
             'validation_status' => 'unverified',
-            'geocode_hash'      => null,
-            'geocode_attempts'  => 0,
-            'geocode_error'     => null,
-            'last_geocoded_at'  => null,
+            'geocode_hash' => null,
+            'geocode_attempts' => 0,
+            'geocode_error' => null,
+            'last_geocoded_at' => null,
         ]);
 
         // Reload to pick up the reset state before checking needsGeocoding()

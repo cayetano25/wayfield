@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Log;
 final class GeocodingService
 {
     public function __construct(
-        private readonly NominatimClient   $client,
+        private readonly NominatimClient $client,
         private readonly AddressNormalizer $normalizer,
     ) {}
 
@@ -51,7 +51,7 @@ final class GeocodingService
         }
 
         $normalizedString = $this->normalizer->normalize($address);
-        $hash             = $this->normalizer->hash($address);
+        $hash = $this->normalizer->hash($address);
 
         // Persist the hash on the address record immediately
         // so the cache lookup works even if we crash partway through
@@ -92,8 +92,8 @@ final class GeocodingService
         if (! $cache->hasCoordinates()) {
             Log::info('[Geocoding] Cache hit but no coordinates (miss/failed entry)', [
                 'address_id' => $address->id,
-                'hash'       => $cache->geocode_hash,
-                'status'     => $cache->status,
+                'hash' => $cache->geocode_hash,
+                'status' => $cache->status,
             ]);
             // Still increment attempts so we do not retry forever
             $address->increment('geocode_attempts');
@@ -102,18 +102,18 @@ final class GeocodingService
         }
 
         $address->updateQuietly([
-            'latitude'          => $cache->latitude,
-            'longitude'         => $cache->longitude,
+            'latitude' => $cache->latitude,
+            'longitude' => $cache->longitude,
             'formatted_address' => $cache->formatted_address ?? $address->formatted_address,
             'validation_status' => 'verified',
-            'last_geocoded_at'  => now(),
-            'geocode_error'     => null,
+            'last_geocoded_at' => now(),
+            'geocode_error' => null,
         ]);
 
         Log::info('[Geocoding] Applied coordinates from cache', [
             'address_id' => $address->id,
-            'lat'        => $cache->latitude,
-            'lng'        => $cache->longitude,
+            'lat' => $cache->latitude,
+            'lng' => $cache->longitude,
         ]);
 
         return true;
@@ -129,8 +129,8 @@ final class GeocodingService
         string $hash,
         array $result
     ): bool {
-        $lat  = (float) $result['lat'];
-        $lng  = (float) $result['lon'];
+        $lat = (float) $result['lat'];
+        $lng = (float) $result['lon'];
         // Nominatim importance is 0.0–1.0; convert to 0–100 integer
         $conf = isset($result['importance'])
             ? (int) round((float) $result['importance'] * 100)
@@ -141,7 +141,7 @@ final class GeocodingService
             Log::warning('[Geocoding] Low confidence result', [
                 'address_id' => $address->id,
                 'confidence' => $conf,
-                'display'    => $result['display_name'] ?? null,
+                'display' => $result['display_name'] ?? null,
             ]);
         }
 
@@ -153,35 +153,35 @@ final class GeocodingService
         GeocodeCache::updateOrCreate(
             ['geocode_hash' => $hash],
             [
-                'normalized_input'  => $normalizedInput,
-                'provider'          => 'nominatim',
-                'latitude'          => $lat,
-                'longitude'         => $lng,
+                'normalized_input' => $normalizedInput,
+                'provider' => 'nominatim',
+                'latitude' => $lat,
+                'longitude' => $lng,
                 'formatted_address' => $result['display_name'] ?? null,
-                'status'            => 'hit',
-                'confidence'        => $conf,
+                'status' => 'hit',
+                'confidence' => $conf,
                 'provider_place_id' => (string) ($result['place_id'] ?? ''),
-                'provider_type'     => $result['type'] ?? null,
-                'failure_reason'    => null,
-                'expires_at'        => $ttl,
-                'last_resolved_at'  => now(),
+                'provider_type' => $result['type'] ?? null,
+                'failure_reason' => null,
+                'expires_at' => $ttl,
+                'last_resolved_at' => now(),
             ]
         );
 
         // Hydrate the address record
         $address->updateQuietly([
-            'latitude'          => $lat,
-            'longitude'         => $lng,
+            'latitude' => $lat,
+            'longitude' => $lng,
             'formatted_address' => $result['display_name'] ?? $address->formatted_address,
             'validation_status' => 'verified',
-            'last_geocoded_at'  => now(),
-            'geocode_error'     => null,
+            'last_geocoded_at' => now(),
+            'geocode_error' => null,
         ]);
 
         Log::info('[Geocoding] Geocoded successfully via Nominatim', [
             'address_id' => $address->id,
-            'lat'        => $lat,
-            'lng'        => $lng,
+            'lat' => $lat,
+            'lng' => $lng,
             'confidence' => $conf,
         ]);
 
@@ -206,25 +206,25 @@ final class GeocodingService
             ['geocode_hash' => $hash],
             [
                 'normalized_input' => $normalizedInput,
-                'provider'         => 'nominatim',
-                'latitude'         => null,
-                'longitude'        => null,
-                'status'           => 'miss',
-                'failure_reason'   => 'No results returned by Nominatim.',
-                'expires_at'       => $ttl,
+                'provider' => 'nominatim',
+                'latitude' => null,
+                'longitude' => null,
+                'status' => 'miss',
+                'failure_reason' => 'No results returned by Nominatim.',
+                'expires_at' => $ttl,
                 'last_resolved_at' => now(),
             ]
         );
 
         $address->updateQuietly([
             'validation_status' => 'failed',
-            'geocode_error'     => 'Address not found. Please check the address and try again.',
-            'geocode_attempts'  => $address->geocode_attempts + 1,
+            'geocode_error' => 'Address not found. Please check the address and try again.',
+            'geocode_attempts' => $address->geocode_attempts + 1,
         ]);
 
         Log::info('[Geocoding] No results from Nominatim (miss)', [
             'address_id' => $address->id,
-            'hash'       => $hash,
+            'hash' => $hash,
         ]);
 
         return false;
@@ -248,25 +248,25 @@ final class GeocodingService
             ['geocode_hash' => $hash],
             [
                 'normalized_input' => $normalizedInput,
-                'provider'         => 'nominatim',
-                'latitude'         => null,
-                'longitude'        => null,
-                'status'           => 'failed',
-                'failure_reason'   => $reason,
-                'expires_at'       => $ttl,
+                'provider' => 'nominatim',
+                'latitude' => null,
+                'longitude' => null,
+                'status' => 'failed',
+                'failure_reason' => $reason,
+                'expires_at' => $ttl,
                 'last_resolved_at' => now(),
             ]
         );
 
         $address->updateQuietly([
             'validation_status' => 'failed',
-            'geocode_error'     => 'Geocoding service error. Will retry automatically.',
-            'geocode_attempts'  => $address->geocode_attempts + 1,
+            'geocode_error' => 'Geocoding service error. Will retry automatically.',
+            'geocode_attempts' => $address->geocode_attempts + 1,
         ]);
 
         Log::error('[Geocoding] Nominatim API error', [
             'address_id' => $address->id,
-            'reason'     => $reason,
+            'reason' => $reason,
         ]);
 
         return false;

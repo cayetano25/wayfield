@@ -77,8 +77,8 @@ class GeocodeAddressJob implements ShouldQueue
         if ($address->geocode_attempts >= $maxAttempts) {
             Log::warning('[GeocodeAddressJob] Max attempts exceeded — giving up.', [
                 'address_id' => $this->addressId,
-                'attempts'   => $address->geocode_attempts,
-                'max'        => $maxAttempts,
+                'attempts' => $address->geocode_attempts,
+                'max' => $maxAttempts,
             ]);
             $this->fail('Max geocoding attempts exceeded.');
 
@@ -117,7 +117,7 @@ class GeocodeAddressJob implements ShouldQueue
             // Other Nominatim errors: let the job fail and retry on backoff
             Log::error('[GeocodeAddressJob] Nominatim error', [
                 'address_id' => $this->addressId,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -146,7 +146,7 @@ class GeocodeAddressJob implements ShouldQueue
 
         Log::info('[GeocodeAddressJob] Dispatched', [
             'address_id' => $address->id,
-            'delay'      => $delaySeconds,
+            'delay' => $delaySeconds,
         ]);
     }
 }

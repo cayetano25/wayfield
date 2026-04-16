@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Address extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'country_code',
         'address_line_1',
@@ -27,12 +31,12 @@ class Address extends Model
     ];
 
     protected $casts = [
-        'latitude'         => 'float',
-        'longitude'        => 'float',
+        'latitude' => 'float',
+        'longitude' => 'float',
         'last_geocoded_at' => 'datetime',
         'geocode_attempts' => 'integer',
-        'created_at'       => 'datetime',
-        'updated_at'       => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -55,6 +59,7 @@ class Address extends Model
     public function needsGeocoding(): bool
     {
         $max = config('services.geocoding.max_attempts', 3);
+
         return ! $this->hasCoordinates()
             && (int) $this->geocode_attempts < $max
             && $this->isGeocodeable();
@@ -88,8 +93,10 @@ class Address extends Model
         }
         if ($this->formatted_address) {
             $q = urlencode($this->formatted_address);
+
             return "https://www.google.com/maps?q={$q}";
         }
+
         return null;
     }
 
@@ -103,17 +110,19 @@ class Address extends Model
         }
         if ($this->formatted_address) {
             $q = urlencode($this->formatted_address);
+
             return "https://maps.apple.com/?q={$q}";
         }
+
         return null;
     }
 
     /**
      * Returns the geocode cache entry linked to this address's hash.
      */
-    public function geocodeCache(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function geocodeCache(): HasOne
     {
-        return $this->hasOne(\App\Models\GeocodeCache::class, 'geocode_hash', 'geocode_hash');
+        return $this->hasOne(GeocodeCache::class, 'geocode_hash', 'geocode_hash');
     }
 
     public function getCountryNameAttribute(): string

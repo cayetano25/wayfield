@@ -26,14 +26,16 @@ use Illuminate\Support\Facades\Log;
 final class NominatimClient
 {
     private string $baseUrl;
+
     private string $userAgent;
-    private int    $timeout;
+
+    private int $timeout;
 
     public function __construct()
     {
-        $this->baseUrl   = rtrim(config('services.nominatim.base_url'), '/');
+        $this->baseUrl = rtrim(config('services.nominatim.base_url'), '/');
         $this->userAgent = config('services.nominatim.user_agent');
-        $this->timeout   = config('services.nominatim.timeout', 10);
+        $this->timeout = config('services.nominatim.timeout', 10);
     }
 
     /**
@@ -53,8 +55,7 @@ final class NominatimClient
      *
      * Throws NominatimException on HTTP error, timeout, or rate limit.
      *
-     * @param  array<string,string|int> $queryParams
-     * @return array|null
+     * @param  array<string,string|int>  $queryParams
      *
      * @throws NominatimException
      */
@@ -64,7 +65,7 @@ final class NominatimClient
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'User-Agent' => $this->userAgent,
-                    'Accept'     => 'application/json',
+                    'Accept' => 'application/json',
                 ])
                 ->get("{$this->baseUrl}/search", $queryParams);
 
@@ -94,7 +95,7 @@ final class NominatimClient
         } catch (ConnectionException $e) {
             Log::error('[Nominatim] Connection error', [
                 'message' => $e->getMessage(),
-                'query'   => $queryParams,
+                'query' => $queryParams,
             ]);
             throw new NominatimException(
                 "Nominatim connection failed: {$e->getMessage()}",
