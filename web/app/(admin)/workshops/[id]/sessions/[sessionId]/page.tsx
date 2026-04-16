@@ -155,12 +155,12 @@ export default function SessionDetailPage() {
       const [wRes, sRes, rRes] = await Promise.all([
         apiGet<Workshop>(`/workshops/${workshopId}`),
         apiGet<Session[]>(`/workshops/${workshopId}/sessions`),
-        apiGet<RosterEntry[]>(`/sessions/${sessionId}/roster`).catch(() => [] as RosterEntry[]),
+        apiGet<{ data: RosterEntry[] }>(`/sessions/${sessionId}/roster`).catch(() => ({ data: [] as RosterEntry[] })),
       ]);
       setWorkshop(wRes);
       const found = (sRes ?? []).find((s) => String(s.id) === String(sessionId)) ?? null;
       setSession(found);
-      setRoster(rRes ?? []);
+      setRoster(rRes.data ?? []);
     } catch {
       toast.error('Failed to load session');
     } finally {

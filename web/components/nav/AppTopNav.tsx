@@ -1,18 +1,36 @@
 // components/nav/AppTopNav.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Megaphone, Bell } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useNavContext } from '@/lib/hooks/useNavContext'
 import { NavLink }      from './NavLink'
 import { UserMenu }     from './UserMenu'
 import { GuestActions } from './GuestActions'
 import { MobileMenu }   from './MobileMenu'
+import { apiGet } from '@/lib/api/client'
 
 export function AppTopNav() {
   const nav                         = useNavContext()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!nav.isAuthenticated) return
+    apiGet<{ data?: { read_at: string | null }[] } | { read_at: string | null }[]>(
+      '/me/notifications',
+    )
+      .then((res) => {
+        const list = Array.isArray(res)
+          ? res
+          : ((res as { data?: { read_at: string | null }[] }).data ?? [])
+        setUnreadCount(list.filter((n) => !n.read_at).length)
+      })
+      .catch(() => {})
+  }, [nav.isAuthenticated])
 
   return (
     <>
@@ -25,39 +43,41 @@ export function AppTopNav() {
         }}
       >
         <div
-          className="h-full flex items-center justify-between px-4 sm:px-6"
+          className="h-full flex items-center px-4 sm:px-6"
           style={{ maxWidth: 1200, margin: '0 auto' }}
         >
           {/* ── LEFT: Logo ─────────────────────────────────────── */}
-          <Link
-            href="/"
-            className="flex-shrink-0 flex items-center"
-            style={{ textDecoration: 'none' }}
-            aria-label="Wayfield home"
-          >
-            <span
-              style={{
-                fontFamily: 'Sora, sans-serif',
-                fontWeight: 700,
-                fontSize:   20,
-                color:      '#2E2E2E',
-                letterSpacing: '-0.01em',
-              }}
+          <div className="flex-1 flex items-center">
+            <Link
+              href="/"
+              className="flex-shrink-0 flex items-center"
+              style={{ textDecoration: 'none' }}
+              aria-label="Wayfield home"
             >
-              Way
-            </span>
-            <span
-              style={{
-                fontFamily: 'Sora, sans-serif',
-                fontWeight: 700,
-                fontSize:   20,
-                color:      '#0FA3B1',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              field
-            </span>
-          </Link>
+              <span
+                style={{
+                  fontFamily: 'Sora, sans-serif',
+                  fontWeight: 700,
+                  fontSize:   20,
+                  color:      '#2E2E2E',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Way
+              </span>
+              <span
+                style={{
+                  fontFamily: 'Sora, sans-serif',
+                  fontWeight: 700,
+                  fontSize:   20,
+                  color:      '#0FA3B1',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                field
+              </span>
+            </Link>
+          </div>
 
           {/* ── CENTER: Desktop nav links ───────────────────────── */}
           <nav
@@ -84,7 +104,7 @@ export function AppTopNav() {
           </nav>
 
           {/* ── RIGHT: Profile or guest actions ────────────────── */}
-          <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center justify-end gap-2">
 
             {/* Loading skeleton — prevents layout shift */}
             {nav.isLoading && (
@@ -99,9 +119,53 @@ export function AppTopNav() {
               />
             )}
 
-            {/* Authenticated user */}
+            {/* Authenticated user — icons + separator + user menu */}
             {!nav.isLoading && nav.isAuthenticated && nav.user && (
-              <UserMenu user={nav.user} />
+              <div className="flex items-center gap-1">
+                {/* Megaphone */}
+                <button
+                  type="button"
+                  className="p-2 rounded-lg transition-colors duration-100 cursor-pointer"
+                  style={{ color: '#9CA3AF', backgroundColor: 'transparent' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
+                  title="Announcements"
+                  aria-label="Announcements"
+                >
+                  <Megaphone size={18} />
+                </button>
+
+                {/* Bell with unread badge */}
+                <button
+                  type="button"
+                  className="relative p-2 rounded-lg transition-colors duration-100 cursor-pointer"
+                  style={{ color: '#9CA3AF', backgroundColor: 'transparent' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
+                  title="Notifications"
+                  aria-label="Notifications"
+                  onClick={() => router.push('/notifications')}
+                >
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span
+                      className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full text-white font-semibold leading-none"
+                      style={{ fontSize: 10, backgroundColor: '#E94F37' }}
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Separator */}
+                <div
+                  className="mx-1 self-stretch"
+                  style={{ width: 1, backgroundColor: '#E5E7EB', margin: '8px 4px' }}
+                  aria-hidden="true"
+                />
+
+                <UserMenu user={nav.user} />
+              </div>
             )}
 
             {/* Guest */}

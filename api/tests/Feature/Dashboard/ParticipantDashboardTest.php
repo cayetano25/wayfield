@@ -97,7 +97,7 @@ test('next_session is the earliest upcoming selected session', function () {
         ->assertOk();
 
     // Earliest future session that is not checked-in should be next_session
-    expect($response->json('active_workshop.next_session.session_id'))->toBe($session1->id);
+    expect($response->json('active_workshop.next_session.id'))->toBe($session1->id);
 });
 
 test('next_session is null when all sessions are completed or none selected', function () {
@@ -220,4 +220,97 @@ test('sessions in active_workshop include attendance_status', function () {
 
 test('unauthenticated request returns 401', function () {
     $this->getJson('/api/v1/me/dashboard')->assertUnauthorized();
+});
+
+test('active_workshop includes workshop_type total_selected and total_selectable', function () {
+    [$user, $workshop, $registration] = makeParticipantScenario('-1 day', '+3 days');
+
+    $workshop->update(['workshop_type' => 'session_based']);
+
+    // 3 published sessions, user selects 2
+    $s1 = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true, 'start_at' => now()->addHours(2), 'end_at' => now()->addHours(4)]);
+    $s2 = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true, 'start_at' => now()->addHours(6), 'end_at' => now()->addHours(8)]);
+    Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true, 'start_at' => now()->addHours(10), 'end_at' => now()->addHours(12)]);
+
+    SessionSelection::factory()->create(['registration_id' => $registration->id, 'session_id' => $s1->id, 'selection_status' => 'selected']);
+    SessionSelection::factory()->create(['registration_id' => $registration->id, 'session_id' => $s2->id, 'selection_status' => 'selected']);
+
+    $response = $this->actingAs($user, 'sanctum')
+        ->getJson('/api/v1/me/dashboard')
+        ->assertOk();
+
+    expect($response->json('active_workshop.workshop_type'))->toBe('session_based');
+    expect($response->json('active_workshop.total_selected'))->toBe(2);
+    expect($response->json('active_workshop.total_selectable'))->toBe(3);
+});
+
+test('session items include is_next and delivery_type', function () {
+    [$user, $workshop, $registration] = makeParticipantScenario('-1 day', '+3 days');
+
+    $s1 = Session::factory()->create([
+        'workshop_id' => $workshop->id,
+        'start_at' => now()->addHours(2),
+        'end_at' => now()->addHours(4),
+        'is_published' => true,
+        'delivery_type' => 'in_person',
+    ]);
+    $s2 = Session::factory()->create([
+        'workshop_id' => $workshop->id,
+        'start_at' => now()->addHours(6),
+        'end_at' => now()->addHours(8),
+        'is_published' => true,
+        'delivery_type' => 'virtual',
+    ]);
+
+    SessionSelection::factory()->create(['registration_id' => $registration->id, 'session_id' => $s1->id, 'selection_status' => 'selected']);
+    SessionSelection::factory()->create(['registration_id' => $registration->id, 'session_id' => $s2->id, 'selection_status' => 'selected']);
+
+    $response = $this->actingAs($user, 'sanctum')
+        ->getJson('/api/v1/me/dashboard')
+        ->assertOk();
+
+    $sessions = $response->json('active_workshop.sessions');
+    expect($sessions)->toHaveCount(2);
+
+    // s1 is the next session (earliest future, not checked in)
+    expect($sessions[0]['is_next'])->toBeTrue();
+    expect($sessions[0]['delivery_type'])->toBe('in_person');
+    expect($sessions[1]['is_next'])->toBeFalse();
+    expect($sessions[1]['delivery_type'])->toBe('virtual');
+});
+
+test('logistics uses hotel_address_display field name', function () {
+    [$user, $workshop, $registration] = makeParticipantScenario('-1 day', '+3 days');
+
+    $workshop->logistics()->create([
+        'hotel_name' => 'Grand Hotel',
+        'hotel_address' => '123 Main St, Springfield',
+    ]);
+
+    $response = $this->actingAs($user, 'sanctum')
+        ->getJson('/api/v1/me/dashboard')
+        ->assertOk();
+
+    $logistics = $response->json('active_workshop.logistics');
+    expect($logistics['hotel_name'])->toBe('Grand Hotel');
+    expect($logistics['hotel_address_display'])->toBe('123 Main St, Springfield');
+    expect(array_key_exists('hotel_address', $logistics))->toBeFalse();
+});
+
+test('other_workshops use sessions_count field name', function () {
+    [$user, $activeWorkshop, $activeReg] = makeParticipantScenario('+1 day', '+3 days');
+    [$user2, $pastWorkshop, $pastReg] = makeParticipantScenario('-10 days', '-7 days');
+
+    $activeReg->update(['user_id' => $user->id]);
+    $pastReg->update(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user, 'sanctum')
+        ->getJson('/api/v1/me/dashboard')
+        ->assertOk();
+
+    $other = collect($response->json('other_workshops'))->firstWhere('workshop_id', $pastWorkshop->id);
+    expect($other)->toHaveKey('sessions_count');
+    expect($other)->not->toHaveKey('session_count');
+    expect($other)->toHaveKey('workshop_type');
+    expect($other)->toHaveKey('checked_in_count');
 });

@@ -194,7 +194,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
           >
             {workshops.map((workshop) => (
-              <WorkshopCard key={workshop.public_slug} workshop={workshop} />
+              <WorkshopCard key={workshop.public_slug ?? workshop.id} workshop={workshop} />
             ))}
           </div>
         )}

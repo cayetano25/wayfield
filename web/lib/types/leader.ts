@@ -8,9 +8,9 @@ export interface LeaderMessagingWindow {
 
 export interface LeaderDashboardSession {
   session_id: number;
-  workshop_id: number;
+  workshop_id?: number;
   workshop_title: string;
-  title: string;
+  session_title: string;
   start_at: string;
   end_at: string;
   location_display: string | null;
@@ -19,6 +19,24 @@ export interface LeaderDashboardSession {
   capacity: number | null;
   is_live: boolean;
   messaging_window: LeaderMessagingWindow;
+}
+
+/* ─── Roster participant ─────────────────────────────────────────────── */
+
+export interface RosterParticipant {
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string | null;
+  };
+  registration_status: string;
+  attendance: {
+    status: 'not_checked_in' | 'checked_in' | 'no_show';
+    check_in_method: string | null;
+    checked_in_at: string | null;
+  };
 }
 
 export interface LeaderPendingInvitation {

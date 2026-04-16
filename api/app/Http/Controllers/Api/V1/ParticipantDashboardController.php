@@ -111,10 +111,23 @@ class ParticipantDashboardController extends Controller
             return ($record?->status ?? 'not_checked_in') !== 'checked_in';
         });
 
+        // Count all published sessions available for selection (session_based workshops).
+        $totalSelectable = $workshop->workshop_type === 'session_based'
+            ? Session::where('workshop_id', $workshop->id)->where('is_published', true)->count()
+            : 0;
+
+        $totalSelected = $sessionIds->count();
+
+        $sessionItems = $sessions->map(fn ($s) => $this->buildSessionItem($s, $attendanceMap, $nextSession?->id))->values();
+
         return [
             'workshop_id' => $workshop->id,
             'title' => $workshop->title,
             'description' => $workshop->description,
+            'header_image_url' => $workshop->header_image_url,
+            'workshop_type' => $workshop->workshop_type,
+            'total_selectable' => $totalSelectable,
+            'total_selected' => $totalSelected,
             'start_date' => $workshop->start_date?->toDateString(),
             'end_date' => $workshop->end_date?->toDateString(),
             'timezone' => $workshop->timezone,
@@ -125,43 +138,45 @@ class ParticipantDashboardController extends Controller
                 'formatted' => $this->formatLocation($location),
             ],
             'registration_status' => $reg->registration_status,
-            'next_session' => $nextSession ? $this->buildNextSession($nextSession, $attendanceMap) : null,
-            'sessions' => $sessions->map(fn ($s) => $this->buildSessionItem($s, $attendanceMap))->values(),
+            'next_session' => $nextSession ? $this->buildNextSession($nextSession) : null,
+            'sessions' => $sessionItems,
             'logistics' => $logistics ? [
                 'hotel_name' => $logistics->hotel_name,
-                'hotel_address' => $logistics->hotel_address,
-                'hotel_phone' => $logistics->hotel_phone,
-                'meetup_instructions' => $logistics->meetup_instructions,
-                'parking_details' => $logistics->parking_details,
+                'hotel_address_display' => $logistics->hotel_address,
+                'maps_url' => null,
+                'workshop_image_url' => $workshop->header_image_url,
             ] : null,
         ];
     }
 
-    private function buildNextSession(Session $session, Collection $attendanceMap): array
+    private function buildNextSession(Session $session): array
     {
         $now = Carbon::now();
 
         return [
-            'session_id' => $session->id,
+            'id' => $session->id,
             'title' => $session->title,
             'start_at' => $session->start_at->toIso8601String(),
             'end_at' => $session->end_at->toIso8601String(),
             'location_display' => $this->simpleLocationDisplay($session),
             'check_in_open' => $now->gte($session->start_at) && $now->lte($session->end_at),
+            'delivery_type' => $session->delivery_type,
         ];
     }
 
-    private function buildSessionItem(Session $session, Collection $attendanceMap): array
+    private function buildSessionItem(Session $session, Collection $attendanceMap, ?int $nextSessionId): array
     {
         $record = $attendanceMap->get($session->id);
 
         return [
-            'session_id' => $session->id,
+            'id' => $session->id,
             'title' => $session->title,
             'start_at' => $session->start_at->toIso8601String(),
             'end_at' => $session->end_at->toIso8601String(),
             'location_display' => $this->simpleLocationDisplay($session),
             'attendance_status' => $record?->status ?? 'not_checked_in',
+            'is_next' => $session->id === $nextSessionId,
+            'delivery_type' => $session->delivery_type,
         ];
     }
 
@@ -172,23 +187,34 @@ class ParticipantDashboardController extends Controller
         $start = $workshop->start_date?->toDateString() ?? $today;
         $end = $workshop->end_date?->toDateString() ?? $today;
 
-        $status = match ($this->workshopTier($start, $end, $today)) {
+        $tier = $this->workshopTier($start, $end, $today);
+        $status = match ($tier) {
             0 => 'in_progress',
             1 => 'upcoming',
             default => 'completed',
         };
 
-        $sessionCount = SessionSelection::where('registration_id', $reg->id)
+        $selectedSessionIds = SessionSelection::where('registration_id', $reg->id)
             ->where('selection_status', 'selected')
-            ->count();
+            ->pluck('session_id');
+
+        $checkedInCount = $selectedSessionIds->isNotEmpty()
+            ? AttendanceRecord::where('user_id', $userId)
+                ->whereIn('session_id', $selectedSessionIds)
+                ->where('status', 'checked_in')
+                ->count()
+            : 0;
 
         return [
             'workshop_id' => $workshop->id,
             'title' => $workshop->title,
+            'workshop_type' => $workshop->workshop_type,
             'start_date' => $start,
             'end_date' => $end,
             'status' => $status,
-            'session_count' => $sessionCount,
+            'sessions_count' => $selectedSessionIds->count(),
+            'checked_in_count' => $checkedInCount,
+            'total_sessions' => $selectedSessionIds->count(),
         ];
     }
 

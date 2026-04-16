@@ -60,19 +60,20 @@ export interface PublicWorkshop {
 }
 
 export interface DiscoverWorkshop {
+  id: number;
   title: string;
   description: string;
   workshop_type: 'session_based' | 'event_based';
   start_date: string;
   end_date: string;
-  public_slug: string;
+  public_slug: string | null;
   hero_image_url?: string;
-  default_location?: {
+  location?: {
     city?: string;
     state_or_region?: string;
   };
-  leaders_count: number;
-  sessions_count: number;
+  leader_count: number;
+  session_count: number;
   // Extended fields for discover page UI
   first_leader?: {
     first_name: string;

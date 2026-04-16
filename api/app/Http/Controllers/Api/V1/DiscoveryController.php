@@ -42,6 +42,7 @@ class DiscoveryController extends Controller
         $query = Workshop::query()
             ->where('status', 'published')
             ->where('public_page_enabled', true)
+            ->whereNotNull('public_slug')
             ->where('end_date', '>=', now()->toDateString())
             ->with(['defaultLocation'])
             ->withCount([

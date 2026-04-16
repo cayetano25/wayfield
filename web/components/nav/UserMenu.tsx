@@ -4,14 +4,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronDown,
-  ChevronUp,
-  UserCircle,
+  User,
   Bell,
   LogOut,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { clearNavCache } from '@/lib/hooks/useNavContext'
+import { apiPost } from '@/lib/api/client'
+import { clearToken, clearStoredUser } from '@/lib/auth/session'
 import type { NavUser } from '@/lib/types/nav'
 
 interface UserMenuProps {
@@ -64,14 +64,12 @@ export function UserMenu({ user }: UserMenuProps) {
     setIsOpen(false)
     setIsLoggingOut(true)
     try {
-      await fetch('/api/v1/auth/logout', {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { Accept: 'application/json' },
-      })
+      await apiPost('/auth/logout')
     } catch {
       // Always redirect even if the API call fails
     } finally {
+      clearToken()
+      clearStoredUser()
       clearNavCache()
       router.push('/login')
     }
@@ -84,7 +82,7 @@ export function UserMenu({ user }: UserMenuProps) {
   }
 
   // ── Display name in the trigger ───────────────────────────────────────
-  const displayName = buildDisplayName(user.first_name, user.last_name)
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Account'
 
   return (
     <div className="relative" data-testid="user-menu-wrapper">
@@ -106,13 +104,6 @@ export function UserMenu({ user }: UserMenuProps) {
         data-testid="user-menu-trigger"
         disabled={isLoggingOut}
       >
-        <UserAvatar
-          firstName={user.first_name}
-          lastName={user.last_name}
-          profileImageUrl={user.profile_image_url}
-          size={32}
-        />
-
         <span
           className="hidden sm:block max-w-[120px] truncate"
           style={{
@@ -125,12 +116,12 @@ export function UserMenu({ user }: UserMenuProps) {
           {displayName}
         </span>
 
-        <span className="hidden sm:block text-[#9CA3AF]" aria-hidden="true">
-          {isOpen
-            ? <ChevronUp  size={14} />
-            : <ChevronDown size={14} />
-          }
-        </span>
+        <UserAvatar
+          firstName={user.first_name}
+          lastName={user.last_name}
+          profileImageUrl={user.profile_image_url}
+          size={32}
+        />
       </button>
 
       {/* ── DROPDOWN ─────────────────────────────────────────────── */}
@@ -206,7 +197,7 @@ export function UserMenu({ user }: UserMenuProps) {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
             }}
           >
-            <UserCircle size={16} color="#6B7280" aria-hidden="true" />
+            <User size={16} color="#6B7280" aria-hidden="true" />
             <span
               style={{
                 fontFamily: 'Plus Jakarta Sans, sans-serif',
@@ -280,12 +271,3 @@ export function UserMenu({ user }: UserMenuProps) {
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function buildDisplayName(firstName: string, lastName: string): string {
-  const f = (firstName ?? '').trim()
-  const l = (lastName  ?? '').trim()
-  if (!f && !l) return 'Account'
-  if (!l)       return f
-  return `${f} ${l[0].toUpperCase()}.`
-}

@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { NavContextData, NAV_CONTEXT_DEFAULT } from '@/lib/types/nav'
+import { getToken } from '@/lib/auth/session'
 
 // ── Module-level cache ────────────────────────────────────────────────────
 // Stored outside React so it survives component unmounts and re-mounts.
@@ -57,10 +58,13 @@ export function useNavContext(): NavContextData {
 
 async function fetchNavContext(): Promise<NavContextData> {
   try {
-    const res = await fetch('/api/v1/me', {
-      headers:     { Accept: 'application/json' },
-      credentials: 'include',
-    })
+    const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
+    const token    = getToken()
+
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const res = await fetch(`${BASE_URL}/me`, { headers })
 
     if (res.status === 401 || res.status === 403) {
       return buildUnauthenticated()

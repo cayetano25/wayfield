@@ -201,7 +201,7 @@ function buildDayCounts(
 export default function SelectSessionsPage() {
   const params = useParams();
   const router = useRouter();
-  const workshopId = Number(params.workshopId as string);
+  const workshopId = Number(params.id as string);
 
   const {
     data,

@@ -13,7 +13,7 @@ class UpdateSessionAction
             'track_id', 'title', 'description', 'start_at', 'end_at',
             'capacity', 'delivery_type', 'virtual_participation_allowed',
             'meeting_platform', 'meeting_url', 'meeting_instructions',
-            'meeting_id', 'meeting_passcode', 'notes',
+            'meeting_id', 'meeting_passcode', 'notes', 'is_published',
         ];
 
         $session->fill(array_intersect_key($data, array_flip($allowed)));

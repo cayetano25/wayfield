@@ -100,8 +100,8 @@ interface WorkshopCardProps {
 
 export function WorkshopCard({ workshop }: WorkshopCardProps) {
   const location = [
-    workshop.default_location?.city,
-    workshop.default_location?.state_or_region,
+    workshop.location?.city,
+    workshop.location?.state_or_region,
   ].filter(Boolean).join(', ');
 
   const leader = workshop.first_leader;
@@ -178,13 +178,15 @@ export function WorkshopCard({ workshop }: WorkshopCardProps) {
         </div>
 
         {/* View link */}
-        <Link
-          href={`/w/${workshop.public_slug}`}
-          className="font-sans font-semibold mt-3 hover:underline"
-          style={{ fontSize: 13, color: '#0FA3B1' }}
-        >
-          View Workshop →
-        </Link>
+        {workshop.public_slug && (
+          <Link
+            href={`/w/${workshop.public_slug}`}
+            className="font-sans font-semibold mt-3 hover:underline"
+            style={{ fontSize: 13, color: '#0FA3B1' }}
+          >
+            View Workshop →
+          </Link>
+        )}
       </div>
     </div>
   );
