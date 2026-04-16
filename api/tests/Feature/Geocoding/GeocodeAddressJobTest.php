@@ -39,8 +39,8 @@ test('job is NOT dispatched when a non-geocodeable address is created', function
     // Only a country code — isGeocodeable() returns false
     Address::factory()->create([
         'address_line_1' => null,
-        'locality'       => null,
-        'country_code'   => 'US',
+        'locality' => null,
+        'country_code' => 'US',
     ]);
 
     Queue::assertNotPushed(GeocodeAddressJob::class);
@@ -120,8 +120,8 @@ test('job skips and makes no API call when address is not geocodeable', function
 
     $address = Address::factory()->create([
         'address_line_1' => null,
-        'locality'       => null,
-        'country_code'   => 'US',
+        'locality' => null,
+        'country_code' => 'US',
     ]);
 
     Http::fake(['https://nominatim.openstreetmap.org/*' => Http::response([], 200)]);
@@ -166,12 +166,12 @@ test('job calls GeocodingService and stores coordinates on success', function ()
 
     Http::fake([
         'https://nominatim.openstreetmap.org/*' => Http::response([[
-            'lat'          => '45.5231',
-            'lon'          => '-122.6765',
+            'lat' => '45.5231',
+            'lon' => '-122.6765',
             'display_name' => '123 Main Street, Portland, Oregon, United States',
-            'importance'   => 0.85,
-            'type'         => 'house',
-            'place_id'     => '12345',
+            'importance' => 0.85,
+            'type' => 'house',
+            'place_id' => '12345',
         ]], 200),
     ]);
 

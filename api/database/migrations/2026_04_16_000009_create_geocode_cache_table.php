@@ -72,7 +72,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Performance indexes
-            $table->index('status',     'idx_geocode_cache_status');
+            $table->index('status', 'idx_geocode_cache_status');
             $table->index('expires_at', 'idx_geocode_cache_expires');
             $table->index(['latitude', 'longitude'], 'idx_geocode_cache_lat_lng');
         });

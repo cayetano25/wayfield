@@ -19,12 +19,12 @@ uses(RefreshDatabase::class);
 function nominatimSuccess(): array
 {
     return [[
-        'lat'          => '45.5231',
-        'lon'          => '-122.6765',
+        'lat' => '45.5231',
+        'lon' => '-122.6765',
         'display_name' => '123 Main Street, Portland, Oregon, United States',
-        'importance'   => 0.85,
-        'type'         => 'house',
-        'place_id'     => '12345',
+        'importance' => 0.85,
+        'type' => 'house',
+        'place_id' => '12345',
     ]];
 }
 
@@ -34,7 +34,7 @@ function nominatimSuccess(): array
  * Queue::fake() prevents the AddressObserver's dispatched job from running
  * synchronously (QUEUE_CONNECTION=sync in tests), keeping Http::assertSentCount accurate.
  */
-function setupGeocodingTest(array $nominatimResponse = null): void
+function setupGeocodingTest(?array $nominatimResponse = null): void
 {
     Queue::fake();
     Http::fake([
@@ -106,12 +106,12 @@ test('geocode uses cache for a different address with identical content (cross-t
     setupGeocodingTest();
 
     $service = app(GeocodingService::class);
-    $fields  = [
-        'address_line_1'      => '123 Main St',
-        'locality'            => 'Portland',
+    $fields = [
+        'address_line_1' => '123 Main St',
+        'locality' => 'Portland',
         'administrative_area' => 'OR',
-        'postal_code'         => '97201',
-        'country_code'        => 'US',
+        'postal_code' => '97201',
+        'country_code' => 'US',
     ];
 
     $address1 = Address::factory()->create($fields);
@@ -182,12 +182,12 @@ test('geocode returns false and makes no API call for non-geocodeable address', 
     Http::fake(['https://nominatim.openstreetmap.org/*' => Http::response(nominatimSuccess(), 200)]);
 
     // Only a country code — not enough for Nominatim
-    $address               = new Address();
+    $address = new Address;
     $address->country_code = 'US';
     $address->save();
 
     $service = app(GeocodingService::class);
-    $result  = $service->geocode($address);
+    $result = $service->geocode($address);
 
     expect($result)->toBeFalse();
     Http::assertNothingSent();
@@ -199,12 +199,12 @@ test('geocode succeeds with low confidence result and still stores coordinates',
     Queue::fake();
     Http::fake([
         'https://nominatim.openstreetmap.org/*' => Http::response([[
-            'lat'          => '45.5231',
-            'lon'          => '-122.6765',
+            'lat' => '45.5231',
+            'lon' => '-122.6765',
             'display_name' => 'Portland, Oregon, United States',
-            'importance'   => 0.20, // low confidence
-            'type'         => 'city',
-            'place_id'     => '99999',
+            'importance' => 0.20, // low confidence
+            'type' => 'city',
+            'place_id' => '99999',
         ]], 200),
     ]);
 

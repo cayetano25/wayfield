@@ -15,17 +15,17 @@ class AddressFactory extends Factory
     public function definition(): array
     {
         return [
-            'country_code'        => 'US',
-            'address_line_1'      => $this->faker->streetAddress(),
-            'address_line_2'      => null,
-            'locality'            => $this->faker->city(),
+            'country_code' => 'US',
+            'address_line_1' => $this->faker->streetAddress(),
+            'address_line_2' => null,
+            'locality' => $this->faker->city(),
             'administrative_area' => $this->faker->stateAbbr(),
-            'postal_code'         => $this->faker->postcode(),
-            'formatted_address'   => null,
-            'validation_status'   => 'unverified',
-            'geocode_attempts'    => 0,
-            'latitude'            => null,
-            'longitude'           => null,
+            'postal_code' => $this->faker->postcode(),
+            'formatted_address' => null,
+            'validation_status' => 'unverified',
+            'geocode_attempts' => 0,
+            'latitude' => null,
+            'longitude' => null,
         ];
     }
 
@@ -36,15 +36,15 @@ class AddressFactory extends Factory
     public function geocodeable(): static
     {
         return $this->state([
-            'address_line_1'      => '123 Main St',
-            'locality'            => 'Portland',
+            'address_line_1' => '123 Main St',
+            'locality' => 'Portland',
             'administrative_area' => 'OR',
-            'postal_code'         => '97201',
-            'country_code'        => 'US',
-            'latitude'            => null,
-            'longitude'           => null,
-            'geocode_attempts'    => 0,
-            'validation_status'   => 'unverified',
+            'postal_code' => '97201',
+            'country_code' => 'US',
+            'latitude' => null,
+            'longitude' => null,
+            'geocode_attempts' => 0,
+            'validation_status' => 'unverified',
         ]);
     }
 
@@ -55,16 +55,16 @@ class AddressFactory extends Factory
     public function withCoordinates(): static
     {
         return $this->state([
-            'address_line_1'      => '123 Main St',
-            'locality'            => 'Portland',
+            'address_line_1' => '123 Main St',
+            'locality' => 'Portland',
             'administrative_area' => 'OR',
-            'postal_code'         => '97201',
-            'country_code'        => 'US',
-            'latitude'            => 45.5231,
-            'longitude'           => -122.6765,
-            'validation_status'   => 'verified',
-            'geocode_attempts'    => 1,
-            'last_geocoded_at'    => now(),
+            'postal_code' => '97201',
+            'country_code' => 'US',
+            'latitude' => 45.5231,
+            'longitude' => -122.6765,
+            'validation_status' => 'verified',
+            'geocode_attempts' => 1,
+            'last_geocoded_at' => now(),
         ]);
     }
 }
