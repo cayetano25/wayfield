@@ -421,3 +421,21 @@ Route::prefix('v1')->group(function () {
             Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
         });
 });
+
+// ─── Test-only routes (local / testing environments only) ────────────────────
+if (app()->environment(['testing', 'local'])) {
+    Route::post('/api/testing/reset', function () {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'E2ETestSeeder']);
+        return response()->json(['reset' => true]);
+    });
+
+    Route::get('/api/testing/invitation-token/{invitationId}', function ($id) {
+        $inv = \App\Models\LeaderInvitation::find($id);
+        if (!$inv) {
+            abort(404);
+        }
+        $rawToken = \Illuminate\Support\Str::random(64);
+        $inv->update(['invitation_token_hash' => hash('sha256', $rawToken)]);
+        return response()->json(['raw_token' => $rawToken]);
+    });
+}
