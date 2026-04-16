@@ -1,3 +1,6 @@
+// TODO: Future — replace inline user dropdown with shared <UserMenu />
+// component from components/nav/UserMenu.tsx. The visual output is
+// identical so no change is needed now.
 import { UserProvider } from '@/contexts/UserContext';
 import { PageProvider } from '@/contexts/PageContext';
 import { AdminShellClient } from '@/components/shared/AdminShellClient';

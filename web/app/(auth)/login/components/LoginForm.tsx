@@ -8,6 +8,7 @@ import { ApiError, apiPost } from '@/lib/api/client'
 import { setStoredUser, setToken, type AdminUser } from '@/lib/auth/session'
 import { getPostLoginRedirect, type UserContexts } from '@/lib/utils/routing'
 import { SocialLoginButtons } from './SocialLoginButtons'
+import { clearNavCache } from '@/lib/hooks/useNavContext'
 
 interface Membership {
   organization_id: number
@@ -100,6 +101,7 @@ export function LoginForm() {
         } satisfies UserContexts,
       }
       setStoredUser(userWithContexts)
+      clearNavCache()
       router.push(getPostLoginRedirect(userWithContexts))
     } catch (err) {
       if (err instanceof ApiError) {

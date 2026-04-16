@@ -1,12 +1,18 @@
-import { UserProvider } from '@/contexts/UserContext';
-import { ToastProvider } from '@/components/ui/Toast';
-import { ParticipantShell } from '@/components/shared/ParticipantShell';
+// app/(participant)/layout.tsx
+import { AppTopNav } from '@/components/nav/AppTopNav'
 
-export default function ParticipantLayout({ children }: { children: React.ReactNode }) {
+export default function ParticipantLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <UserProvider>
-      <ToastProvider />
-      <ParticipantShell>{children}</ParticipantShell>
-    </UserProvider>
-  );
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F5' }}>
+      <AppTopNav />
+      {/* pt-14 = 56px — clears the fixed nav bar */}
+      <main className="pt-14">
+        {children}
+      </main>
+    </div>
+  )
 }
