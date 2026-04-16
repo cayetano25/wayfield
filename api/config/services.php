@@ -63,6 +63,16 @@ return [
         // Nominatim policy: max 1 request/second.
         // This delay is added between queue job retries and should be
         // enforced at the queue dispatcher level.
+        //
+        // IMPORTANT: The geocoding queue worker must run with a single process.
+        // For production (Supervisor or AWS), configure:
+        //
+        //   [program:wayfield-geocoding]
+        //   command=php artisan queue:work --queue=geocoding --sleep=3 --tries=3 --max-jobs=50
+        //   numprocs=1   ← CRITICAL: only one worker to respect Nominatim rate limit
+        //
+        // For local development:
+        //   php artisan queue:work --queue=geocoding,default
         'queue_delay_seconds'  => (int) env('GEOCODE_QUEUE_DELAY_SECONDS', 2),
     ],
 

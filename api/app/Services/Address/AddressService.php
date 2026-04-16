@@ -136,22 +136,40 @@ class AddressService
     public function toApiResponse(Address $address): array
     {
         $response = [
-            'country_code' => $address->country_code,
-            'country_name' => $address->country_name,
+            'country_code'      => $address->country_code,
+            'country_name'      => $address->country_name,
             'formatted_address' => $address->formatted_address,
             'validation_status' => $address->validation_status,
+            'has_coordinates'   => $address->hasCoordinates(),
         ];
 
         $optionalFields = [
             'address_line_1', 'address_line_2', 'address_line_3',
             'locality', 'administrative_area', 'dependent_locality',
-            'postal_code', 'sorting_code', 'latitude', 'longitude',
+            'postal_code', 'sorting_code',
         ];
 
         foreach ($optionalFields as $field) {
             if ($address->$field !== null) {
                 $response[$field] = $address->$field;
             }
+        }
+
+        // Coordinates: only expose when present
+        if ($address->hasCoordinates()) {
+            $response['latitude']  = $address->latitude;
+            $response['longitude'] = $address->longitude;
+        }
+
+        // Maps URLs: let the mobile app open native routing directly
+        $mapsUrl      = $address->mapsUrl();
+        $appleMapsUrl = $address->appleMapsUrl();
+
+        if ($mapsUrl !== null) {
+            $response['maps_url'] = $mapsUrl;
+        }
+        if ($appleMapsUrl !== null) {
+            $response['apple_maps_url'] = $appleMapsUrl;
         }
 
         return $response;

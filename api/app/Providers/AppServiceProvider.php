@@ -50,6 +50,9 @@ class AppServiceProvider extends AuthServiceProvider
     {
         $this->registerPolicies();
 
+        // Geocoding: dispatch GeocodeAddressJob on address create/update
+        \App\Models\Address::observe(\App\Observers\AddressObserver::class);
+
         // Phase 5: Attendance, Roster, and Notification gate defines.
         // These are defined as named gates (not tied to a single model-policy mapping)
         // because multiple policies share the Session model context.
