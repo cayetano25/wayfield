@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { NavContextData, NAV_CONTEXT_DEFAULT } from '@/lib/types/nav'
 import { getToken } from '@/lib/auth/session'
 
-// ── Module-level cache ────────────────────────────────────────────────────
+// -- Module-level cache ----------------------------------------------------
 // Stored outside React so it survives component unmounts and re-mounts.
 // Route changes do NOT trigger re-fetches — only login and logout do.
 // clearNavCache() resets both so the next mount fetches fresh data.
@@ -54,7 +54,7 @@ export function useNavContext(): NavContextData {
   return context
 }
 
-// ── Internal fetch ────────────────────────────────────────────────────────
+// -- Internal fetch --------------------------------------------------------
 
 async function fetchNavContext(): Promise<NavContextData> {
   try {

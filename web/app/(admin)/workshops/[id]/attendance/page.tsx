@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 
-/* ─── Types ──────────────────────────────────────────────────────────── */
+/* --- Types ------------------------------------------------------------ */
 
 interface Workshop {
   id: number;
@@ -53,18 +53,18 @@ interface SessionSummary {
   pending: number;
 }
 
-/* ─── Constants ──────────────────────────────────────────────────────── */
+/* --- Constants -------------------------------------------------------- */
 
 const PHONE_VISIBLE_ROLES = ['owner', 'admin', 'staff'] as const;
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers ---------------------------------------------------------- */
 
 function pct(num: number, denom: number): string {
   if (denom === 0) return '0%';
   return `${Math.round((num / denom) * 100)}%`;
 }
 
-/* ─── Status badge ───────────────────────────────────────────────────── */
+/* --- Status badge ----------------------------------------------------- */
 
 const statusLabel: Record<AttendanceStatus, string> = {
   not_checked_in: 'Pending',
@@ -86,7 +86,7 @@ function StatusBadge({ status }: { status: AttendanceStatus }) {
   );
 }
 
-/* ─── Method badge ───────────────────────────────────────────────────── */
+/* --- Method badge ----------------------------------------------------- */
 
 function MethodBadge({ method }: { method: CheckInMethod | null }) {
   if (!method) return null;
@@ -97,7 +97,7 @@ function MethodBadge({ method }: { method: CheckInMethod | null }) {
   );
 }
 
-/* ─── Stat card ──────────────────────────────────────────────────────── */
+/* --- Stat card -------------------------------------------------------- */
 
 function StatCard({
   label,
@@ -121,7 +121,7 @@ function StatCard({
   );
 }
 
-/* ─── Bar chart ──────────────────────────────────────────────────────── */
+/* --- Bar chart -------------------------------------------------------- */
 
 function AttendanceChart({ data }: { data: SessionSummary[] }) {
   if (data.length === 0) return null;
@@ -179,7 +179,7 @@ function AttendanceChart({ data }: { data: SessionSummary[] }) {
   );
 }
 
-/* ─── Roster table ───────────────────────────────────────────────────── */
+/* --- Roster table ----------------------------------------------------- */
 
 function RosterTable({
   roster,
@@ -307,7 +307,7 @@ function RosterTable({
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────────── */
+/* --- Main page -------------------------------------------------------- */
 
 export default function WorkshopAttendancePage() {
   const { id } = useParams<{ id: string }>();

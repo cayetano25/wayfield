@@ -27,7 +27,7 @@ import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ----------------------------------------------------------- */
 
 interface WorkshopLogistics {
   hotel_name: string | null;
@@ -104,7 +104,7 @@ const EMPTY_FORM: SessionForm = {
   is_published: false,
 };
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers ---------------------------------------------------------- */
 
 function utcToLocalInput(utcStr: string, tz: string): string {
   try {
@@ -130,7 +130,7 @@ function formatSessionTime(utcStr: string, tz: string): string {
   }
 }
 
-/* ─── Delivery type card selector ────────────────────────────────────── */
+/* --- Delivery type card selector -------------------------------------- */
 
 const DELIVERY_OPTIONS = [
   { value: 'in_person', label: 'In Person', icon: MapPin },
@@ -168,7 +168,7 @@ function DeliveryTypeSelector({
   );
 }
 
-/* ─── Slide-over panel ───────────────────────────────────────────────── */
+/* --- Slide-over panel ------------------------------------------------- */
 
 function SessionSlideOver({
   open,
@@ -554,7 +554,7 @@ function SessionSlideOver({
   );
 }
 
-/* ─── Track panel item ───────────────────────────────────────────────── */
+/* --- Track panel item ------------------------------------------------- */
 
 function TrackItem({
   track,
@@ -645,7 +645,7 @@ function TrackItem({
   );
 }
 
-/* ─── Session row ────────────────────────────────────────────────────── */
+/* --- Session row ------------------------------------------------------ */
 
 function SessionRow({
   session,
@@ -723,7 +723,7 @@ function SessionRow({
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────────── */
+/* --- Main page -------------------------------------------------------- */
 
 export default function WorkshopSessionsPage() {
   const { id } = useParams<{ id: string }>();
@@ -849,7 +849,7 @@ export default function WorkshopSessionsPage() {
     ? sessions
     : sessions.filter((s) => s.track_id === selectedTrack);
 
-  /* ── Render ── */
+  /* -- Render -- */
 
   if (loading) {
     return (
@@ -874,7 +874,7 @@ export default function WorkshopSessionsPage() {
       <div className="max-w-[1280px] mx-auto">
         <Card className="overflow-hidden">
           <div className="flex min-h-[480px]">
-            {/* ── Track panel (left 200px) ── */}
+            {/* -- Track panel (left 200px) -- */}
             <div className="w-[200px] shrink-0 border-r border-border-gray flex flex-col">
               {/* Track panel header */}
               <div className="px-3 py-3 border-b border-border-gray">
@@ -944,7 +944,7 @@ export default function WorkshopSessionsPage() {
               </nav>
             </div>
 
-            {/* ── Sessions list (right) ── */}
+            {/* -- Sessions list (right) -- */}
             <div className="flex-1 min-w-0 flex flex-col">
               {/* Sessions header */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-gray">

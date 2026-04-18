@@ -281,6 +281,7 @@ Route::prefix('v1')->group(function () {
         // Leader manual check-in and no-show
         Route::post('sessions/{session}/attendance/{user}/leader-check-in', [AttendanceController::class, 'leaderCheckIn']);
         Route::post('sessions/{session}/attendance/{user}/no-show', [AttendanceController::class, 'markNoShow']);
+        Route::patch('sessions/{session}/attendance/{user}/revert', [AttendanceController::class, 'revertAttendance']);
 
         // ─── Roster (Phase 5) ─────────────────────────────────────────────────
         Route::get('sessions/{session}/roster', [RosterController::class, 'sessionRoster']);
@@ -424,12 +425,12 @@ Route::prefix('v1')->group(function () {
 
 // ─── Test-only routes (local / testing environments only) ────────────────────
 if (app()->environment(['testing', 'local'])) {
-    Route::post('/api/testing/reset', function () {
+    Route::post('/testing/reset', function () {
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'E2ETestSeeder']);
         return response()->json(['reset' => true]);
     });
 
-    Route::get('/api/testing/invitation-token/{invitationId}', function ($id) {
+    Route::get('/testing/invitation-token/{invitationId}', function ($id) {
         $inv = \App\Models\LeaderInvitation::find($id);
         if (!$inv) {
             abort(404);

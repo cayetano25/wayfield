@@ -228,7 +228,7 @@ export default function OrganizationBillingPage() {
         <CheckoutResultHandler />
       </Suspense>
 
-      {/* ── Current Plan Card ── */}
+      {/* -- Current Plan Card -- */}
       <Card>
         <div
           style={{
@@ -321,7 +321,7 @@ export default function OrganizationBillingPage() {
         </div>
       </Card>
 
-      {/* ── Invoice History ── */}
+      {/* -- Invoice History -- */}
       {data.invoices && data.invoices.length > 0 && (
         <Card>
           <div className="px-6 py-5 border-b border-border-gray">
@@ -380,7 +380,7 @@ export default function OrganizationBillingPage() {
         </Card>
       )}
 
-      {/* ── Pricing Section ── */}
+      {/* -- Pricing Section -- */}
       <div ref={pricingRef} id="pricing">
         <PricingPage
           context="billing"

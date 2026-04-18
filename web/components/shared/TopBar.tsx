@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { formatDistanceToNow } from 'date-fns';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ---------------------------------------------------------------- */
 
 interface InAppNotification {
   id: number;           // notification_recipient id
@@ -23,7 +23,7 @@ interface InAppNotification {
   created_at: string;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers -------------------------------------------------------------- */
 
 const typeColors: Record<InAppNotification['notification_type'], string> = {
   informational: 'bg-info/10 text-info',
@@ -125,7 +125,7 @@ function UserMenuDropdown({
   );
 }
 
-/* ─── Notification dropdown ─────────────────────────────────────────── */
+/* --- Notification dropdown ------------------------------------------------ */
 
 function NotificationDropdown({
   notifications,
@@ -206,7 +206,7 @@ function NotificationDropdown({
   );
 }
 
-/* ─── TopBar ─────────────────────────────────────────────────────────── */
+/* --- TopBar --------------------------------------------------------------- */
 
 export interface Breadcrumb {
   label: string;
@@ -337,7 +337,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="relative p-2 rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
           title="Announcements"
         >
           <Megaphone className="w-5 h-5" />
@@ -347,7 +347,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         <div ref={bellRef} className="relative">
           <button
             type="button"
-            className="relative p-2 rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
+            className="relative w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
             title="Notifications"
             onClick={() => setDropdownOpen((o) => !o)}
           >

@@ -11,7 +11,7 @@ import { SelectionConfirmation } from './components/SelectionConfirmation';
 import { SelectionPageHeader } from './components/SelectionPageHeader';
 import { SessionList } from './components/SessionList';
 
-/* ── Skeleton shimmer ───────────────────────────────────────────────────── */
+/* -- Skeleton shimmer ----------------------------------------------------- */
 
 function SkeletonCard() {
   return (
@@ -73,7 +73,7 @@ function LoadingSkeleton() {
   );
 }
 
-/* ── Error state ────────────────────────────────────────────────────────── */
+/* -- Error state ---------------------------------------------------------- */
 
 function ErrorState({
   message,
@@ -110,7 +110,7 @@ function ErrorState({
   );
 }
 
-/* ── Not registered state ───────────────────────────────────────────────── */
+/* -- Not registered state ------------------------------------------------- */
 
 function NotRegisteredState() {
   const router = useRouter();
@@ -142,7 +142,7 @@ function NotRegisteredState() {
   );
 }
 
-/* ── Event-based workshop state ─────────────────────────────────────────── */
+/* -- Event-based workshop state ------------------------------------------- */
 
 function EventBasedState() {
   const router = useRouter();
@@ -174,7 +174,7 @@ function EventBasedState() {
   );
 }
 
-/* ── Build session counts by day ────────────────────────────────────────── */
+/* -- Build session counts by day ------------------------------------------ */
 
 function buildDayCounts(
   days: SelectionDay[],
@@ -196,7 +196,7 @@ function buildDayCounts(
   return result;
 }
 
-/* ── Page ───────────────────────────────────────────────────────────────── */
+/* -- Page ----------------------------------------------------------------- */
 
 export default function SelectSessionsPage() {
   const params = useParams();
@@ -239,7 +239,7 @@ export default function SelectSessionsPage() {
     router.push('/my-workshops');
   }
 
-  // ── Render: confirmation overlay ──
+  // -- Render: confirmation overlay --
   if (isConfirmed) {
     return (
       <SelectionConfirmation
@@ -249,7 +249,7 @@ export default function SelectSessionsPage() {
     );
   }
 
-  // ── Loading skeleton ──
+  // -- Loading skeleton --
   if (isLoading) {
     return (
       <div
@@ -266,7 +266,7 @@ export default function SelectSessionsPage() {
     );
   }
 
-  // ── Error ──
+  // -- Error --
   if (error || !data) {
     return (
       <div
@@ -281,7 +281,7 @@ export default function SelectSessionsPage() {
     );
   }
 
-  // ── Not registered (403 results in error string, handle event_based here) ──
+  // -- Not registered (403 results in error string, handle event_based here) --
   if (data.workshop.workshop_type === 'event_based') {
     return (
       <div
@@ -296,7 +296,7 @@ export default function SelectSessionsPage() {
   const dayCounts = buildDayCounts(data.days, data.selected_session_ids);
   const effectiveActiveDate = activeDayDate || (data.days[0]?.date ?? '');
 
-  // ── Main render ──
+  // -- Main render --
   return (
     <div
       className="flex flex-col"

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import type { DiscoverWorkshop } from '@/lib/api/public';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 const GRADIENTS = [
   'linear-gradient(135deg, #E67E22 0%, #C0392B 100%)', // warm desert
@@ -29,7 +29,7 @@ function formatDateRange(start: string, end: string): string {
   return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
-/* ─── Availability badge ──────────────────────────────────────────────── */
+/* --- Availability badge ------------------------------------------------ */
 
 function AvailabilityBadge({ spots }: { spots?: number | null }) {
   if (spots === undefined || spots === null) return null;
@@ -71,7 +71,7 @@ function AvailabilityBadge({ spots }: { spots?: number | null }) {
   );
 }
 
-/* ─── Leader avatar ───────────────────────────────────────────────────── */
+/* --- Leader avatar ----------------------------------------------------- */
 
 function LeaderAvatar({ firstName, lastName, imageUrl }: {
   firstName: string;
@@ -92,7 +92,7 @@ function LeaderAvatar({ firstName, lastName, imageUrl }: {
   );
 }
 
-/* ─── WorkshopCard ────────────────────────────────────────────────────── */
+/* --- WorkshopCard ------------------------------------------------------ */
 
 interface WorkshopCardProps {
   workshop: DiscoverWorkshop;

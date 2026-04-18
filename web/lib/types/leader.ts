@@ -1,4 +1,4 @@
-/* ─── Leader dashboard types ─────────────────────────────────────────── */
+/* --- Leader dashboard types ------------------------------------------- */
 
 export interface LeaderMessagingWindow {
   is_open: boolean;
@@ -6,22 +6,39 @@ export interface LeaderMessagingWindow {
   closes_at: string | null;
 }
 
+export interface LeaderSessionLocation {
+  id: number;
+  name: string;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state_or_region: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface LeaderDashboardSession {
   session_id: number;
   workshop_id?: number;
   workshop_title: string;
+  workshop_timezone?: string;
   session_title: string;
-  start_at: string;
-  end_at: string;
+  description?: string | null;
+  start_at: string | null;
+  end_at: string | null;
+  location?: LeaderSessionLocation | null;
   location_display: string | null;
+  workshop_default_location_id?: number | null;
   checked_in_count: number;
   enrolled_count: number;
   capacity: number | null;
   is_live: boolean;
   messaging_window: LeaderMessagingWindow;
+  messaging_window_open?: boolean;
 }
 
-/* ─── Roster participant ─────────────────────────────────────────────── */
+/* --- Roster participant ----------------------------------------------- */
 
 export interface RosterParticipant {
   user: {
@@ -54,7 +71,7 @@ export interface LeaderDashboard {
   upcoming: LeaderDashboardSession[];
 }
 
-/* ─── Session leader (roster) ────────────────────────────────────────── */
+/* --- Session leader (roster) ------------------------------------------ */
 
 export interface SessionLeader {
   id: number;

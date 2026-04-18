@@ -25,7 +25,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const dropdownRef           = useRef<HTMLDivElement>(null)
   const router                = useRouter()
 
-  // ── Close on outside click ────────────────────────────────────────────
+  // -- Close on outside click --------------------------------------------
   useEffect(() => {
     if (!isOpen) return
 
@@ -44,7 +44,7 @@ export function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [isOpen])
 
-  // ── Close on Escape key ───────────────────────────────────────────────
+  // -- Close on Escape key -----------------------------------------------
   useEffect(() => {
     if (!isOpen) return
 
@@ -59,7 +59,7 @@ export function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [isOpen])
 
-  // ── Sign Out ──────────────────────────────────────────────────────────
+  // -- Sign Out ----------------------------------------------------------
   const handleSignOut = useCallback(async () => {
     setIsOpen(false)
     setIsLoggingOut(true)
@@ -75,35 +75,34 @@ export function UserMenu({ user }: UserMenuProps) {
     }
   }, [router])
 
-  // ── Navigate helper ───────────────────────────────────────────────────
+  // -- Navigate helper ---------------------------------------------------
   function navigateTo(href: string) {
     setIsOpen(false)
     router.push(href)
   }
 
-  // ── Display name in the trigger ───────────────────────────────────────
+  // -- Display name in the trigger ---------------------------------------
   const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Account'
 
   return (
-    <div className="relative" data-testid="user-menu-wrapper">
-      {/* ── TRIGGER ──────────────────────────────────────────────── */}
+    <div className="relative ml-1 pl-3 border-l border-border-gray" data-testid="user-menu-wrapper">
+      {/* -- TRIGGER ------------------------------------------------ */}
       <button
         ref={triggerRef}
         onClick={() => setIsOpen((o) => !o)}
-        className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors
-                   duration-100 cursor-pointer"
-        style={{ backgroundColor: isOpen ? '#F9FAFB' : 'transparent' }}
-        onMouseEnter={(e) => {
-          if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB'
-        }}
-        onMouseLeave={(e) => {
-          if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
-        }}
+        className="flex items-center gap-2 px-1 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors hover:bg-surface"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         data-testid="user-menu-trigger"
         disabled={isLoggingOut}
       >
+        <UserAvatar
+          firstName={user.first_name}
+          lastName={user.last_name}
+          profileImageUrl={user.profile_image_url}
+          size={32}
+        />
+
         <span
           className="hidden sm:block max-w-[120px] truncate"
           style={{
@@ -115,16 +114,9 @@ export function UserMenu({ user }: UserMenuProps) {
         >
           {displayName}
         </span>
-
-        <UserAvatar
-          firstName={user.first_name}
-          lastName={user.last_name}
-          profileImageUrl={user.profile_image_url}
-          size={32}
-        />
       </button>
 
-      {/* ── DROPDOWN ─────────────────────────────────────────────── */}
+      {/* -- DROPDOWN ----------------------------------------------- */}
       {isOpen && (
         <div
           ref={dropdownRef}

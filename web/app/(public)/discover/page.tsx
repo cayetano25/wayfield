@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: 'Discover and join photography workshops and creative events curated on Wayfield.',
 };
 
-/* ─── Feature pill row ────────────────────────────────────────────────── */
+/* --- Feature pill row -------------------------------------------------- */
 
 const PILLS = [
   { icon: '📅', label: 'WORKSHOP SCHEDULING' },
@@ -49,7 +49,7 @@ function FeaturePills() {
   );
 }
 
-/* ─── Pagination ──────────────────────────────────────────────────────── */
+/* --- Pagination -------------------------------------------------------- */
 
 function PaginationLink({
   page,
@@ -84,7 +84,7 @@ function PaginationLink({
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────────────── */
+/* --- Page -------------------------------------------------------------- */
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;

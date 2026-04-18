@@ -6,6 +6,7 @@ use App\Domain\Leaders\Actions\UpdateLeaderProfileAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\UpdateLeaderProfileRequest;
 use App\Http\Resources\LeaderSelfProfileResource;
+use App\Http\Resources\LeaderSessionResource;
 use App\Http\Resources\OrganizerSessionResource;
 use App\Http\Resources\OrganizerWorkshopResource;
 use App\Models\Leader;
@@ -57,22 +58,30 @@ class LeaderSelfController extends Controller
 
     /**
      * GET /api/v1/leader/sessions
-     * Return sessions assigned to the authenticated leader.
+     * Return sessions assigned to the authenticated leader with roster and messaging context.
      */
     public function sessions(Request $request): AnonymousResourceCollection
     {
         $leader = Leader::where('user_id', $request->user()->id)->first();
 
         if (! $leader) {
-            return OrganizerSessionResource::collection(collect());
+            return LeaderSessionResource::collection(collect());
         }
 
-        $sessions = Session::whereHas('sessionLeaders', fn ($q) => $q->where('leader_id', $leader->id))
-            ->with(['workshop', 'track', 'location'])
+        $sessions = Session::whereHas('sessionLeaders', fn ($q) => $q->where('leader_id', $leader->id)->where('assignment_status', 'accepted'))
+            ->with([
+                'workshop',
+                'workshop.defaultLocation',
+                'workshop.logistics',
+                'workshop.registrations' => fn ($q) => $q->where('registration_status', 'registered')->with('user'),
+                'location',
+                'selections' => fn ($q) => $q->where('selection_status', 'selected')->with('registration.user'),
+                'attendanceRecords',
+            ])
             ->orderBy('start_at')
             ->get();
 
-        return OrganizerSessionResource::collection($sessions);
+        return LeaderSessionResource::collection($sessions);
     }
 
     /**

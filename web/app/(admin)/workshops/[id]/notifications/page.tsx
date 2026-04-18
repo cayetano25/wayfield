@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { NotificationDetailSlideOver, SlideOverNotification } from '@/components/notifications/NotificationDetailSlideOver';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ----------------------------------------------------------- */
 
 type NotificationType = 'informational' | 'urgent' | 'reminder';
 type DeliveryScope = 'all_participants' | 'leaders' | 'session_participants' | 'custom';
@@ -45,12 +45,12 @@ interface SentNotification {
   created_at: string;
 }
 
-/* ─── Constants ──────────────────────────────────────────────────────── */
+/* --- Constants -------------------------------------------------------- */
 
 const MAX_MESSAGE = 500;
 const OWNER_ADMIN_ROLES = ['owner', 'admin'] as const;
 
-/* ─── Type pill toggle ───────────────────────────────────────────────── */
+/* --- Type pill toggle ------------------------------------------------- */
 
 const typeConfig: Record<NotificationType, { label: string; icon: React.ReactNode; activeClass: string }> = {
   informational: {
@@ -104,7 +104,7 @@ function TypePillToggle({
   );
 }
 
-/* ─── Type badge (history) ───────────────────────────────────────────── */
+/* --- Type badge (history) --------------------------------------------- */
 
 const typeBadgeClasses: Record<NotificationType, string> = {
   informational: 'bg-info/10 text-info',
@@ -120,7 +120,7 @@ function TypeBadge({ type }: { type: NotificationType }) {
   );
 }
 
-/* ─── Scope label ────────────────────────────────────────────────────── */
+/* --- Scope label ------------------------------------------------------ */
 
 const scopeLabels: Record<DeliveryScope, string> = {
   all_participants:   'All Participants',
@@ -129,7 +129,7 @@ const scopeLabels: Record<DeliveryScope, string> = {
   custom:             'Custom',
 };
 
-/* ─── Compose section ────────────────────────────────────────────────── */
+/* --- Compose section -------------------------------------------------- */
 
 function ComposeSection({
   workshopId,
@@ -306,7 +306,7 @@ function ComposeSection({
   );
 }
 
-/* ─── History section ────────────────────────────────────────────────── */
+/* --- History section -------------------------------------------------- */
 
 function HistorySection({
   notifications,
@@ -398,7 +398,7 @@ function HistorySection({
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────────────── */
+/* --- Page ------------------------------------------------------------- */
 
 export default function WorkshopNotificationsPage() {
   const { id } = useParams<{ id: string }>();

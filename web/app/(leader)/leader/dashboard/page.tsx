@@ -10,7 +10,7 @@ import { ThisWeekList } from './components/ThisWeekList';
 import { UpcomingTable } from './components/UpcomingTable';
 import type { LeaderDashboard } from '@/lib/types/leader';
 
-/* ─── Skeleton ────────────────────────────────────────────────────────── */
+/* --- Skeleton ---------------------------------------------------------- */
 
 function Skeleton({ height, className = '' }: { height: number; className?: string }) {
   return (
@@ -26,7 +26,7 @@ function Skeleton({ height, className = '' }: { height: number; className?: stri
   );
 }
 
-/* ─── Error state ─────────────────────────────────────────────────────── */
+/* --- Error state ------------------------------------------------------- */
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
@@ -50,7 +50,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────────────── */
+/* --- Page -------------------------------------------------------------- */
 
 export default function LeaderDashboardPage() {
   const [data, setData] = useState<LeaderDashboard | null>(null);
@@ -83,7 +83,7 @@ export default function LeaderDashboardPage() {
         }
       `}</style>
 
-      <div className="mx-auto" style={{ maxWidth: 720, padding: '32px 16px' }}>
+      <div className="max-w-4xl mx-auto px-6 py-8">
         {loading ? (
           <div className="flex flex-col gap-6">
             <Skeleton height={72} />

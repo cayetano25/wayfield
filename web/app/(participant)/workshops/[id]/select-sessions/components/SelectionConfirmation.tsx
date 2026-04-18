@@ -94,7 +94,7 @@ export function SelectionConfirmation({ selectedSessions, onBack }: Props) {
   );
 }
 
-/* ── Shared content ─────────────────────────────────────────────────────── */
+/* -- Shared content ------------------------------------------------------- */
 
 function ConfirmationContent({
   selectedSessions,

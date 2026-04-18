@@ -27,14 +27,38 @@ export interface PublicLeader {
   // email, phone_number, address_line_1, address_line_2, postal_code, country are intentionally absent
 }
 
+export interface PublicHotelAddressObject {
+  formatted_address?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  locality?: string;
+  administrative_area?: string;
+  postal_code?: string;
+  country_code?: string;
+  country_name?: string;
+}
+
 export interface PublicLogistics {
   hotel_name?: string;
   hotel_address?: string;
+  hotel_address_object?: PublicHotelAddressObject;
   hotel_phone?: string;
   hotel_notes?: string;
   parking_details?: string;
   meeting_room_details?: string;
   meetup_instructions?: string;
+}
+
+export interface PublicLocation {
+  name?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  state_or_region?: string;
+  postal_code?: string;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface PublicWorkshop {
@@ -49,11 +73,7 @@ export interface PublicWorkshop {
   hero_title?: string;
   hero_subtitle?: string;
   body_content?: string;
-  default_location?: {
-    city?: string;
-    state_or_region?: string;
-    address?: string;
-  };
+  default_location?: PublicLocation;
   sessions: PublicSession[];
   leaders: PublicLeader[];
   logistics?: PublicLogistics;

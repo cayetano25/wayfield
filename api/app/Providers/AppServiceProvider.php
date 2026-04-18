@@ -60,6 +60,7 @@ class AppServiceProvider extends AuthServiceProvider
         // because multiple policies share the Session model context.
         Gate::define('attendance.self-check-in', [AttendancePolicy::class, 'selfCheckIn']);
         Gate::define('attendance.leader-manage', [AttendancePolicy::class, 'leaderManage']);
+        Gate::define('attendance.revert', [AttendancePolicy::class, 'revert']);
         Gate::define('roster.view', [RosterPolicy::class, 'view']);
         Gate::define('roster.view-phones', [RosterPolicy::class, 'viewPhoneNumbers']);
         Gate::define('notification.create-leader', [NotificationPolicy::class, 'createLeader']);

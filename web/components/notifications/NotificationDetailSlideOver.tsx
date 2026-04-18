@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { apiGet } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ----------------------------------------------------------- */
 
 export type NotificationType = 'informational' | 'urgent' | 'reminder';
 export type DeliveryScope = 'all_participants' | 'leaders' | 'session_participants' | 'custom';
@@ -43,7 +43,7 @@ interface Props {
   onClose: () => void;
 }
 
-/* ─── Badge configs ─────────────────────────────────────────────────── */
+/* --- Badge configs --------------------------------------------------- */
 
 const typeBadge: Record<NotificationType, { label: string; className: string; icon: React.ReactNode }> = {
   informational: {
@@ -70,7 +70,7 @@ const scopeBadge: Record<DeliveryScope, { label: string; icon: React.ReactNode }
   custom:              { label: 'Custom',                icon: <Users className="w-3 h-3" /> },
 };
 
-/* ─── Component ─────────────────────────────────────────────────────── */
+/* --- Component ------------------------------------------------------- */
 
 export function NotificationDetailSlideOver({ notification, workshopId, onClose }: Props) {
   const [detail, setDetail] = useState<NotificationDetail | null>(null);
@@ -140,7 +140,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
       >
         {notification && (
           <>
-            {/* ── Header ──────────────────────────────────────────── */}
+            {/* -- Header -------------------------------------------- */}
             <div className="flex items-start justify-between px-6 pt-6 pb-5 border-b border-border-gray">
               <div className="flex flex-wrap gap-2">
                 {/* Type badge */}
@@ -193,7 +193,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
               )}
             </div>
 
-            {/* ── Scrollable body ──────────────────────────────────── */}
+            {/* -- Scrollable body ------------------------------------ */}
             <div className="flex-1 overflow-y-auto">
               {/* Message */}
               <div className="px-6 py-5 border-b border-border-gray">
@@ -268,7 +268,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
               </div>
             </div>
 
-            {/* ── Footer ──────────────────────────────────────────── */}
+            {/* -- Footer -------------------------------------------- */}
             <div className="px-6 py-4 border-t border-border-gray">
               <Button variant="ghost" size="md" onClick={onClose} className="w-full">
                 Close

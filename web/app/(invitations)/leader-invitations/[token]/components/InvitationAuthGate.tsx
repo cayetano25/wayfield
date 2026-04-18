@@ -14,7 +14,7 @@ interface Props {
 
 type Scenario = 'loading' | 'mismatch' | 'login' | 'register'
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
+// --- Style helpers ------------------------------------------------------------
 
 const inputBaseStyle: React.CSSProperties = {
   width: '100%',
@@ -45,7 +45,7 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '6px',
 }
 
-// ─── Password strength ────────────────────────────────────────────────────────
+// --- Password strength --------------------------------------------------------
 
 function getPasswordStrength(password: string): 0 | 1 | 2 | 3 | 4 {
   if (!password) return 0
@@ -60,7 +60,7 @@ function getPasswordStrength(password: string): 0 | 1 | 2 | 3 | 4 {
 const STRENGTH_COLORS = ['#E5E7EB', '#E94F37', '#F97316', '#F59E0B', '#10B981']
 const STRENGTH_LABELS = ['', 'Too short', 'Weak', 'Almost there', 'Strong']
 
-// ─── Shared: read-only email pill ─────────────────────────────────────────────
+// --- Shared: read-only email pill ---------------------------------------------
 
 function EmailPill({ label, email }: { label: string; email: string }) {
   return (
@@ -85,7 +85,7 @@ function EmailPill({ label, email }: { label: string; email: string }) {
   )
 }
 
-// ─── Shared: field error ──────────────────────────────────────────────────────
+// --- Shared: field error ------------------------------------------------------
 
 function FieldError({ message }: { message: string }) {
   return (
@@ -100,7 +100,7 @@ function FieldError({ message }: { message: string }) {
   )
 }
 
-// ─── Shared: form error banner ────────────────────────────────────────────────
+// --- Shared: form error banner ------------------------------------------------
 
 function FormError({ message }: { message: string }) {
   return (
@@ -123,7 +123,7 @@ function FormError({ message }: { message: string }) {
   )
 }
 
-// ─── Shared: primary button ───────────────────────────────────────────────────
+// --- Shared: primary button ---------------------------------------------------
 
 function PrimaryButton({
   isLoading,
@@ -170,7 +170,7 @@ function PrimaryButton({
   )
 }
 
-// ─── Scenario A: Register ─────────────────────────────────────────────────────
+// --- Scenario A: Register -----------------------------------------------------
 
 function RegisterForm({
   invitedEmail,
@@ -427,7 +427,7 @@ function RegisterForm({
   )
 }
 
-// ─── Scenario B: Login ────────────────────────────────────────────────────────
+// --- Scenario B: Login --------------------------------------------------------
 
 function LoginForm({
   invitedEmail,
@@ -536,7 +536,7 @@ function LoginForm({
   )
 }
 
-// ─── Email Mismatch State ─────────────────────────────────────────────────────
+// --- Email Mismatch State -----------------------------------------------------
 
 function EmailMismatch({
   invitedEmail,
@@ -604,7 +604,7 @@ function EmailMismatch({
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// --- Main component -----------------------------------------------------------
 
 export function InvitationAuthGate({ invitedEmail, onAuthenticated }: Props) {
   const [scenario, setScenario] = useState<Scenario>('loading')

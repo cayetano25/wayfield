@@ -7,6 +7,8 @@ use App\Models\AttendanceRecord;
 use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionSelection;
+use App\Models\Workshop;
+use App\Services\Sessions\SessionLocationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +16,10 @@ use Illuminate\Support\Collection;
 
 class ParticipantDashboardController extends Controller
 {
+    public function __construct(
+        private readonly SessionLocationService $locationService,
+    ) {}
+
     /**
      * GET /api/v1/me/dashboard
      *
@@ -28,7 +34,7 @@ class ParticipantDashboardController extends Controller
         $registrations = Registration::where('user_id', $user->id)
             ->where('registration_status', 'registered')
             ->whereHas('workshop', fn ($q) => $q->where('status', 'published'))
-            ->with(['workshop', 'workshop.defaultLocation', 'workshop.logistics'])
+            ->with(['workshop', 'workshop.defaultLocation', 'workshop.logistics', 'workshop.logistics.hotelAddress'])
             ->get();
 
         if ($registrations->isEmpty()) {
@@ -86,14 +92,23 @@ class ParticipantDashboardController extends Controller
         $location = $workshop->defaultLocation;
         $logistics = $workshop->logistics;
 
-        $sessionIds = SessionSelection::where('registration_id', $reg->id)
-            ->where('selection_status', 'selected')
-            ->pluck('session_id');
+        if ($workshop->workshop_type === 'event_based') {
+            $sessions = Session::where('workshop_id', $workshop->id)
+                ->where('is_published', true)
+                ->with(['location', 'location.address', 'leaders'])
+                ->orderBy('start_at')
+                ->get();
+            $sessionIds = $sessions->pluck('id');
+        } else {
+            $sessionIds = SessionSelection::where('registration_id', $reg->id)
+                ->where('selection_status', 'selected')
+                ->pluck('session_id');
 
-        $sessions = Session::whereIn('id', $sessionIds)
-            ->with('location')
-            ->orderBy('start_at')
-            ->get();
+            $sessions = Session::whereIn('id', $sessionIds)
+                ->with(['location', 'location.address', 'leaders'])
+                ->orderBy('start_at')
+                ->get();
+        }
 
         $attendanceMap = AttendanceRecord::where('user_id', $userId)
             ->whereIn('session_id', $sessionIds)
@@ -118,7 +133,11 @@ class ParticipantDashboardController extends Controller
 
         $totalSelected = $sessionIds->count();
 
-        $sessionItems = $sessions->map(fn ($s) => $this->buildSessionItem($s, $attendanceMap, $nextSession?->id))->values();
+        // Pre-bind the workshop relation on each session so resolveForDisplay()
+        // can access workshop.logistics without extra queries.
+        $sessions->each(fn ($s) => $s->setRelation('workshop', $workshop));
+
+        $sessionItems = $sessions->map(fn ($s) => $this->buildSessionItem($s, $attendanceMap, $nextSession?->id, $workshop))->values();
 
         return [
             'workshop_id' => $workshop->id,
@@ -126,6 +145,8 @@ class ParticipantDashboardController extends Controller
             'description' => $workshop->description,
             'header_image_url' => $workshop->header_image_url,
             'workshop_type' => $workshop->workshop_type,
+            'public_slug' => $workshop->public_slug,
+            'public_page_enabled' => (bool) $workshop->public_page_enabled,
             'total_selectable' => $totalSelectable,
             'total_selected' => $totalSelected,
             'start_date' => $workshop->start_date?->toDateString(),
@@ -138,12 +159,21 @@ class ParticipantDashboardController extends Controller
                 'formatted' => $this->formatLocation($location),
             ],
             'registration_status' => $reg->registration_status,
+            'default_location_id' => $workshop->default_location_id,
             'next_session' => $nextSession ? $this->buildNextSession($nextSession) : null,
             'sessions' => $sessionItems,
             'logistics' => $logistics ? [
                 'hotel_name' => $logistics->hotel_name,
-                'hotel_address_display' => $logistics->hotel_address,
-                'maps_url' => null,
+                'hotel_address_display' => $logistics->hotel_address ?? $logistics->hotelAddress?->formatted_address,
+                'hotel_phone' => $logistics->hotel_phone,
+                'hotel_notes' => $logistics->hotel_notes,
+                'parking_details' => $logistics->parking_details,
+                'meeting_room_details' => $logistics->meeting_room_details,
+                'meetup_instructions' => $logistics->meetup_instructions,
+                'location_name' => $location?->name,
+                'venue_address_display' => $location ? $this->formatVenueAddress($location) : null,
+                'location_lat' => $location?->latitude ? (float) $location->latitude : null,
+                'location_lng' => $location?->longitude ? (float) $location->longitude : null,
                 'workshop_image_url' => $workshop->header_image_url,
             ] : null,
         ];
@@ -164,16 +194,32 @@ class ParticipantDashboardController extends Controller
         ];
     }
 
-    private function buildSessionItem(Session $session, Collection $attendanceMap, ?int $nextSessionId): array
+    private function buildSessionItem(Session $session, Collection $attendanceMap, ?int $nextSessionId, Workshop $workshop): array
     {
         $record = $attendanceMap->get($session->id);
+
+        // Use SessionLocationService for canonical Phase-16-aware location resolution.
+        // The workshop relation was pre-bound on each session before this loop so that
+        // hotel-type sessions can access workshop.logistics without extra queries.
+        $resolvedLocation = $this->locationService->resolveForDisplay($session);
 
         return [
             'id' => $session->id,
             'title' => $session->title,
+            'description' => $session->description,
             'start_at' => $session->start_at->toIso8601String(),
             'end_at' => $session->end_at->toIso8601String(),
             'location_display' => $this->simpleLocationDisplay($session),
+            'location' => $resolvedLocation['type'] !== null ? $resolvedLocation : null,
+            'leaders' => $session->leaders->map(fn ($leader) => [
+                'id' => $leader->id,
+                'first_name' => $leader->first_name,
+                'last_name' => $leader->last_name,
+                'city' => $leader->city,
+                'state_or_region' => $leader->state_or_region,
+                'bio' => $leader->bio,
+                'profile_image_url' => $leader->profile_image_url,
+            ])->values()->all(),
             'attendance_status' => $record?->status ?? 'not_checked_in',
             'is_next' => $session->id === $nextSessionId,
             'delivery_type' => $session->delivery_type,
@@ -209,6 +255,8 @@ class ParticipantDashboardController extends Controller
             'workshop_id' => $workshop->id,
             'title' => $workshop->title,
             'workshop_type' => $workshop->workshop_type,
+            'public_slug' => $workshop->public_slug,
+            'public_page_enabled' => (bool) $workshop->public_page_enabled,
             'start_date' => $start,
             'end_date' => $end,
             'status' => $status,
@@ -218,18 +266,26 @@ class ParticipantDashboardController extends Controller
         ];
     }
 
-    /**
-     * Returns a short human-readable location string for a session, or null.
-     * Does not expose meeting URLs or private location details.
-     */
     private function simpleLocationDisplay(Session $session): ?string
     {
         if ($session->location_type === Session::LOCATION_TYPE_HOTEL) {
-            return 'Workshop Hotel';
+            // Use the hotel name from logistics if available; workshop relation is pre-bound.
+            return $session->workshop?->logistics?->hotel_name ?? 'Workshop Hotel';
         }
 
         if ($session->location) {
-            return collect([$session->location->city, $session->location->state_or_region])
+            // For address/coordinate sessions, show locality from the canonical address
+            // or fall back to the flat city field (legacy locations).
+            $loc = $session->location;
+            if ($loc->address) {
+                return $loc->address->locality
+                    ? collect([$loc->address->locality, $loc->address->administrative_area])
+                        ->filter()
+                        ->implode(', ')
+                    : null;
+            }
+
+            return collect([$loc->city, $loc->state_or_region])
                 ->filter()
                 ->implode(', ') ?: null;
         }
@@ -246,5 +302,22 @@ class ParticipantDashboardController extends Controller
         return collect([$location->city, $location->state_or_region, $location->country])
             ->filter()
             ->implode(', ') ?: null;
+    }
+
+    private function formatVenueAddress(?object $location): ?string
+    {
+        if (! $location) {
+            return null;
+        }
+
+        $parts = array_filter([
+            $location->address_line_1,
+            $location->address_line_2,
+            trim(implode(', ', array_filter([$location->city, $location->state_or_region]))),
+            $location->postal_code,
+            $location->country,
+        ]);
+
+        return implode(', ', $parts) ?: null;
     }
 }

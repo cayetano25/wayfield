@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Attendance\Actions\LeaderCheckInAction;
 use App\Domain\Attendance\Actions\MarkNoShowAction;
+use App\Domain\Attendance\Actions\RevertAttendanceAction;
 use App\Domain\Attendance\Actions\SelfCheckInAction;
 use App\Domain\Attendance\Exceptions\AttendanceEligibilityException;
 use App\Http\Controllers\Controller;
@@ -18,6 +19,7 @@ class AttendanceController extends Controller
         private readonly SelfCheckInAction $selfCheckIn,
         private readonly LeaderCheckInAction $leaderCheckIn,
         private readonly MarkNoShowAction $markNoShow,
+        private readonly RevertAttendanceAction $revertAttendance,
     ) {}
 
     /**
@@ -75,6 +77,30 @@ class AttendanceController extends Controller
         return response()->json([
             'message' => 'Participant marked as no-show.',
             'status' => $record->status,
+        ]);
+    }
+
+    /**
+     * PATCH /api/v1/sessions/{session}/attendance/{user}/revert
+     * Assigned leader or organizer reverts a participant's attendance from checked_in to not_checked_in.
+     */
+    public function revertAttendance(Request $request, Session $session, User $user): JsonResponse
+    {
+        $actor = $request->user();
+
+        $this->authorize('attendance.revert', $session);
+
+        try {
+            $record = $this->revertAttendance->execute($actor, $session, $user);
+        } catch (AttendanceEligibilityException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Attendance reverted.',
+            'status' => $record->status,
+            'check_in_method' => $record->check_in_method,
+            'checked_in_at' => $record->checked_in_at,
         ]);
     }
 }

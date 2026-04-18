@@ -9,7 +9,7 @@ test.describe('Login Page', () => {
     await page.goto('/login')
   })
 
-  // ── Rendering ────────────────────────────────────────────────
+  // -- Rendering ------------------------------------------------
 
   test('login page renders all required elements', async ({ page }) => {
     await expect(page.getByText('Welcome back')).toBeVisible()
@@ -24,7 +24,7 @@ test.describe('Login Page', () => {
     await expect(page.getByText('perfectly')).toBeVisible()
   })
 
-  // ── Validation ───────────────────────────────────────────────
+  // -- Validation -----------------------------------------------
 
   test('empty submit shows email required error', async ({ page }) => {
     await page.click('button:has-text("Sign in")')
@@ -46,7 +46,7 @@ test.describe('Login Page', () => {
     await expect(page.getByText(/incorrect email or password/i)).toBeVisible()
   })
 
-  // ── Password toggle ──────────────────────────────────────────
+  // -- Password toggle ------------------------------------------
 
   test('show/hide password toggle works', async ({ page }) => {
     await page.fill('[type="password"]', 'mypassword')
@@ -56,7 +56,7 @@ test.describe('Login Page', () => {
     await expect(page.locator('[name="password"][type="password"]')).toBeVisible()
   })
 
-  // ── Post-login routing ───────────────────────────────────────
+  // -- Post-login routing ---------------------------------------
 
   test('organizer lands on admin dashboard', async ({ page }) => {
     await page.fill('[type="email"]', TEST_USERS.owner.email)
@@ -79,7 +79,7 @@ test.describe('Login Page', () => {
     await expect(page).toHaveURL(/\/leader\/dashboard/, { timeout: 10000 })
   })
 
-  // ── Navigation ───────────────────────────────────────────────
+  // -- Navigation -----------------------------------------------
 
   test('forgot password navigates correctly', async ({ page }) => {
     await page.click('text=Forgot password?')

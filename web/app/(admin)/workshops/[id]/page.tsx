@@ -37,6 +37,17 @@ interface Session {
 
 interface WorkshopLogistics {
   hotel_name: string | null;
+  hotel_address: string | null;            // legacy varchar — not used for display
+  hotel_address_object: AddressFormData | null;  // Phase 16 structured address
+  hotel_phone: string | null;
+  hotel_notes: string | null;
+  parking_details: string | null;
+  meeting_room_details: string | null;
+  meetup_instructions: string | null;
+}
+
+interface LogisticsFormState {
+  hotel_name: string | null;
   hotel_address: AddressFormData | null;
   hotel_phone: string | null;
   hotel_notes: string | null;
@@ -107,7 +118,7 @@ export default function WorkshopOverviewPage() {
 
   const [logisticsOpen, setLogisticsOpen] = useState(false);
   const [logisticsSaving, setLogisticsSaving] = useState(false);
-  const [logisticsForm, setLogisticsForm] = useState<WorkshopLogistics>({
+  const [logisticsForm, setLogisticsForm] = useState<LogisticsFormState>({
     hotel_name: null, hotel_address: null, hotel_phone: null, hotel_notes: null,
     parking_details: null, meeting_room_details: null, meetup_instructions: null,
   });
@@ -144,7 +155,7 @@ export default function WorkshopOverviewPage() {
     ]);
     setLogisticsForm({
       hotel_name: workshop.logistics?.hotel_name ?? null,
-      hotel_address: workshop.logistics?.hotel_address ?? null,
+      hotel_address: workshop.logistics?.hotel_address_object ?? null,
       hotel_phone: workshop.logistics?.hotel_phone ?? null,
       hotel_notes: workshop.logistics?.hotel_notes ?? null,
       parking_details: workshop.logistics?.parking_details ?? null,
@@ -216,7 +227,7 @@ export default function WorkshopOverviewPage() {
   }
 
   function setLF(
-    field: Exclude<keyof WorkshopLogistics, 'hotel_address'>,
+    field: Exclude<keyof LogisticsFormState, 'hotel_address'>,
     value: string,
   ) {
     setLogisticsForm((prev) => ({ ...prev, [field]: value || null }));
@@ -457,10 +468,10 @@ export default function WorkshopOverviewPage() {
                     <MapPin className="w-4 h-4 text-light-gray shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-dark">{workshop.logistics!.hotel_name}</p>
-                      {workshop.logistics!.hotel_address && (
+                      {workshop.logistics!.hotel_address_object && (
                         <div className="mt-1">
                           <FormattedAddress
-                            address={workshop.logistics!.hotel_address}
+                            address={workshop.logistics!.hotel_address_object}
                             compact={false}
                             showCountry={true}
                             className="text-xs text-medium-gray"

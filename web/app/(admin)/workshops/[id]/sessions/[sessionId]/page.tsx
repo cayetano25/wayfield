@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddParticipantModal } from '@/components/participants/AddParticipantModal';
 
-/* ─── Types ──────────────────────────────────────────────────────────── */
+/* --- Types ---------------------------------------------------------------- */
 
 interface Workshop {
   id: number;
@@ -53,7 +53,7 @@ interface RosterEntry {
   status: 'not_checked_in' | 'checked_in' | 'no_show';
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers -------------------------------------------------------------- */
 
 const deliveryIcons = {
   in_person: MapPin,
@@ -83,7 +83,7 @@ function getInitials(first: string, last: string): string {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
 }
 
-/* ─── Capacity bar ───────────────────────────────────────────────────── */
+/* --- Capacity bar --------------------------------------------------------- */
 
 function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: number }) {
   const pct = Math.min((enrolled / capacity) * 100, 100);
@@ -117,7 +117,7 @@ function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: numbe
   );
 }
 
-/* ─── Enrolled participant row ───────────────────────────────────────── */
+/* --- Enrolled participant row --------------------------------------------- */
 
 function EnrolledRow({ entry }: { entry: RosterEntry }) {
   return (
@@ -138,7 +138,7 @@ function EnrolledRow({ entry }: { entry: RosterEntry }) {
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────────── */
+/* --- Main page ------------------------------------------------------------ */
 
 export default function SessionDetailPage() {
   const { id: workshopId, sessionId } = useParams<{ id: string; sessionId: string }>();

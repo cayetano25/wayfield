@@ -34,7 +34,7 @@ export function AppTopNav() {
 
   return (
     <>
-      {/* ── NAV BAR ───────────────────────────────────────────────── */}
+      {/* -- NAV BAR ------------------------------------------------- */}
       <header
         className="fixed top-0 left-0 right-0 z-50 bg-white"
         style={{
@@ -42,11 +42,8 @@ export function AppTopNav() {
           borderBottom: '1px solid #E5E7EB',
         }}
       >
-        <div
-          className="h-full flex items-center px-4 sm:px-6"
-          style={{ maxWidth: 1200, margin: '0 auto' }}
-        >
-          {/* ── LEFT: Logo ─────────────────────────────────────── */}
+        <div className="h-full flex items-center px-4 sm:px-6">
+          {/* -- LEFT: Logo --------------------------------------- */}
           <div className="flex-1 flex items-center">
             <Link
               href="/"
@@ -79,7 +76,7 @@ export function AppTopNav() {
             </Link>
           </div>
 
-          {/* ── CENTER: Desktop nav links ───────────────────────── */}
+          {/* -- CENTER: Desktop nav links ------------------------- */}
           <nav
             className="hidden sm:flex items-center gap-7 h-full"
             aria-label="Main navigation"
@@ -103,7 +100,7 @@ export function AppTopNav() {
             )}
           </nav>
 
-          {/* ── RIGHT: Profile or guest actions ────────────────── */}
+          {/* -- RIGHT: Profile or guest actions ------------------ */}
           <div className="flex-1 flex items-center justify-end gap-2">
 
             {/* Loading skeleton — prevents layout shift */}
@@ -121,48 +118,32 @@ export function AppTopNav() {
 
             {/* Authenticated user — icons + separator + user menu */}
             {!nav.isLoading && nav.isAuthenticated && nav.user && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {/* Megaphone */}
                 <button
                   type="button"
-                  className="p-2 rounded-lg transition-colors duration-100 cursor-pointer"
-                  style={{ color: '#9CA3AF', backgroundColor: 'transparent' }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
                   title="Announcements"
                   aria-label="Announcements"
                 >
-                  <Megaphone size={18} />
+                  <Megaphone size={20} />
                 </button>
 
                 {/* Bell with unread badge */}
                 <button
                   type="button"
-                  className="relative p-2 rounded-lg transition-colors duration-100 cursor-pointer"
-                  style={{ color: '#9CA3AF', backgroundColor: 'transparent' }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
+                  className="relative w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
                   title="Notifications"
                   aria-label="Notifications"
                   onClick={() => router.push('/notifications')}
                 >
-                  <Bell size={18} />
+                  <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span
-                      className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full text-white font-semibold leading-none"
-                      style={{ fontSize: 10, backgroundColor: '#E94F37' }}
-                    >
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-danger text-white text-[10px] font-semibold leading-none">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
-
-                {/* Separator */}
-                <div
-                  className="mx-1 self-stretch"
-                  style={{ width: 1, backgroundColor: '#E5E7EB', margin: '8px 4px' }}
-                  aria-hidden="true"
-                />
 
                 <UserMenu user={nav.user} />
               </div>
@@ -200,7 +181,7 @@ export function AppTopNav() {
         </div>
       </header>
 
-      {/* ── MOBILE MENU ───────────────────────────────────────────── */}
+      {/* -- MOBILE MENU --------------------------------------------- */}
       {mobileOpen && (
         <MobileMenu
           nav={nav}

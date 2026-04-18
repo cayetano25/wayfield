@@ -26,7 +26,7 @@ export function SelectionPageHeader({
       className="bg-white z-50 shrink-0"
       style={{ borderBottom: '1px solid #E5E7EB' }}
     >
-      {/* ── Mobile: two-row header ─────────────────────────────────── */}
+      {/* -- Mobile: two-row header ----------------------------------- */}
       <div className="md:hidden">
         {/* Row 1 */}
         <div
@@ -88,7 +88,7 @@ export function SelectionPageHeader({
         </div>
       </div>
 
-      {/* ── Desktop: single-row header ──────────────────────────────── */}
+      {/* -- Desktop: single-row header -------------------------------- */}
       <div
         className="hidden md:flex items-center justify-between px-6"
         style={{ height: 56 }}

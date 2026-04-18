@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import type { ParticipantActiveWorkshop } from '@/lib/types/participant';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 function formatSessionWindow(startAt: string, endAt: string): string {
   const start = new Date(startAt);
@@ -23,7 +23,7 @@ function formatSessionWindow(startAt: string, endAt: string): string {
   return `${start.toLocaleDateString('en-US', dateOpts)} · ${startTime} – ${endTime}`;
 }
 
-/* ─── ActiveWorkshopCard ──────────────────────────────────────────────── */
+/* --- ActiveWorkshopCard ------------------------------------------------ */
 
 export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWorkshop }) {
   const [checkingIn, setCheckingIn] = useState(false);
@@ -118,7 +118,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
             </p>
           </div>
         ) : noSessionsSelected ? (
-          /* ── Amber prompt: no sessions selected yet ── */
+          /* -- Amber prompt: no sessions selected yet -- */
           <div
             className="flex items-start gap-3 rounded-lg"
             style={{
@@ -149,7 +149,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
             </div>
           </div>
         ) : next_session ? (
-          /* ── Next session ── */
+          /* -- Next session -- */
           <div>
             <p
               className="font-sans font-semibold uppercase mb-2"
@@ -187,14 +187,16 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                   Check In
                 </Button>
               )}
-              <Link href={`/workshops/${workshop.workshop_id}`}>
-                <Button variant="secondary" size="md">
-                  View Details
-                </Button>
-              </Link>
+              {workshop.public_slug && workshop.public_page_enabled && (
+                <Link href={`/w/${workshop.public_slug}`}>
+                  <Button variant="secondary" size="md">
+                    View Details
+                  </Button>
+                </Link>
+              )}
             </div>
 
-            {/* ── Soft nudge when partial selection ── */}
+            {/* -- Soft nudge when partial selection -- */}
             {partialSelection && (
               <div
                 className="flex items-center justify-between rounded-lg mt-4"

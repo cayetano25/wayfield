@@ -15,7 +15,7 @@ import { OtherWorkshopsGrid } from './components/OtherWorkshopsGrid';
 import type { ParticipantDashboard } from '@/lib/types/participant';
 import toast from 'react-hot-toast';
 
-/* ─── Skeleton ────────────────────────────────────────────────────────── */
+/* --- Skeleton ---------------------------------------------------------- */
 
 function Skeleton({ height, className = '' }: { height: number; className?: string }) {
   return (
@@ -31,7 +31,7 @@ function Skeleton({ height, className = '' }: { height: number; className?: stri
   );
 }
 
-/* ─── Empty state ─────────────────────────────────────────────────────── */
+/* --- Empty state ------------------------------------------------------- */
 
 function EmptyState({ onJoined }: { onJoined: (workshopId?: number) => void }) {
   const router = useRouter();
@@ -116,7 +116,7 @@ function EmptyState({ onJoined }: { onJoined: (workshopId?: number) => void }) {
   );
 }
 
-/* ─── Error state ─────────────────────────────────────────────────────── */
+/* --- Error state ------------------------------------------------------- */
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
@@ -140,7 +140,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/* ─── Joined banner ───────────────────────────────────────────────────── */
+/* --- Joined banner ----------------------------------------------------- */
 
 interface JoinedBannerProps {
   workshopTitle: string;
@@ -200,7 +200,7 @@ function JoinedBanner({ workshopTitle, isSessionBased, selectHref, onDismiss }: 
   );
 }
 
-/* ─── Quick Actions row ────────────────────────────────────────────────── */
+/* --- Quick Actions row -------------------------------------------------- */
 
 function QuickActions({ workshopId }: { workshopId: number }) {
   return (
@@ -224,7 +224,7 @@ function QuickActions({ workshopId }: { workshopId: number }) {
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────────────── */
+/* --- Page -------------------------------------------------------------- */
 
 function MyWorkshopsPageInner() {
   const router = useRouter();
@@ -304,10 +304,7 @@ function MyWorkshopsPageInner() {
         }
       `}</style>
 
-      <div
-        className="mx-auto"
-        style={{ maxWidth: 720, padding: '32px 16px' }}
-      >
+      <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Joined banner */}
         {bannerVisible && joinedWorkshopId && (
           <JoinedBanner
@@ -348,10 +345,12 @@ function MyWorkshopsPageInner() {
             )}
 
             {/* Section 3 — Workshop info / logistics */}
-            {data?.active_workshop?.logistics && (
+            {data?.active_workshop && (
               <WorkshopInfoCard
                 logistics={data.active_workshop.logistics}
                 workshopId={data.active_workshop.workshop_id}
+                publicSlug={data.active_workshop.public_slug}
+                publicPageEnabled={data.active_workshop.public_page_enabled}
               />
             )}
 

@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { apiGet, apiPost, ApiError } from '@/lib/api/client';
 
-/* ─── Types ──────────────────────────────────────────────────────────── */
+/* --- Types ------------------------------------------------------------ */
 
 interface ParticipantSearchResult {
   user_id: number;
@@ -29,7 +29,7 @@ export interface AddParticipantModalProps {
   onSuccess: () => void;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers ---------------------------------------------------------- */
 
 function getInitials(first: string, last: string): string {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
@@ -54,7 +54,7 @@ function deriveError(err: ApiError): string {
   return err.message || 'Could not add participant.';
 }
 
-/* ─── Main component ─────────────────────────────────────────────────── */
+/* --- Main component --------------------------------------------------- */
 
 export function AddParticipantModal({
   open,

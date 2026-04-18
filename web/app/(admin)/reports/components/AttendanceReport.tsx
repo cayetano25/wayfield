@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { getAttendanceReport, type AttendanceReport, type AttendanceReportWorkshop, type AttendanceReportSession } from '@/lib/api/reports';
 
-/* ─── Date helpers ────────────────────────────────────────────────────── */
+/* --- Date helpers ------------------------------------------------------ */
 
 function toIso(d: Date) { return d.toISOString().split('T')[0]; }
 const todayStr = () => toIso(new Date());
@@ -23,7 +23,7 @@ function fmtTime(s: string) {
   return new Date(s).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-/* ─── Presets ─────────────────────────────────────────────────────────── */
+/* --- Presets ----------------------------------------------------------- */
 
 const PRESETS = [
   { label: 'Last 7 days',  start: () => daysAgo(6),  end: todayStr },
@@ -34,7 +34,7 @@ const PRESETS = [
 ];
 const DEFAULT_PRESET = 1;
 
-/* ─── Shared sub-components ───────────────────────────────────────────── */
+/* --- Shared sub-components --------------------------------------------- */
 
 function StatCard({ icon: Icon, label, value, sub, valueColor }: {
   icon: React.ElementType;
@@ -88,7 +88,7 @@ function SkeletonStatCard() {
   );
 }
 
-/* ─── Workshop table ──────────────────────────────────────────────────── */
+/* --- Workshop table ---------------------------------------------------- */
 
 function WorkshopTable({ workshops }: { workshops: AttendanceReportWorkshop[] }) {
   const sorted = [...workshops].sort((a, b) =>
@@ -160,7 +160,7 @@ function WorkshopTable({ workshops }: { workshops: AttendanceReportWorkshop[] })
   );
 }
 
-/* ─── Session table (shown when a workshop is selected) ───────────────── */
+/* --- Session table (shown when a workshop is selected) ----------------- */
 
 function SessionTable({ sessions }: { sessions: AttendanceReportSession[] }) {
   const sorted = [...sessions].sort((a, b) => a.start_at.localeCompare(b.start_at));
@@ -210,7 +210,7 @@ function SessionTable({ sessions }: { sessions: AttendanceReportSession[] }) {
   );
 }
 
-/* ─── AttendanceReport ────────────────────────────────────────────────── */
+/* --- AttendanceReport -------------------------------------------------- */
 
 interface AttendanceReportProps {
   orgId: number;

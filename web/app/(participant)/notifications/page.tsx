@@ -6,7 +6,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 
-/* ─── Types ────────────────────────────────────────────────────────────── */
+/* --- Types -------------------------------------------------------------- */
 
 type NotificationType = 'informational' | 'urgent' | 'reminder';
 
@@ -29,7 +29,7 @@ interface ApiResponse {
   meta: { total: number; current_page: number; last_page: number };
 }
 
-/* ─── Type badge config ────────────────────────────────────────────────── */
+/* --- Type badge config -------------------------------------------------- */
 
 const typeConfig: Record<
   NotificationType,
@@ -55,7 +55,7 @@ const typeConfig: Record<
   },
 };
 
-/* ─── Notification card ────────────────────────────────────────────────── */
+/* --- Notification card -------------------------------------------------- */
 
 function NotificationCard({
   notification,
@@ -174,7 +174,7 @@ function NotificationCard({
   );
 }
 
-/* ─── Empty state ──────────────────────────────────────────────────────── */
+/* --- Empty state -------------------------------------------------------- */
 
 function EmptyState() {
   return (
@@ -198,7 +198,7 @@ function EmptyState() {
   );
 }
 
-/* ─── Skeleton ─────────────────────────────────────────────────────────── */
+/* --- Skeleton ----------------------------------------------------------- */
 
 function Skeleton() {
   return (
@@ -216,7 +216,7 @@ function Skeleton() {
   );
 }
 
-/* ─── Page ─────────────────────────────────────────────────────────────── */
+/* --- Page --------------------------------------------------------------- */
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<ParticipantNotification[]>([]);
@@ -283,7 +283,7 @@ export default function NotificationsPage() {
         }
       `}</style>
 
-      <div className="mx-auto" style={{ maxWidth: 720, padding: '32px 16px' }}>
+      <div className="mx-auto" style={{ maxWidth: 1200, padding: '32px 24px' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

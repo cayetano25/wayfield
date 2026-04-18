@@ -12,7 +12,7 @@ import { ExportButton } from './components/ExportButton';
 import { WorkshopFilter } from './components/WorkshopFilter';
 import { ReportLockedState } from './components/ReportLockedState';
 
-/* ─── Plan helpers ────────────────────────────────────────────────────── */
+/* --- Plan helpers ------------------------------------------------------ */
 
 const PLAN_TIERS: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 };
 
@@ -20,7 +20,7 @@ function isPlanAtLeast(planCode: string, min: 'starter' | 'pro'): boolean {
   return (PLAN_TIERS[planCode] ?? 0) >= PLAN_TIERS[min];
 }
 
-/* ─── Tab definitions ─────────────────────────────────────────────────── */
+/* --- Tab definitions --------------------------------------------------- */
 
 type TabId = 'attendance' | 'workshops' | 'participants' | 'trend';
 
@@ -37,7 +37,7 @@ const TABS: TabDef[] = [
   { id: 'trend',        label: 'Registration Trend', requiresPro: true },
 ];
 
-/* ─── Reports page ────────────────────────────────────────────────────── */
+/* --- Reports page ------------------------------------------------------ */
 
 export default function ReportsPage() {
   useSetPage('Reports');
@@ -53,7 +53,7 @@ export default function ReportsPage() {
 
   const showWorkshopFilter = activeTab === 'attendance' || activeTab === 'participants';
 
-  /* ── Free plan: full-page locked state ── */
+  /* -- Free plan: full-page locked state -- */
   if (!isStarterPlus) {
     return (
       <div className="max-w-[1280px] mx-auto">
@@ -78,7 +78,7 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-[1280px] mx-auto">
-      {/* ── Page header ── */}
+      {/* -- Page header -- */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading font-bold text-dark" style={{ fontSize: 28 }}>Reports</h1>
@@ -94,7 +94,7 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* ── Tab bar ── */}
+      {/* -- Tab bar -- */}
       <div
         className="flex items-end gap-1 mb-6"
         style={{ borderBottom: '1px solid #E5E7EB' }}
@@ -122,7 +122,7 @@ export default function ReportsPage() {
         })}
       </div>
 
-      {/* ── Workshop filter (attendance + participants only) ── */}
+      {/* -- Workshop filter (attendance + participants only) -- */}
       {showWorkshopFilter && (
         <WorkshopFilter
           orgId={orgId}
@@ -131,7 +131,7 @@ export default function ReportsPage() {
         />
       )}
 
-      {/* ── Tab content ── */}
+      {/* -- Tab content -- */}
       {activeTab === 'attendance' && (
         <AttendanceReportTab orgId={orgId} workshopId={workshopId} />
       )}

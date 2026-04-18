@@ -20,7 +20,7 @@ const cardStyle: React.CSSProperties = {
   marginBottom: '16px',
 }
 
-// ─── Terminal error states ────────────────────────────────────────────────────
+// --- Terminal error states ----------------------------------------------------
 
 function NotFoundState() {
   return (
@@ -121,7 +121,7 @@ function AlreadyDeclinedState({ token, orgName }: { token: string; orgName: stri
   )
 }
 
-// ─── Success state ────────────────────────────────────────────────────────────
+// --- Success state ------------------------------------------------------------
 
 function SuccessState({ orgName, roleDisplay }: { orgName: string; roleDisplay: string }) {
   const router = useRouter()
@@ -165,7 +165,7 @@ function SuccessState({ orgName, roleDisplay }: { orgName: string; roleDisplay: 
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// --- Main page ----------------------------------------------------------------
 
 export default function AcceptOrgInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)

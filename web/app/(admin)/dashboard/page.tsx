@@ -50,7 +50,7 @@ import {
 
 const MONTH_NAME = new Date().toLocaleString('default', { month: 'long' });
 
-// ── Shimmer / skeleton helpers ────────────────────────────────────────────────
+// -- Shimmer / skeleton helpers ------------------------------------------------
 
 function shimmerClass() {
   return 'shimmer rounded-xl';
@@ -68,7 +68,7 @@ function SkeletonChart({ height }: { height: number }) {
   );
 }
 
-// ── KPI card ─────────────────────────────────────────────────────────────────
+// -- KPI card -----------------------------------------------------------------
 
 interface KpiCardProps {
   label: string;
@@ -94,7 +94,7 @@ function KpiCard({ label, value, sub, icon: Icon }: KpiCardProps) {
   );
 }
 
-// ── Coloured metric card (analytics) ─────────────────────────────────────────
+// -- Coloured metric card (analytics) -----------------------------------------
 
 interface MetricCardProps {
   label: string;
@@ -120,7 +120,7 @@ function MetricCard({ label, value, valueColor, sub }: MetricCardProps) {
   );
 }
 
-// ── Plan usage bar ────────────────────────────────────────────────────────────
+// -- Plan usage bar ------------------------------------------------------------
 
 function PlanUsageBar({
   used,
@@ -156,7 +156,7 @@ function PlanUsageBar({
   );
 }
 
-// ── Next Up: workshop type ────────────────────────────────────────────────────
+// -- Next Up: workshop type ----------------------------------------------------
 
 interface DashboardWorkshop {
   id: number;
@@ -173,7 +173,7 @@ interface DashboardWorkshop {
   join_code?: string;
 }
 
-// ── Date range formatter ──────────────────────────────────────────────────────
+// -- Date range formatter ------------------------------------------------------
 
 function formatDateRange(start: string, end: string): string {
   if (!start) return '';
@@ -193,7 +193,7 @@ function formatDateRange(start: string, end: string): string {
   return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
-// ── Stat cell (used in Next Up card) ─────────────────────────────────────────
+// -- Stat cell (used in Next Up card) -----------------------------------------
 
 function StatCell({
   icon: Icon,
@@ -217,7 +217,7 @@ function StatCell({
   );
 }
 
-// ── Next Up workshop card ─────────────────────────────────────────────────────
+// -- Next Up workshop card -----------------------------------------------------
 
 function NextUpWorkshopCard({
   workshop,
@@ -379,7 +379,7 @@ function NextUpWorkshopCard({
   );
 }
 
-// ── Next Up section (loading / empty / loaded) ────────────────────────────────
+// -- Next Up section (loading / empty / loaded) --------------------------------
 
 function NextUpSection({
   nextUp,
@@ -429,7 +429,7 @@ function NextUpSection({
   );
 }
 
-// ── Workshops list — row ──────────────────────────────────────────────────────
+// -- Workshops list — row ------------------------------------------------------
 
 function WorkshopRow({ workshop }: { workshop: DashboardWorkshop }) {
   const initials = workshop.title.slice(0, 2).toUpperCase();
@@ -511,7 +511,7 @@ function WorkshopRow({ workshop }: { workshop: DashboardWorkshop }) {
   );
 }
 
-// ── Workshops list card ───────────────────────────────────────────────────────
+// -- Workshops list card -------------------------------------------------------
 
 function WorkshopsList({
   workshops,
@@ -560,7 +560,7 @@ function WorkshopsList({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// -- Main page -----------------------------------------------------------------
 
 export default function DashboardPage() {
   useSetPage('Dashboard');
@@ -617,7 +617,7 @@ export default function DashboardPage() {
 
   const isLoading = orgLoading || loadingStats;
 
-  // ── Skeleton ──────────────────────────────────────────────────────────────
+  // -- Skeleton --------------------------------------------------------------
   if (isLoading || (!data && !error)) {
     return (
       <>
@@ -646,7 +646,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Error ─────────────────────────────────────────────────────────────────
+  // -- Error -----------------------------------------------------------------
   if (error || !data) {
     return (
       <div className="max-w-[1280px] mx-auto">
@@ -675,7 +675,7 @@ export default function DashboardPage() {
   const isFree = !isStarter;
   const showEmptyState = core.workshops.total === 0;
 
-  // ── Row 2: analytics cards ────────────────────────────────────────────────
+  // -- Row 2: analytics cards ------------------------------------------------
   let analyticsRow: React.ReactNode;
   if (isFree) {
     analyticsRow = (
@@ -720,7 +720,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Row 3: registration trend ────────────────────────────────────────────
+  // -- Row 3: registration trend --------------------------------------------
   let trendRow: React.ReactNode;
   if (!isPro) {
     trendRow = (
@@ -776,7 +776,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Row 4: session breakdown (left 60%) ──────────────────────────────────
+  // -- Row 4: session breakdown (left 60%) ----------------------------------
   let sessionChart: React.ReactNode;
   if (isFree) {
     sessionChart = (

@@ -1,7 +1,8 @@
+import React from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics } from '@/lib/api/public';
+import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
 
 // Allowed public leader fields — enforced here as a second layer after the API
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
@@ -103,64 +104,165 @@ function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
   );
 }
 
-function LogisticsSection({ logistics }: { logistics: PublicLogistics }) {
-  const hasAny = Object.values(logistics).some(Boolean);
-  if (!hasAny) return null;
+function LogisticsCard({ icon, children }: { icon: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 flex gap-4">
+      <span className="material-symbols-outlined text-primary text-xl shrink-0">{icon}</span>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function buildMapsUrl(
+  lat?: number | null,
+  lng?: number | null,
+  name?: string,
+  address?: string,
+): string | null {
+  if (lat != null && lng != null) {
+    const q = name ? `&q=${encodeURIComponent(name)}` : '';
+    return `https://maps.apple.com/?ll=${lat},${lng}${q}`;
+  }
+  if (address) {
+    return `https://maps.apple.com/?address=${encodeURIComponent(address)}`;
+  }
+  return null;
+}
+
+function MapLink({ url, label }: { url: string; label: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 min-h-[44px] text-sm text-primary font-medium hover:underline"
+    >
+      <span className="material-symbols-outlined text-base shrink-0">pin_drop</span>
+      {label}
+    </a>
+  );
+}
+
+function LogisticsSection({
+  logistics,
+  defaultLocation,
+}: {
+  logistics: PublicLogistics;
+  defaultLocation?: PublicLocation;
+}) {
+  const hasLogistics = Object.values(logistics).some(Boolean);
+  const hasDefaultLocation =
+    defaultLocation &&
+    (defaultLocation.city || defaultLocation.state_or_region || defaultLocation.address_line_1 || defaultLocation.name);
+
+  if (!hasLogistics && !hasDefaultLocation) return null;
+
+  // Map URL for the venue-only card (uses location coordinates when available)
+  const venueMapUrl = buildMapsUrl(
+    defaultLocation?.latitude,
+    defaultLocation?.longitude,
+    defaultLocation?.name,
+    defaultLocation?.address_line_1,
+  );
+
+  // Map URL for the hotel card — prefer structured address, fall back to legacy freeform
+  const hotelAddressString =
+    logistics.hotel_address_object?.formatted_address ?? logistics.hotel_address ?? null;
+  const hotelMapUrl = buildMapsUrl(null, null, logistics.hotel_name, hotelAddressString ?? undefined);
+
+  // Map URL for the parking card (coordinates only — no freeform address fallback)
+  const parkingMapUrl =
+    defaultLocation?.latitude != null && defaultLocation.longitude != null
+      ? buildMapsUrl(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.name)
+      : null;
+
+  const cleanPhone = logistics.hotel_phone?.replace(/\D/g, '') ?? '';
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
       <h2 className="font-heading text-2xl font-bold text-dark mb-8">Venue &amp; Logistics</h2>
-      <div className="bg-white rounded-xl border border-border-gray shadow-sm divide-y divide-border-gray">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {hasDefaultLocation && !logistics.hotel_name && (
+          <LogisticsCard icon="location_on">
+            <p className="font-semibold text-dark">{defaultLocation!.name ?? 'Workshop Location'}</p>
+            {defaultLocation!.address_line_1 && (
+              <p className="text-sm text-medium-gray mt-0.5">{defaultLocation!.address_line_1}</p>
+            )}
+            {defaultLocation!.address_line_2 && (
+              <p className="text-sm text-medium-gray">{defaultLocation!.address_line_2}</p>
+            )}
+            {(defaultLocation!.city || defaultLocation!.state_or_region) && (
+              <p className="text-sm text-medium-gray">
+                {[defaultLocation!.city, defaultLocation!.state_or_region, defaultLocation!.postal_code]
+                  .filter(Boolean)
+                  .join(', ')}
+              </p>
+            )}
+            {venueMapUrl && <MapLink url={venueMapUrl} label="Open in Maps" />}
+          </LogisticsCard>
+        )}
+
         {logistics.hotel_name && (
-          <div className="p-6 flex gap-4">
-            <span className="material-symbols-outlined text-primary text-xl shrink-0">hotel</span>
-            <div>
-              <p className="font-semibold text-dark">{logistics.hotel_name}</p>
-              {logistics.hotel_address && (
-                <p className="text-sm text-medium-gray mt-0.5">{logistics.hotel_address}</p>
-              )}
-              {logistics.hotel_phone && (
-                <p className="text-sm text-medium-gray mt-0.5">{logistics.hotel_phone}</p>
-              )}
-              {logistics.hotel_notes && (
-                <p className="text-sm text-medium-gray mt-2 leading-relaxed">{logistics.hotel_notes}</p>
-              )}
-            </div>
-          </div>
+          <LogisticsCard icon="hotel">
+            <p className="font-heading font-semibold text-dark text-base">{logistics.hotel_name}</p>
+
+            {/* Address: prefer Phase 16 structured object, fall back to legacy freeform string */}
+            {logistics.hotel_address_object?.formatted_address ? (
+              <p className="mt-1 text-sm text-medium-gray whitespace-pre-line leading-relaxed">
+                {logistics.hotel_address_object.formatted_address}
+              </p>
+            ) : logistics.hotel_address ? (
+              <p className="mt-1 text-sm text-medium-gray">{logistics.hotel_address}</p>
+            ) : null}
+
+            {/* Phone as tappable tel: link */}
+            {logistics.hotel_phone && (
+              <a
+                href={`tel:${cleanPhone}`}
+                className="inline-flex items-center gap-1.5 min-h-[44px] text-sm text-primary font-medium hover:underline"
+              >
+                <span className="material-symbols-outlined text-base shrink-0">call</span>
+                {logistics.hotel_phone}
+              </a>
+            )}
+
+            {/* Map link */}
+            {hotelMapUrl && <MapLink url={hotelMapUrl} label="Open in Maps" />}
+
+            {/* Notes — muted, below action links */}
+            {logistics.hotel_notes && (
+              <p className="mt-2 text-sm text-gray-500 leading-relaxed">{logistics.hotel_notes}</p>
+            )}
+          </LogisticsCard>
         )}
+
         {logistics.parking_details && (
-          <div className="p-6 flex gap-4">
-            <span className="material-symbols-outlined text-primary text-xl shrink-0">local_parking</span>
-            <div>
-              <p className="font-semibold text-dark mb-1">Parking</p>
-              <p className="text-sm text-medium-gray leading-relaxed">{logistics.parking_details}</p>
-            </div>
-          </div>
+          <LogisticsCard icon="local_parking">
+            <p className="font-semibold text-dark mb-1">Parking</p>
+            <p className="text-sm text-medium-gray leading-relaxed">{logistics.parking_details}</p>
+            {parkingMapUrl && <MapLink url={parkingMapUrl} label="View Location in Maps" />}
+          </LogisticsCard>
         )}
+
         {logistics.meeting_room_details && (
-          <div className="p-6 flex gap-4">
-            <span className="material-symbols-outlined text-primary text-xl shrink-0">door_open</span>
-            <div>
-              <p className="font-semibold text-dark mb-1">Meeting Room</p>
-              <p className="text-sm text-medium-gray leading-relaxed">{logistics.meeting_room_details}</p>
-            </div>
-          </div>
+          <LogisticsCard icon="door_open">
+            <p className="font-semibold text-dark mb-1">Meeting Room</p>
+            <p className="text-sm text-medium-gray leading-relaxed">{logistics.meeting_room_details}</p>
+          </LogisticsCard>
         )}
+
         {logistics.meetup_instructions && (
-          <div className="p-6 flex gap-4">
-            <span className="material-symbols-outlined text-primary text-xl shrink-0">info</span>
-            <div>
-              <p className="font-semibold text-dark mb-1">Meetup Instructions</p>
-              <p className="text-sm text-medium-gray leading-relaxed">{logistics.meetup_instructions}</p>
-            </div>
-          </div>
+          <LogisticsCard icon="info">
+            <p className="font-semibold text-dark mb-1">Meetup Instructions</p>
+            <p className="text-sm text-medium-gray leading-relaxed">{logistics.meetup_instructions}</p>
+          </LogisticsCard>
         )}
       </div>
     </section>
   );
 }
 
-// ─── generateMetadata ────────────────────────────────────────────────────────
+// --- generateMetadata --------------------------------------------------------
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },
@@ -181,7 +283,7 @@ export async function generateMetadata(
   };
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// --- Page --------------------------------------------------------------------
 
 export default async function PublicWorkshopPage(
   { params }: { params: Promise<{ slug: string }> },
@@ -323,7 +425,12 @@ export default async function PublicWorkshopPage(
       )}
 
       {/* Logistics */}
-      {workshop.logistics && <LogisticsSection logistics={workshop.logistics} />}
+      {(workshop.logistics || workshop.default_location) && (
+        <LogisticsSection
+          logistics={workshop.logistics ?? {}}
+          defaultLocation={workshop.default_location}
+        />
+      )}
 
       {/* Footer CTA */}
       <section

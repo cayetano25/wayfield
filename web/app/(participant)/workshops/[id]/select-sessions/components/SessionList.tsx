@@ -15,7 +15,7 @@ interface Props {
   showAllDays?: boolean;
 }
 
-/* ── Time group header ──────────────────────────────────────────────────── */
+/* -- Time group header ---------------------------------------------------- */
 
 function TimeGroupHeader({ slotTime }: { slotTime: string }) {
   return (
@@ -40,7 +40,7 @@ function TimeGroupHeader({ slotTime }: { slotTime: string }) {
   );
 }
 
-/* ── Day section header (desktop) ──────────────────────────────────────── */
+/* -- Day section header (desktop) ---------------------------------------- */
 
 function DayHeader({ dayLabel, dateFormatted }: { dayLabel: string; dateFormatted: string }) {
   return (
@@ -61,7 +61,7 @@ function DayHeader({ dayLabel, dateFormatted }: { dayLabel: string; dateFormatte
   );
 }
 
-/* ── SessionList ────────────────────────────────────────────────────────── */
+/* -- SessionList ---------------------------------------------------------- */
 
 export function SessionList({
   days,

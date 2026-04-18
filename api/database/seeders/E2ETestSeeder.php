@@ -102,9 +102,10 @@ class E2ETestSeeder extends Seeder
         $day1 = Carbon::parse($workshop->start_date, 'America/Chicago');
 
         // Session A: Wildlife at Dawn — capacity 20, starts 8 AM day 1
-        $sessionA = Session::firstOrCreate(
+        $sessionA = Session::updateOrCreate(
             ['workshop_id' => $workshop->id, 'title' => 'Wildlife at Dawn'],
             [
+                'description'   => 'Start the day before sunrise at the meadow edge. We will cover stalking techniques, telephoto settings for low-light movement, and reading animal behaviour to anticipate the shot.',
                 'start_at'      => $day1->copy()->setTime(8, 0)->utc(),
                 'end_at'        => $day1->copy()->setTime(10, 0)->utc(),
                 'delivery_type' => 'in_person',
@@ -114,9 +115,10 @@ class E2ETestSeeder extends Seeder
         );
 
         // Session B: Golden Hour — capacity 15, starts 2 PM day 1
-        $sessionB = Session::firstOrCreate(
+        $sessionB = Session::updateOrCreate(
             ['workshop_id' => $workshop->id, 'title' => 'Golden Hour Composition'],
             [
+                'description'   => 'Work with the warm directional light of late afternoon to build compelling environmental portraits. Emphasis on background separation, reflector use, and posing for non-models.',
                 'start_at'      => $day1->copy()->setTime(14, 0)->utc(),
                 'end_at'        => $day1->copy()->setTime(16, 0)->utc(),
                 'delivery_type' => 'in_person',
@@ -126,9 +128,10 @@ class E2ETestSeeder extends Seeder
         );
 
         // Session C: Composition Theory — OVERLAPS Session B (2 PM – 5 PM)
-        $sessionC = Session::firstOrCreate(
+        $sessionC = Session::updateOrCreate(
             ['workshop_id' => $workshop->id, 'title' => 'Composition Theory'],
             [
+                'description'   => 'An in-depth look at the rule of thirds, leading lines, negative space, and frame-within-frame techniques. Includes a hands-on critique of participant images shot earlier in the day.',
                 'start_at'      => $day1->copy()->setTime(14, 0)->utc(),
                 'end_at'        => $day1->copy()->setTime(17, 0)->utc(),
                 'delivery_type' => 'in_person',
@@ -139,9 +142,10 @@ class E2ETestSeeder extends Seeder
 
         // Session D: Post-Processing — unlimited capacity, day 2
         $day2 = $day1->copy()->addDay();
-        $sessionD = Session::firstOrCreate(
+        $sessionD = Session::updateOrCreate(
             ['workshop_id' => $workshop->id, 'title' => 'Post-Processing Workshop'],
             [
+                'description'   => 'Hands-on Lightroom and Capture One workflow covering culling strategy, colour grading with tone curves, skin tone correction, and export presets for web and print delivery.',
                 'start_at'      => $day2->copy()->setTime(9, 0)->utc(),
                 'end_at'        => $day2->copy()->setTime(11, 0)->utc(),
                 'delivery_type' => 'in_person',
@@ -221,7 +225,7 @@ class E2ETestSeeder extends Seeder
             [
                 'first_name'              => $first,
                 'last_name'               => $last,
-                'password'                => Hash::make('Testing!2024'),
+                'password_hash'           => Hash::make('Testing!2024'),
                 'email_verified_at'       => now(),
                 'is_active'               => true,
                 'onboarding_completed_at' => now(),
