@@ -32,4 +32,25 @@ class NotificationRecipient extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function isRead(): bool
+    {
+        return $this->in_app_status === 'read' && $this->read_at !== null;
+    }
+
+    /**
+     * Marks this recipient record as read in a single atomic update.
+     * Uses updateQuietly to avoid triggering observers unnecessarily.
+     */
+    public function markAsRead(): void
+    {
+        if ($this->isRead()) {
+            return;
+        }
+
+        $this->updateQuietly([
+            'in_app_status' => 'read',
+            'read_at' => now(),
+        ]);
+    }
 }

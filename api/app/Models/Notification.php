@@ -18,6 +18,8 @@ class Notification extends Model
         'title',
         'message',
         'notification_type',
+        'notification_category',
+        'action_data',
         'sender_scope',
         'delivery_scope',
         'session_id',
@@ -25,6 +27,7 @@ class Notification extends Model
     ];
 
     protected $casts = [
+        'action_data' => 'array',
         'sent_at' => 'datetime',
     ];
 
@@ -56,5 +59,15 @@ class Notification extends Model
     public function isLeaderNotification(): bool
     {
         return $this->sender_scope === 'leader';
+    }
+
+    public function isInvitation(): bool
+    {
+        return $this->notification_category === 'invitation';
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->notification_category === 'system';
     }
 }

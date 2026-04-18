@@ -294,6 +294,8 @@ Route::prefix('v1')->group(function () {
 
         // In-app notifications for current user
         Route::get('me/notifications', [UserNotificationController::class, 'index']);
+        Route::get('me/notifications/unread-count', [UserNotificationController::class, 'unreadCount']);
+        Route::post('me/notifications/read-all', [UserNotificationController::class, 'readAll']);
         Route::patch('me/notifications/{notificationRecipient}/read', [UserNotificationController::class, 'markRead']);
 
         // Push token registration

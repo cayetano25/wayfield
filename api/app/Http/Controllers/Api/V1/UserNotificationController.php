@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\InAppNotificationResource;
 use App\Models\NotificationRecipient;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,51 +13,89 @@ class UserNotificationController extends Controller
     /**
      * GET /api/v1/me/notifications
      *
-     * Return in-app notifications for the authenticated user.
-     * Sorted by most recent first, paginated.
+     * Paginated in-app notifications for the authenticated user.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, NotificationService $service): JsonResponse
     {
-        $user = $request->user();
+        $paginator = $service->getForUser(
+            userId: $request->user()->id,
+            perPage: 20,
+        );
 
-        $recipients = NotificationRecipient::where('user_id', $user->id)
-            ->with('notification.workshop')
-            ->whereIn('in_app_status', ['pending', 'delivered', 'read'])
-            ->orderByDesc('created_at')
-            ->paginate(30);
+        $items = $paginator->getCollection()->map(function (NotificationRecipient $r) {
+            $n = $r->notification;
 
-        // Mark pending in-app notifications as delivered on fetch
-        NotificationRecipient::where('user_id', $user->id)
-            ->where('in_app_status', 'pending')
-            ->update(['in_app_status' => 'delivered']);
+            return [
+                'recipient_id' => $r->id,
+                'notification_id' => $n->id,
+                'title' => $n->title,
+                'message' => $n->message,
+                'notification_type' => $n->notification_type,
+                'notification_category' => $n->notification_category,
+                'action_data' => $n->action_data,
+                'is_read' => $r->isRead(),
+                'read_at' => $r->read_at?->toIso8601String(),
+                'created_at' => $r->created_at->toIso8601String(),
+                'is_invitation' => $n->isInvitation(),
+                'is_system' => $n->isSystem(),
+            ];
+        });
 
         return response()->json([
-            'data' => InAppNotificationResource::collection($recipients->items()),
+            'data' => $items,
             'meta' => [
-                'total' => $recipients->total(),
-                'current_page' => $recipients->currentPage(),
-                'last_page' => $recipients->lastPage(),
+                'current_page' => $paginator->currentPage(),
+                'total_pages' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
             ],
+        ]);
+    }
+
+    /**
+     * GET /api/v1/me/notifications/unread-count
+     *
+     * Fast COUNT-only endpoint for the bell badge.
+     */
+    public function unreadCount(Request $request, NotificationService $service): JsonResponse
+    {
+        return response()->json([
+            'unread_count' => $service->getUnreadCount($request->user()->id),
         ]);
     }
 
     /**
      * PATCH /api/v1/me/notifications/{notificationRecipient}/read
      *
-     * Mark a specific in-app notification as read.
+     * Marks a single notification as read. Atomic single-row update.
      */
     public function markRead(Request $request, NotificationRecipient $notificationRecipient): JsonResponse
     {
-        // Ensure the authenticated user owns this recipient row
         if ($notificationRecipient->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        $notificationRecipient->update([
-            'in_app_status' => 'read',
-            'read_at' => now(),
-        ]);
+        $notificationRecipient->markAsRead();
 
-        return response()->json(['message' => 'Notification marked as read.']);
+        return response()->json([
+            'recipient_id' => $notificationRecipient->id,
+            'is_read' => true,
+            'read_at' => $notificationRecipient->read_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/me/notifications/read-all
+     *
+     * Marks all unread notifications as read for the authenticated user.
+     */
+    public function readAll(Request $request, NotificationService $service): JsonResponse
+    {
+        $count = $service->markAllRead($request->user()->id);
+
+        return response()->json([
+            'marked_read' => $count,
+            'unread_count' => 0,
+        ]);
     }
 }

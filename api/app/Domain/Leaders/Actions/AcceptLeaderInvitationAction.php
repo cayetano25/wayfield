@@ -6,6 +6,7 @@ use App\Domain\Shared\Services\AuditLogService;
 use App\Domain\Webhooks\WebhookDispatcher;
 use App\Models\Leader;
 use App\Models\LeaderInvitation;
+use App\Models\NotificationRecipient;
 use App\Models\OrganizationLeader;
 use App\Models\User;
 use App\Models\WorkshopLeader;
@@ -108,6 +109,15 @@ class AcceptLeaderInvitationAction
                     ]
                 );
             }
+
+            // Mark any delivered invitation notification as read so the badge clears
+            NotificationRecipient::whereHas('notification', function ($q) use ($invitation) {
+                $q->where('notification_category', 'invitation')
+                    ->whereJsonContains('action_data->invitation_id', $invitation->id);
+            })
+                ->where('user_id', $user->id)
+                ->where('in_app_status', 'delivered')
+                ->update(['in_app_status' => 'read', 'read_at' => now()]);
 
             AuditLogService::record([
                 'organization_id' => $invitation->organization_id,

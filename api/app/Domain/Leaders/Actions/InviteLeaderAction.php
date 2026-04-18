@@ -3,6 +3,7 @@
 namespace App\Domain\Leaders\Actions;
 
 use App\Domain\Shared\Services\AuditLogService;
+use App\Jobs\SendLeaderInvitationNotificationJob;
 use App\Mail\LeaderInvitationMail;
 use App\Models\LeaderInvitation;
 use App\Models\Organization;
@@ -38,6 +39,12 @@ class InviteLeaderAction
         // Queue the invitation email — raw token goes in the link, never stored
         Mail::to($invitation->invited_email)
             ->queue(new LeaderInvitationMail($invitation, $rawToken));
+
+        // Queue in-app notification for users who already have an account
+        SendLeaderInvitationNotificationJob::dispatch(
+            $invitation->id,
+            $rawToken,
+        )->onQueue('default');
 
         AuditLogService::record([
             'organization_id' => $organization->id,
