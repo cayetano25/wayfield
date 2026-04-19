@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 
 export type NotificationType = 'informational' | 'urgent' | 'reminder';
 export type DeliveryScope = 'all_participants' | 'leaders' | 'session_participants' | 'custom';
+export type SenderScope = 'organizer' | 'leader';
 
 export interface SlideOverNotification {
   id: number;
@@ -18,8 +19,10 @@ export interface SlideOverNotification {
   message: string;
   notification_type: NotificationType;
   delivery_scope: DeliveryScope;
+  sender_scope?: SenderScope;
   session_id: number | null;
   session_title?: string | null;
+  session_start_at?: string | null;
   recipient_count: number | null;
   sent_at: string | null;
   sent_by?: { first_name: string; last_name: string } | null;
@@ -28,6 +31,7 @@ export interface SlideOverNotification {
 
 interface NotificationDetail {
   session_title: string | null;
+  session_start_at?: string | null;
   sent_by: { first_name: string; last_name: string } | null;
   recipient_count: number;
   channel_breakdown: {
@@ -78,6 +82,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
   const panelRef = useRef<HTMLDivElement>(null);
 
   const isOpen = notification !== null;
+  const isLeader = notification?.sender_scope === 'leader';
 
   // Fetch detail when notification changes
   useEffect(() => {
@@ -94,7 +99,6 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
       .finally(() => setDetailLoading(false));
   }, [notification?.id, workshopId]);
 
-  // Escape key closes
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -103,7 +107,6 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
     return () => document.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll while open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -115,6 +118,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
 
   const sentBy = detail?.sent_by ?? notification?.sent_by;
   const sessionTitle = detail?.session_title ?? notification?.session_title;
+  const sessionStartAt = detail?.session_start_at ?? notification?.session_start_at;
   const recipientCount = detail?.recipient_count ?? notification?.recipient_count;
 
   return (
@@ -143,6 +147,13 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
             {/* -- Header -------------------------------------------- */}
             <div className="flex items-start justify-between px-6 pt-6 pb-5 border-b border-border-gray">
               <div className="flex flex-wrap gap-2">
+                {/* Leader badge */}
+                {isLeader && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                    Leader
+                  </span>
+                )}
+
                 {/* Type badge */}
                 {(() => {
                   const cfg = typeBadge[notification.notification_type];
@@ -157,10 +168,13 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
                 {/* Scope badge */}
                 {(() => {
                   const cfg = scopeBadge[notification.delivery_scope] ?? scopeBadge.custom;
+                  const label = isLeader && sessionTitle
+                    ? `Session: ${sessionTitle}`
+                    : cfg.label;
                   return (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container text-medium-gray border border-border-gray">
                       {cfg.icon}
-                      {cfg.label}
+                      {label}
                     </span>
                   );
                 })()}
@@ -177,20 +191,36 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
             </div>
 
             {/* Sent timestamp + by */}
-            <div className="px-6 py-3 border-b border-border-gray bg-surface/40">
+            <div
+              className="px-6 py-3 border-b border-border-gray bg-surface/40"
+              style={isLeader ? { borderLeft: '3px solid #E67E22' } : undefined}
+            >
               <p className="text-xs text-medium-gray">
                 {notification.sent_at
                   ? <>Sent on <span className="font-medium text-dark">{format(parseISO(notification.sent_at), "MMMM d, yyyy 'at' h:mm a")}</span></>
                   : <span className="italic">Queued — not yet sent</span>}
               </p>
-              {sentBy && (
+              {sentBy ? (
                 <p className="text-xs text-medium-gray mt-0.5">
-                  Sent by <span className="font-medium text-dark">{sentBy.first_name} {sentBy.last_name}</span>
+                  {isLeader ? (
+                    <>
+                      Leader:{' '}
+                      <span className="font-medium" style={{ color: '#92400E' }}>
+                        {sentBy.first_name} {sentBy.last_name}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Sent by{' '}
+                      <span className="font-medium text-dark">
+                        {sentBy.first_name} {sentBy.last_name}
+                      </span>
+                    </>
+                  )}
                 </p>
-              )}
-              {!sentBy && detailLoading && (
+              ) : detailLoading ? (
                 <div className="h-3.5 w-32 bg-border-gray rounded animate-pulse mt-1" />
-              )}
+              ) : null}
             </div>
 
             {/* -- Scrollable body ------------------------------------ */}
@@ -212,14 +242,21 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
                 </h3>
 
                 <div className="space-y-3">
-                  {/* Session (if scoped) */}
-                  {notification.delivery_scope === 'session_participants' && (
+                  {/* Session — shown for session-scoped or leader notifications */}
+                  {(notification.delivery_scope === 'session_participants' || isLeader) && (
                     <div className="flex items-start gap-2.5">
                       <MessagesSquare className="w-4 h-4 text-medium-gray mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs text-medium-gray">Session</p>
                         {sessionTitle ? (
-                          <p className="text-sm font-medium text-dark">{sessionTitle}</p>
+                          <>
+                            <p className="text-sm font-medium text-dark">{sessionTitle}</p>
+                            {sessionStartAt && (
+                              <p className="text-xs text-medium-gray mt-0.5">
+                                {format(parseISO(sessionStartAt), "MMM d 'at' h:mm a")}
+                              </p>
+                            )}
+                          </>
                         ) : detailLoading ? (
                           <div className="h-4 w-40 bg-border-gray rounded animate-pulse mt-1" />
                         ) : (

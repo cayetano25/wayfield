@@ -36,6 +36,8 @@ export interface LeaderDashboardSession {
   is_live: boolean;
   messaging_window: LeaderMessagingWindow;
   messaging_window_open?: boolean;
+  messaging_window_start?: string | null;
+  messaging_window_end?: string | null;
 }
 
 /* --- Roster participant ----------------------------------------------- */

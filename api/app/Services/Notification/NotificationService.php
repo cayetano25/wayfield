@@ -90,16 +90,47 @@ final class NotificationService
 
     /**
      * Returns paginated in-app notifications for a user, most recent first.
+     * Eager-loads sender identity, session, and workshop context to avoid N+1.
      *
      * @return LengthAwarePaginator
      */
     public function getForUser(int $userId, int $perPage = 20)
     {
-        return NotificationRecipient::with('notification')
+        return NotificationRecipient::with([
+            'notification.createdBy.leader',
+            'notification.session:id,title,start_at,end_at',
+            'notification.workshop:id,title,timezone,organization_id',
+            'notification.workshop.organization:id,name',
+        ])
             ->where('user_id', $userId)
             ->whereIn('in_app_status', ['pending', 'delivered', 'read'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
+    }
+
+    /**
+     * Returns unread-count meta for the bell and notification list header.
+     * Single aggregate JOIN query — no N+1.
+     */
+    public function getMetaForUser(int $userId): array
+    {
+        $row = NotificationRecipient::query()
+            ->join('notifications', 'notification_recipients.notification_id', '=', 'notifications.id')
+            ->where('notification_recipients.user_id', $userId)
+            ->whereIn('notification_recipients.in_app_status', ['pending', 'delivered'])
+            ->whereNull('notification_recipients.read_at')
+            ->selectRaw('
+                COUNT(*) as unread_count,
+                SUM(notifications.notification_type = ?) as urgent_count,
+                SUM(notifications.sender_scope = ?) as leader_count
+            ', ['urgent', 'leader'])
+            ->first();
+
+        return [
+            'unread_count'      => (int) ($row->unread_count ?? 0),
+            'has_urgent_unread' => (int) ($row->urgent_count ?? 0) > 0,
+            'has_leader_unread' => (int) ($row->leader_count ?? 0) > 0,
+        ];
     }
 
     /**

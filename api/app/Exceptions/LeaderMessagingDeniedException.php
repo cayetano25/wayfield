@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use Carbon\Carbon;
 use RuntimeException;
 
 class LeaderMessagingDeniedException extends RuntimeException
@@ -31,9 +32,24 @@ class LeaderMessagingDeniedException extends RuntimeException
         return new self('messaging_denied', $message);
     }
 
-    public static function outsideWindow(string $message): self
+    public static function outsideWindow(string $message, ?\Carbon\Carbon $windowStart = null, ?\Carbon\Carbon $windowEnd = null): self
     {
-        return new self('messaging_window', $message);
+        $extra = ['messaging_window_open' => false];
+
+        if ($windowStart !== null) {
+            $extra['window_start'] = $windowStart->toIso8601String();
+        }
+
+        if ($windowEnd !== null) {
+            $extra['window_end'] = $windowEnd->toIso8601String();
+        }
+
+        return new self('messaging_window', $message, $extra);
+    }
+
+    public static function noParticipants(): self
+    {
+        return new self('no_participants', 'No participants are enrolled in this session.');
     }
 
     public function getResponseData(): array

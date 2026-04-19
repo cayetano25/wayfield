@@ -1,36 +1,19 @@
 // components/nav/AppTopNav.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Megaphone, Bell } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Menu, X } from 'lucide-react'
 import { useNavContext } from '@/lib/hooks/useNavContext'
-import { NavLink }      from './NavLink'
-import { UserMenu }     from './UserMenu'
-import { GuestActions } from './GuestActions'
-import { MobileMenu }   from './MobileMenu'
-import { apiGet } from '@/lib/api/client'
+import { NavLink }            from './NavLink'
+import { UserMenu }           from './UserMenu'
+import { GuestActions }       from './GuestActions'
+import { MobileMenu }         from './MobileMenu'
+import { NotificationBell }   from '@/components/notifications/NotificationBell'
 
 export function AppTopNav() {
   const nav                         = useNavContext()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!nav.isAuthenticated) return
-    apiGet<{ data?: { read_at: string | null }[] } | { read_at: string | null }[]>(
-      '/me/notifications',
-    )
-      .then((res) => {
-        const list = Array.isArray(res)
-          ? res
-          : ((res as { data?: { read_at: string | null }[] }).data ?? [])
-        setUnreadCount(list.filter((n) => !n.read_at).length)
-      })
-      .catch(() => {})
-  }, [nav.isAuthenticated])
 
   return (
     <>
@@ -116,35 +99,10 @@ export function AppTopNav() {
               />
             )}
 
-            {/* Authenticated user — icons + separator + user menu */}
+            {/* Authenticated user — notification bell + user menu */}
             {!nav.isLoading && nav.isAuthenticated && nav.user && (
               <div className="flex items-center gap-2">
-                {/* Megaphone */}
-                <button
-                  type="button"
-                  className="w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
-                  title="Announcements"
-                  aria-label="Announcements"
-                >
-                  <Megaphone size={20} />
-                </button>
-
-                {/* Bell with unread badge */}
-                <button
-                  type="button"
-                  className="relative w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
-                  title="Notifications"
-                  aria-label="Notifications"
-                  onClick={() => router.push('/notifications')}
-                >
-                  <Bell size={20} />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-danger text-white text-[10px] font-semibold leading-none">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-
+                <NotificationBell isAuthenticated={nav.isAuthenticated} />
                 <UserMenu user={nav.user} />
               </div>
             )}

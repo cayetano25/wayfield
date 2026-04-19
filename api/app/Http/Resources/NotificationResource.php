@@ -25,6 +25,18 @@ class NotificationResource extends JsonResource
                 'first_name' => $this->createdBy->first_name,
                 'last_name' => $this->createdBy->last_name,
             ] : null),
+            'created_by' => $this->whenLoaded('createdBy', fn () => $this->createdBy ? [
+                'id' => $this->createdBy->id,
+                'first_name' => $this->createdBy->first_name,
+                'last_name' => $this->createdBy->last_name,
+            ] : null),
+            'leader' => $this->sender_scope === 'leader' && $this->relationLoaded('createdBy') && $this->createdBy?->leader
+                ? [
+                    'id' => $this->createdBy->leader->id,
+                    'first_name' => $this->createdBy->leader->first_name,
+                    'last_name' => $this->createdBy->leader->last_name,
+                ]
+                : null,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

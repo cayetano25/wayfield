@@ -16,6 +16,7 @@ use App\Policies\AttendancePolicy;
 use App\Policies\LeaderInvitationPolicy;
 use App\Policies\LeaderPolicy;
 use App\Policies\LocationPolicy;
+use App\Policies\BillingPolicy;
 use App\Policies\NotificationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\RegistrationPolicy;
@@ -52,6 +53,8 @@ class AppServiceProvider extends AuthServiceProvider
     {
         $this->registerPolicies();
 
+        \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+
         // Geocoding: dispatch GeocodeAddressJob on address create/update
         Address::observe(AddressObserver::class);
 
@@ -67,6 +70,12 @@ class AppServiceProvider extends AuthServiceProvider
 
         // Phase 7: Offline sync
         Gate::define('sync.download', [WorkshopPolicy::class, 'syncDownload']);
+
+        // Billing gates — owner and billing_admin access
+        Gate::define('billing.view',   [BillingPolicy::class, 'view']);
+        Gate::define('billing.manage', [BillingPolicy::class, 'manage']);
+        Gate::define('billing.cancel', [BillingPolicy::class, 'cancel']);
+        Gate::define('billing.portal', [BillingPolicy::class, 'portal']);
 
         // Pure JSON API — no data wrapper on resources.
         JsonResource::withoutWrapping();

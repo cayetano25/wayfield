@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, Suspense } from 'react'
+import { useCallback, useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 // useRouter is used in CheckoutResultHandler; useSearchParams requires Suspense
 import toast from 'react-hot-toast'
@@ -8,6 +8,7 @@ import { ExternalLink, FileText, TrendingUp } from 'lucide-react'
 import { useSetPage } from '@/contexts/PageContext'
 import { useUser } from '@/contexts/UserContext'
 import { apiGet, apiPost, ApiError } from '@/lib/api/client'
+import { cancelSubscription, resumeSubscription } from '@/lib/api/billing'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -44,6 +45,7 @@ interface SubscriptionData {
   current_period_start: string | null
   current_period_end: string | null
   renewal_date: string | null
+  cancel_at_period_end: boolean
   limits: PlanLimits
   usage: PlanUsage
   invoices: Invoice[]
@@ -117,6 +119,91 @@ function UsageBar({ label, used, max }: UsageBarProps) {
   )
 }
 
+interface CancelConfirmModalProps {
+  planName: string
+  periodEnd: string | null
+  onConfirm: () => void
+  onCancel: () => void
+  loading: boolean
+}
+
+function CancelConfirmModal({ planName, periodEnd, onConfirm, onCancel, loading }: CancelConfirmModalProps) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.45)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '32px',
+          maxWidth: '440px',
+          width: '100%',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+        }}
+      >
+        <div style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#2E2E2E', marginBottom: '12px' }}>
+          Cancel subscription?
+        </div>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#4B5563', lineHeight: '1.6', margin: '0 0 24px' }}>
+          Your <strong>{planName}</strong> plan will stay active until{' '}
+          <strong>{periodEnd ?? 'the end of your billing period'}</strong>. After that your
+          organization moves to the Foundation plan.
+        </p>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              height: '40px',
+              borderRadius: '8px',
+              background: loading ? '#F87171' : '#E94F37',
+              color: 'white',
+              border: 'none',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {loading ? 'Canceling…' : 'Confirm Cancellation'}
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              height: '40px',
+              borderRadius: '8px',
+              background: 'white',
+              color: '#0FA3B1',
+              border: '1px solid #0FA3B1',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Keep My Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function invoiceStatusVariant(status: Invoice['status']): 'status-active' | 'status-draft' | 'status-archived' {
   if (status === 'paid') return 'status-active'
   if (status === 'open') return 'status-draft'
@@ -160,17 +247,29 @@ export default function OrganizationBillingPage() {
   const [data, setData] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [resumeLoading, setResumeLoading] = useState(false)
 
   const pricingRef = useRef<HTMLDivElement>(null)
+
+  const loadData = useCallback(async () => {
+    if (!currentOrg || !canAccess) return
+    try {
+      const res = await apiGet<SubscriptionData>(`/organizations/${currentOrg.id}/subscription`)
+      setData(res)
+    } catch {
+      toast.error('Failed to load billing information')
+    } finally {
+      setLoading(false)
+    }
+  }, [currentOrg, canAccess])
 
   useEffect(() => {
     if (!currentOrg) return
     if (!canAccess) { setLoading(false); return }
-    apiGet<SubscriptionData>(`/organizations/${currentOrg.id}/subscription`)
-      .then((res) => setData(res))
-      .catch(() => toast.error('Failed to load billing information'))
-      .finally(() => setLoading(false))
-  }, [currentOrg, canAccess])
+    loadData()
+  }, [currentOrg, canAccess, loadData])
 
   async function handleManage() {
     if (!currentOrg) return
@@ -186,6 +285,35 @@ export default function OrganizationBillingPage() {
 
   function scrollToPricing() {
     pricingRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  async function handleCancelConfirm() {
+    if (!currentOrg) return
+    setCancelLoading(true)
+    try {
+      await cancelSubscription(currentOrg.id)
+      toast.success('Subscription canceled. Your plan stays active until the end of the period.')
+      setShowCancelModal(false)
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not cancel subscription')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
+  async function handleResume() {
+    if (!currentOrg) return
+    setResumeLoading(true)
+    try {
+      await resumeSubscription(currentOrg.id)
+      toast.success('Subscription resumed!')
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not resume subscription')
+    } finally {
+      setResumeLoading(false)
+    }
   }
 
   if (!canAccess) {
@@ -386,8 +514,83 @@ export default function OrganizationBillingPage() {
           context="billing"
           currentPlanCode={data.plan_code}
           orgId={currentOrg?.id}
+          orgName={currentOrg?.name}
+          onSuccess={loadData}
         />
       </div>
+
+      {/* -- Danger Zone: Cancel / Resume (owner only) -- */}
+      {role === 'owner' && hasSubscription && (
+        <Card>
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold" style={{ color: '#E94F37' }}>
+              Danger Zone
+            </h2>
+          </div>
+          <div className="px-6 py-6">
+            {data.cancel_at_period_end ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#374151', fontWeight: 500 }}>
+                    Your plan is canceled and ends on{' '}
+                    <strong>{formatDate(data.current_period_end)}</strong>.
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
+                    After this date your organization moves to the Foundation plan.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleResume}
+                  loading={resumeLoading}
+                >
+                  Resume Subscription
+                </Button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#374151', fontWeight: 500 }}>
+                    Cancel your {displayName} plan
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
+                    Your plan will remain active until the end of the current billing period.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  style={{
+                    height: '36px',
+                    padding: '0 16px',
+                    borderRadius: '8px',
+                    background: 'white',
+                    color: '#E94F37',
+                    border: '1px solid #E94F37',
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel Subscription
+                </button>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {showCancelModal && (
+        <CancelConfirmModal
+          planName={displayName}
+          periodEnd={formatDate(data.current_period_end)}
+          onConfirm={handleCancelConfirm}
+          onCancel={() => setShowCancelModal(false)}
+          loading={cancelLoading}
+        />
+      )}
     </div>
   )
 }
