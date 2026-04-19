@@ -1,12 +1,17 @@
-import { UserProvider } from '@/contexts/UserContext';
-import { ToastProvider } from '@/components/ui/Toast';
-import { LeaderShell } from '@/components/shared/LeaderShell';
+// app/(leader)/layout.tsx
+import { AppTopNav } from '@/components/nav/AppTopNav'
 
-export default function LeaderLayout({ children }: { children: React.ReactNode }) {
+export default function LeaderLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <UserProvider>
-      <ToastProvider />
-      <LeaderShell>{children}</LeaderShell>
-    </UserProvider>
-  );
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F5' }}>
+      <AppTopNav />
+      <main className="pt-14">
+        {children}
+      </main>
+    </div>
+  )
 }
