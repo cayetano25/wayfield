@@ -7,6 +7,7 @@ import {
   Copy, Check, Camera, Pencil, AlertTriangle, AlertCircle,
   CalendarDays, MapPin, Phone, ParkingSquare, DoorOpen, Info,
 } from 'lucide-react';
+import { QRCodeModal } from '@/components/workshops/QRCodeModal';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { apiGet, apiPost, apiPut, ApiError } from '@/lib/api/client';
@@ -102,6 +103,7 @@ export default function WorkshopOverviewPage() {
   const [publishing, setPublishing] = useState(false);
   const [publishErrors, setPublishErrors] = useState<string[]>([]);
 
+  const [qrModalOpen, setQRModalOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
@@ -344,8 +346,19 @@ export default function WorkshopOverviewPage() {
           </button>
           <button
             type="button"
-            className="p-1.5 rounded-md text-light-gray hover:text-medium-gray transition-colors"
-            title="QR code (coming soon)"
+            onClick={workshop.status === 'published' ? () => setQRModalOpen(true) : undefined}
+            disabled={workshop.status !== 'published'}
+            className={`p-1.5 rounded-md transition-colors ${
+              workshop.status === 'published'
+                ? 'text-light-gray hover:text-primary hover:bg-primary/5 cursor-pointer'
+                : 'text-light-gray opacity-40 cursor-not-allowed'
+            }`}
+            title={
+              workshop.status === 'published'
+                ? 'Show QR code'
+                : 'Publish this workshop to enable the QR code'
+            }
+            data-testid="qr-camera-btn"
           >
             <Camera className="w-4 h-4" />
           </button>
@@ -529,6 +542,14 @@ export default function WorkshopOverviewPage() {
           </Card>
         </div>
       </div>
+
+      {/* QR Code modal */}
+      <QRCodeModal
+        joinCode={workshop.join_code}
+        workshopTitle={workshop.title}
+        isOpen={qrModalOpen}
+        onClose={() => setQRModalOpen(false)}
+      />
 
       {/* Publish modal */}
       <Modal

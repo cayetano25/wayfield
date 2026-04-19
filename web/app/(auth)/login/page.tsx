@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ interface LoginResponse {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -46,6 +47,17 @@ export default function LoginPage() {
       });
       setToken(res.token);
       setStoredUser(res.user);
+      const pendingJoin = sessionStorage.getItem('pendingJoin');
+      if (pendingJoin) {
+        sessionStorage.removeItem('pendingJoin');
+        router.push(pendingJoin);
+        return;
+      }
+      const redirect = searchParams.get('redirect');
+      if (redirect?.startsWith('/')) {
+        router.push(redirect);
+        return;
+      }
       router.push('/dashboard');
     } catch (err) {
       if (err instanceof ApiError) {
