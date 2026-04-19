@@ -225,12 +225,11 @@ class BillingController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $subscription = $org->subscriptions()
+        $hasActiveSubscription = $org->subscriptions()
             ->whereIn('status', ['active', 'trialing'])
-            ->latest('starts_at')
-            ->first();
+            ->exists();
 
-        if (! $subscription?->stripe_customer_id) {
+        if (! $org->stripe_customer_id || ! $hasActiveSubscription) {
             return response()->json([
                 'error' => 'no_stripe_customer',
                 'message' => 'No active Stripe subscription found for this organization.',
@@ -238,7 +237,7 @@ class BillingController extends Controller
         }
 
         $portalSession = StripeBillingSession::create([
-            'customer' => $subscription->stripe_customer_id,
+            'customer' => $org->stripe_customer_id,
             'return_url' => config('app.frontend_url').'/admin/organization/billing',
         ]);
 

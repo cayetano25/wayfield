@@ -26,6 +26,14 @@ class Workshop extends Model
         'default_location_id',
         'public_page_enabled',
         'public_slug',
+        'social_share_title',
+        'social_share_description',
+        'social_share_image_file_id',
+        'public_page_is_indexable',
+        'canonical_url_override',
+        'public_summary',
+        'join_code_rotated_at',
+        'join_code_rotated_by_user_id',
         'header_image_url',
     ];
 

@@ -18,11 +18,15 @@ class Registration extends Model
         'joined_via_code',
         'registered_at',
         'canceled_at',
+        'removed_by_user_id',
+        'removed_at',
+        'removal_reason',
     ];
 
     protected $casts = [
         'registered_at' => 'datetime',
         'canceled_at' => 'datetime',
+        'removed_at' => 'datetime',
     ];
 
     public function workshop(): BelongsTo
