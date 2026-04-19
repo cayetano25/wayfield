@@ -109,4 +109,28 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Verification email sent.']);
     }
+
+    /**
+     * GET /api/v1/auth/check-email?email={email}
+     *
+     * Public endpoint used by the invitation frontend to determine whether
+     * the invited person already has a Wayfield account.
+     *
+     * Security note: intentionally discloses whether an email has an account.
+     * This is acceptable because invitation links are already targeted to a
+     * specific email — the invited person knows their own email address.
+     * Rate-limited to 10 requests/minute per IP in routes/api.php.
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+
+        $email = strtolower(trim($request->query('email', '')));
+        $exists = User::where('email', $email)->exists();
+
+        return response()->json([
+            'email' => $email,
+            'account_exists' => $exists,
+        ]);
+    }
 }

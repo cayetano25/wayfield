@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OfflineSyncController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\OrgInvitationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ParticipantController;
@@ -73,6 +74,9 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:5,1');
         Route::get('verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('verification.verify');
+        // Used by the invitation frontend to determine auth scenario (new vs. returning user).
+        Route::get('check-email', [AuthController::class, 'checkEmail'])
+            ->middleware('throttle:10,1');
     });
 
     // ─── Public endpoints (no auth required) ─────────────────────────────────
@@ -106,10 +110,21 @@ Route::prefix('v1')->group(function () {
     });
 
     // ─── Leader invitation resolve/decline (public-but-tokenized) ────────────
-    // URL shape: /leader-invitations/{id}/{token}
-    // {id} is the non-secret lookup key; {token} is the raw secret verified with hash_equals().
-    Route::get('leader-invitations/{id}/{token}', [LeaderInvitationController::class, 'show']);
-    Route::post('leader-invitations/{id}/{token}/decline', [LeaderInvitationController::class, 'decline']);
+    // URL shape: /leader-invitations/{token}
+    // {token} is the raw secret — SHA-256 hashed and looked up via indexed column.
+    Route::get('leader-invitations/{token}', [LeaderInvitationController::class, 'show']);
+    Route::post('leader-invitations/{token}/decline', [LeaderInvitationController::class, 'decline']);
+
+    // ─── Org member invitation resolution (public-but-tokenized) ─────────────
+    // URL shape: /org-invitations/{token}
+    // {token} is the raw secret — hashed and compared via hash_equals().
+    Route::prefix('org-invitations/{token}')->group(function () {
+        Route::get('', [OrgInvitationController::class, 'show']);
+        Route::post('decline', [OrgInvitationController::class, 'decline']);
+        // Accept requires authentication — the user must be logged in first.
+        Route::middleware(['auth:sanctum', 'tenant.auth'])
+            ->post('accept', [OrgInvitationController::class, 'accept']);
+    });
 
     // ─── Address / country config (authenticated) ─────────────────────────────
     // Country config is static — safe to expose to any authenticated user.
@@ -172,6 +187,13 @@ Route::prefix('v1')->group(function () {
         Route::post('organizations/{organization}/users', [OrganizationUserController::class, 'store']);
         Route::patch('organizations/{organization}/users/{organizationUser}', [OrganizationUserController::class, 'update']);
 
+        // ─── Org member invitations ───────────────────────────────────────────
+        Route::prefix('organizations/{organization}/invitations')->group(function () {
+            Route::get('', [OrgInvitationController::class, 'index']);
+            Route::post('', [OrgInvitationController::class, 'store']);
+            Route::delete('{invitation}', [OrgInvitationController::class, 'destroy']);
+        });
+
         // Locations
         Route::get('organizations/{organization}/locations', [LocationController::class, 'index']);
         Route::post('organizations/{organization}/locations', [LocationController::class, 'store']);
@@ -225,7 +247,7 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{workshop}/my-schedule', [MyScheduleController::class, 'show']);
 
         // ─── Leader invitation acceptance (requires auth) ─────────────────────
-        Route::post('leader-invitations/{id}/{token}/accept', [LeaderInvitationController::class, 'accept']);
+        Route::post('leader-invitations/{token}/accept', [LeaderInvitationController::class, 'accept']);
 
         // ─── Leader admin (organizer) ─────────────────────────────────────────
         Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);
@@ -290,9 +312,9 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
 
         // ─── Billing / Stripe Checkout (Phase 15) ─────────────────────────────
-        Route::post('billing/checkout', [BillingController::class, 'checkout']);
-        Route::post('billing/portal', [BillingController::class, 'portal']);
-        Route::get('billing/status', [BillingController::class, 'status']);
+        Route::post('organizations/{organization}/billing/checkout', [BillingController::class, 'checkout']);
+        Route::post('organizations/{organization}/billing/portal', [BillingController::class, 'portal']);
+        Route::get('organizations/{organization}/billing/status', [BillingController::class, 'status']);
 
         // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);

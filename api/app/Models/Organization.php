@@ -88,6 +88,11 @@ class Organization extends Model
         return $this->hasMany(LeaderInvitation::class);
     }
 
+    public function organizationInvitations(): HasMany
+    {
+        return $this->hasMany(OrganizationInvitation::class);
+    }
+
     public function featureFlags(): HasMany
     {
         return $this->hasMany(FeatureFlag::class);
