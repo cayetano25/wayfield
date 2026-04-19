@@ -25,8 +25,12 @@ class AuthController extends Controller
     {
         $user = $action->execute($request->validated());
 
+        $token = $user->createToken('auth_token', ['*'], now()->addDays(30));
+
         return response()->json([
             'message' => 'Registration successful. Please verify your email.',
+            'token' => $token->plainTextToken,
+            'token_type' => 'Bearer',
             'user' => new UserResource($user),
         ], 201);
     }

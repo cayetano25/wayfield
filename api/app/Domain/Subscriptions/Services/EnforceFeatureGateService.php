@@ -14,8 +14,125 @@ class EnforceFeatureGateService
         private readonly ResolveOrganizationEntitlementsService $entitlementsService,
     ) {}
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Config-driven methods (read exclusively from config/plans.php)
+    // These use the new config key names (e.g. 'active_workshops', 'custom_branding').
+    // Used by BillingController, PlansController, and new feature checks.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns true if the organization's plan includes the given feature.
+     * Reads from config/plans.features.{planCode}.{featureKey}.
+     *
+     * @param  string  $featureKey  A key from config('plans.features.*'), e.g. 'custom_branding'
+     */
+    public function hasFeature(Organization $org, string $featureKey): bool
+    {
+        $planCode = $org->subscription?->plan_code ?? 'free';
+        $features = config("plans.features.{$planCode}", []);
+
+        return (bool) ($features[$featureKey] ?? false);
+    }
+
+    /**
+     * Returns the limit value for the given dimension on the org's plan.
+     * Returns null if the plan has no limit for this dimension (unlimited).
+     *
+     * @param  string  $limitKey  A key from config('plans.limits.*'), e.g. 'active_workshops'
+     */
+    public function getLimit(Organization $org, string $limitKey): ?int
+    {
+        $planCode = $org->subscription?->plan_code ?? 'free';
+        $limits = config("plans.limits.{$planCode}", []);
+
+        return $limits[$limitKey] ?? null;
+    }
+
+    /**
+     * Returns true if the org is within the given limit.
+     * Always returns true when the limit is null (unlimited).
+     *
+     * @param  string  $limitKey  e.g. 'active_workshops', 'participants_per_workshop'
+     * @param  int  $currentCount  Current usage count
+     */
+    public function isWithinLimit(Organization $org, string $limitKey, int $currentCount): bool
+    {
+        $limit = $this->getLimit($org, $limitKey);
+        if ($limit === null) {
+            return true; // unlimited
+        }
+
+        return $currentCount < $limit;
+    }
+
+    /**
+     * Returns the display name for the org's current plan from config.
+     * e.g. 'starter' → 'Creator'
+     */
+    public function getPlanDisplayName(Organization $org): string
+    {
+        $planCode = $org->subscription?->plan_code ?? 'free';
+
+        return config("plans.display_names.{$planCode}", ucfirst($planCode));
+    }
+
+    /**
+     * Returns true if the given plan code is higher than the org's current plan.
+     * Used by upgrade prompts to determine which plans to offer.
+     */
+    public function isUpgrade(Organization $org, string $targetPlanCode): bool
+    {
+        $order = config('plans.order', []);
+        $currentCode = $org->subscription?->plan_code ?? 'free';
+        $currentIdx = array_search($currentCode, $order, true);
+        $targetIdx = array_search($targetPlanCode, $order, true);
+
+        if ($currentIdx === false || $targetIdx === false) {
+            return false;
+        }
+
+        return $targetIdx > $currentIdx;
+    }
+
+    /**
+     * Builds the standardised plan_limit_reached error array.
+     * Used by controllers when catching PlanLimitExceededException.
+     *
+     * @param  string  $configLimitKey  The config/plans.php limit key, e.g. 'active_workshops'
+     */
+    public function planLimitErrorArray(
+        Organization $org,
+        PlanLimitExceededException $e,
+        string $configLimitKey,
+    ): array {
+        $planCode = $org->subscription?->plan_code ?? 'free';
+        $displayName = config("plans.display_names.{$planCode}", ucfirst($planCode));
+        $nextPlan = $this->nextPlanUp($planCode);
+        $limit = $e->max;
+        $label = str_replace('_', ' ', $configLimitKey);
+
+        return [
+            'error' => 'plan_limit_reached',
+            'limit_key' => $configLimitKey,
+            'current_count' => $e->current,
+            'limit' => $limit,
+            'current_plan' => $planCode,
+            'current_plan_display' => $displayName,
+            'upgrade_to' => $nextPlan,
+            'upgrade_to_display' => $nextPlan ? config("plans.display_names.{$nextPlan}") : null,
+            'upgrade_url' => '/admin/organization/billing',
+            'message' => "You've reached the {$displayName} plan limit of {$limit} {$label}.",
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Legacy assertion methods (delegate to ResolveOrganizationEntitlementsService)
+    // These use the legacy feature key names consumed by GET /entitlements.
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Check if a feature is enabled for the organization.
+     * Uses legacy feature keys from the entitlements resolver.
      * Returns true/false — does NOT throw.
      */
     public function isFeatureEnabled(Organization $organization, string $featureKey): bool
@@ -26,7 +143,7 @@ class EnforceFeatureGateService
     }
 
     /**
-     * Return the minimum plan required to access a feature.
+     * Return the minimum plan required to access a feature (legacy feature keys).
      */
     public function requiredPlanFor(string $featureKey): string
     {
@@ -65,7 +182,7 @@ class EnforceFeatureGateService
 
         if ($current >= $max) {
             throw new PlanLimitExceededException(
-                limitKey: 'max_active_workshops',
+                limitKey: 'active_workshops',
                 current: $current,
                 max: $max,
                 requiredPlan: $this->nextPlanUp($entitlements['plan']),
@@ -93,7 +210,7 @@ class EnforceFeatureGateService
 
         if ($current >= $max) {
             throw new PlanLimitExceededException(
-                limitKey: 'max_participants_per_workshop',
+                limitKey: 'participants_per_workshop',
                 current: $current,
                 max: $max,
                 requiredPlan: $this->nextPlanUp($entitlements['plan']),
@@ -119,7 +236,7 @@ class EnforceFeatureGateService
 
         if ($current >= $max) {
             throw new PlanLimitExceededException(
-                limitKey: 'max_managers',
+                limitKey: 'organizers',
                 current: $current,
                 max: $max,
                 requiredPlan: $this->nextPlanUp($entitlements['plan']),
@@ -129,10 +246,9 @@ class EnforceFeatureGateService
 
     private function nextPlanUp(string $currentPlan): string
     {
-        return match ($currentPlan) {
-            'free' => 'starter',
-            'starter' => 'pro',
-            default => 'enterprise',
-        };
+        $order = config('plans.order', ['free', 'starter', 'pro', 'enterprise']);
+        $idx = array_search($currentPlan, $order, true);
+
+        return ($idx !== false && isset($order[$idx + 1])) ? $order[$idx + 1] : 'enterprise';
     }
 }

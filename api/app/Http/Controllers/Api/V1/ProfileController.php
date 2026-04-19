@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Address\AddressService;
 use App\Services\Auth\RoleContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,17 +16,32 @@ use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
-    public function __construct(private readonly RoleContextService $roleContext) {}
+    public function __construct(
+        private readonly RoleContextService $roleContext,
+        private readonly AddressService $addressService,
+    ) {}
 
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
+        $user->loadMissing('profile.address');
 
         // Merge the UserResource fields with the role context summary.
         // Per ROLE_MODEL.md Section 0: one account, all roles, context-determined.
         return response()->json(array_merge(
             (new UserResource($user))->resolve($request),
-            ['contexts' => $this->buildContextSummary($user)],
+            [
+                'pronouns' => $user->pronouns,
+                'onboarding_completed' => $user->hasCompletedOnboarding(),
+                'profile' => $user->profile ? [
+                    'phone_number' => $user->profile->phone_number,
+                    'timezone' => $user->profile->timezone,
+                    'address' => $user->profile->address
+                        ? $this->addressService->toApiResponse($user->profile->address)
+                        : null,
+                ] : null,
+                'contexts' => $this->buildContextSummary($user),
+            ],
         ));
     }
 

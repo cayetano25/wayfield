@@ -1,223 +1,35 @@
-'use client';
+import type { Metadata } from 'next'
+import { MarketingPanel } from '../login/components/MarketingPanel'
+import { RegistrationFlow } from './components/RegistrationFlow'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff, Check, CalendarDays, Users } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { ApiError, apiPost } from '@/lib/api/client';
-import { AuthCard } from '@/components/auth/AuthCard';
-
-const passwordSchema = z
-  .string()
-  .min(10, 'Must be 10+ characters')
-  .regex(/[A-Z]/, 'Must contain an uppercase letter')
-  .regex(/[0-9]/, 'Must contain a number')
-  .regex(/[^A-Za-z0-9]/, 'Must contain a special character');
-
-const schema = z
-  .object({
-    first_name: z.string().min(1, 'First name is required'),
-    last_name: z.string().min(1, 'Last name is required'),
-    email: z.string().min(1, 'Email is required').email('Invalid email address'),
-    password: passwordSchema,
-    password_confirmation: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((d) => d.password === d.password_confirmation, {
-    message: 'Passwords do not match',
-    path: ['password_confirmation'],
-  });
-
-type FormValues = z.infer<typeof schema>;
-type Intent = 'organizer' | 'participant';
-
-const passwordRules = [
-  { label: '10+ characters', test: (v: string) => v.length >= 10 },
-  { label: 'Uppercase letter', test: (v: string) => /[A-Z]/.test(v) },
-  { label: 'Number', test: (v: string) => /[0-9]/.test(v) },
-  { label: 'Special character', test: (v: string) => /[^A-Za-z0-9]/.test(v) },
-];
+export const metadata: Metadata = {
+  title: 'Create Account — Wayfield',
+  description: 'Create your Wayfield account to join or manage photography workshops.',
+}
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [intent, setIntent] = useState<Intent | null>(null);
-  const [intentError, setIntentError] = useState(false);
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    mode: 'onChange',
-  });
-
-  const passwordValue = useWatch({ control, name: 'password', defaultValue: '' });
-
-  async function onSubmit(values: FormValues) {
-    if (!intent) {
-      setIntentError(true);
-      return;
-    }
-    setApiError(null);
-    setIntentError(false);
-    try {
-      await apiPost('/auth/register', { ...values, intent });
-      router.push('/verify-email');
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setApiError(err.message);
-      } else {
-        setApiError('Something went wrong. Please try again.');
-      }
-    }
-  }
-
   return (
-    <AuthCard>
-    <div>
-      <h2 className="font-heading text-xl font-semibold text-dark mb-6">Create your account</h2>
-
-      {apiError && (
-        <div className="mb-4 px-4 py-3 bg-danger/8 border border-danger/20 rounded-lg text-sm text-danger">
-          {apiError}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="First name"
-            autoComplete="given-name"
-            error={errors.first_name?.message}
-            {...register('first_name')}
-          />
-          <Input
-            label="Last name"
-            autoComplete="family-name"
-            error={errors.last_name?.message}
-            {...register('last_name')}
-          />
-        </div>
-
-        <Input
-          label="Email address"
-          type="email"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-
-        {/* Account type selector */}
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-dark">I am a…</span>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => { setIntent('organizer'); setIntentError(false); }}
-              className={`
-                flex flex-col items-center gap-2 p-4 rounded-lg border-2 text-left transition-colors
-                ${intent === 'organizer'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border-gray bg-white hover:border-gray-300'}
-              `}
-            >
-              <CalendarDays
-                className={`w-12 h-12 ${intent === 'organizer' ? 'text-primary' : 'text-light-gray'}`}
-              />
-              <div>
-                <div className={`text-sm font-semibold ${intent === 'organizer' ? 'text-primary' : 'text-dark'}`}>
-                  Workshop Organizer
-                </div>
-                <div className="text-xs text-medium-gray mt-0.5 leading-snug">
-                  I run workshops and creative events
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setIntent('participant'); setIntentError(false); }}
-              className={`
-                flex flex-col items-center gap-2 p-4 rounded-lg border-2 text-left transition-colors
-                ${intent === 'participant'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border-gray bg-white hover:border-gray-300'}
-              `}
-            >
-              <Users
-                className={`w-12 h-12 ${intent === 'participant' ? 'text-primary' : 'text-light-gray'}`}
-              />
-              <div>
-                <div className={`text-sm font-semibold ${intent === 'participant' ? 'text-primary' : 'text-dark'}`}>
-                  Workshop Participant
-                </div>
-                <div className="text-xs text-medium-gray mt-0.5 leading-snug">
-                  I attend workshops and want to find new ones
-                </div>
-              </div>
-            </button>
+    <main className="flex h-screen w-full overflow-hidden">
+      {/*
+       * LEFT PANEL — Registration flow
+       * ~45% width on desktop, full width on mobile
+       * Scrollable for multi-step content
+       */}
+      <div className="w-full md:w-[45%] lg:w-[44%] flex flex-col bg-white overflow-y-auto">
+        <div className="flex flex-1 items-center justify-center px-8 py-10">
+          <div className="w-full max-w-[420px]">
+            <RegistrationFlow />
           </div>
-          {intentError && (
-            <p className="text-xs text-danger mt-1">Please select your account type to continue.</p>
-          )}
         </div>
+      </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="new-password"
-            error={errors.password?.message}
-            rightElement={
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-light-gray hover:text-dark transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            }
-            {...register('password')}
-          />
-          {/* Password rules checklist */}
-          <ul className="flex flex-col gap-1 mt-1">
-            {passwordRules.map((rule) => {
-              const met = rule.test(passwordValue);
-              return (
-                <li key={rule.label} className="flex items-center gap-1.5 text-xs">
-                  <Check
-                    className={`w-3 h-3 shrink-0 transition-colors ${
-                      met ? 'text-primary' : 'text-light-gray'
-                    }`}
-                  />
-                  <span className={met ? 'text-primary' : 'text-light-gray'}>{rule.label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        <Input
-          label="Confirm password"
-          type={showPassword ? 'text' : 'password'}
-          autoComplete="new-password"
-          error={errors.password_confirmation?.message}
-          {...register('password_confirmation')}
-        />
-
-        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
-          Create account
-        </Button>
-      </form>
-    </div>
-    </AuthCard>
-  );
+      {/*
+       * RIGHT PANEL — Marketing / hero area
+       * Identical to login page
+       */}
+      <div className="hidden md:block md:w-[55%] lg:w-[56%] relative overflow-hidden">
+        <MarketingPanel />
+      </div>
+    </main>
+  )
 }

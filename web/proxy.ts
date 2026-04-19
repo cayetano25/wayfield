@@ -7,6 +7,8 @@ const PROTECTED_PREFIXES = [
   '/reports',
   '/onboarding',
   '/profile',
+  '/my-workshops',
+  '/leader',
 ];
 
 export function proxy(req: NextRequest) {
@@ -75,6 +77,8 @@ export const config = {
     '/reports/:path*',
     '/onboarding/:path*',
     '/profile/:path*',
+    '/my-workshops/:path*',
+    '/leader/:path*',
     '/login',
     '/register',
   ],

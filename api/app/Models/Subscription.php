@@ -12,6 +12,10 @@ class Subscription extends Model
 
     protected $fillable = [
         'organization_id',
+        'stripe_customer_id',
+        'stripe_subscription_id',
+        'billing_cycle',
+        'current_period_end',
         'plan_code',
         'status',
         'starts_at',
@@ -23,6 +27,7 @@ class Subscription extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'current_period_end' => 'datetime',
         ];
     }
 

@@ -23,6 +23,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'is_active' => true,
             'last_login_at' => null,
+            // Mirrors the production backfill: pre-onboarding-wizard users are all treated as done.
+            'onboarding_completed_at' => now(),
         ];
     }
 
@@ -37,6 +39,16 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
+        ]);
+    }
+
+    /**
+     * A freshly-registered user who has not yet completed the onboarding wizard.
+     */
+    public function unboarded(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'onboarding_completed_at' => null,
         ]);
     }
 }

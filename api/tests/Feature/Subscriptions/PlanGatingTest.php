@@ -52,8 +52,8 @@ test('free plan blocks creating a 3rd active workshop', function () {
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload())
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'plan_limit_exceeded'])
-        ->assertJsonFragment(['required_plan' => 'starter']);
+        ->assertJsonFragment(['error' => 'plan_limit_reached'])
+        ->assertJsonFragment(['upgrade_to' => 'starter']);
 });
 
 test('free plan allows creating when below active workshop limit', function () {
@@ -89,8 +89,8 @@ test('starter plan blocks creating an 11th active workshop', function () {
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload())
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'plan_limit_exceeded'])
-        ->assertJsonFragment(['required_plan' => 'pro']);
+        ->assertJsonFragment(['error' => 'plan_limit_reached'])
+        ->assertJsonFragment(['upgrade_to' => 'pro']);
 });
 
 test('starter plan allows creating when below limit', function () {
@@ -144,7 +144,7 @@ test('free plan blocks the 76th participant registration', function () {
     $this->actingAs($newParticipant, 'sanctum')
         ->postJson('/api/v1/workshops/join', ['join_code' => $workshop->join_code])
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'plan_limit_exceeded']);
+        ->assertJsonFragment(['error' => 'plan_limit_reached']);
 });
 
 test('free plan allows the 75th participant registration', function () {
@@ -202,8 +202,8 @@ test('plan limit 403 response is structured JSON never a 500', function () {
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload());
 
     $response->assertStatus(403);
-    $response->assertJsonStructure(['error', 'message', 'required_plan']);
-    $response->assertJsonFragment(['error' => 'plan_limit_exceeded']);
+    $response->assertJsonStructure(['error', 'message', 'limit_key', 'upgrade_to']);
+    $response->assertJsonFragment(['error' => 'plan_limit_reached']);
 });
 
 // ─── Organization has no subscription (defaults to free) ──────────────────────
@@ -225,7 +225,7 @@ test('organization with no subscription defaults to free plan limits', function 
     $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload())
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'plan_limit_exceeded']);
+        ->assertJsonFragment(['error' => 'plan_limit_reached']);
 });
 
 // ─── Feature gating (reporting routes) ────────────────────────────────────────
@@ -236,7 +236,7 @@ test('free plan cannot access attendance report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'feature_not_available'])
+        ->assertJsonFragment(['error' => 'plan_required'])
         ->assertJsonFragment(['required_plan' => 'starter']);
 });
 
@@ -246,7 +246,7 @@ test('free plan cannot access workshops report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/workshops")
         ->assertStatus(403)
-        ->assertJsonFragment(['error' => 'feature_not_available']);
+        ->assertJsonFragment(['error' => 'plan_required']);
 });
 
 test('starter plan can access attendance report', function () {
@@ -255,7 +255,7 @@ test('starter plan can access attendance report', function () {
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertOk()
-        ->assertJsonStructure(['data']);
+        ->assertJsonStructure(['summary', 'by_workshop', 'by_session', 'trend']);
 });
 
 test('pro plan can access attendance report', function () {

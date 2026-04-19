@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Subscriptions\Exceptions\PlanLimitExceededException;
+use App\Domain\Subscriptions\Services\EnforceFeatureGateService;
 use App\Domain\Workshops\Actions\ArchiveWorkshopAction;
 use App\Domain\Workshops\Actions\CreateWorkshopAction;
 use App\Domain\Workshops\Actions\PublishWorkshopAction;
@@ -20,6 +21,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class WorkshopController extends Controller
 {
+    public function __construct(
+        private readonly EnforceFeatureGateService $featureGate,
+    ) {}
+
     public function index(Request $request, Organization $organization): AnonymousResourceCollection
     {
         $this->authorize('view', $organization);
@@ -58,14 +63,10 @@ class WorkshopController extends Controller
         try {
             $workshop = $action->execute($organization, $request->validated());
         } catch (PlanLimitExceededException $e) {
-            return response()->json([
-                'error' => 'plan_limit_exceeded',
-                'message' => $e->getMessage(),
-                'limit_key' => $e->limitKey,
-                'current' => $e->current,
-                'max' => $e->max,
-                'required_plan' => $e->requiredPlan,
-            ], 403);
+            return response()->json(
+                $this->featureGate->planLimitErrorArray($organization, $e, 'active_workshops'),
+                403
+            );
         }
 
         return response()->json(

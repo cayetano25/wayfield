@@ -35,9 +35,10 @@ async function request<T>(
   });
 
   if (res.status === 401) {
+    const hadToken = !!token;
     clearToken();
     clearStoredUser();
-    if (typeof window !== 'undefined') {
+    if (hadToken && typeof window !== 'undefined') {
       window.location.href = '/login';
     }
     throw new ApiError(401, 'Unauthorized');
@@ -50,6 +51,9 @@ async function request<T>(
       const json = await res.json();
       message = json.message ?? message;
       errors = json.errors;
+      if (json.error === 'plan_limit_reached' && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('wayfield:plan_limit_reached', { detail: json }));
+      }
     } catch {
       // ignore parse errors
     }

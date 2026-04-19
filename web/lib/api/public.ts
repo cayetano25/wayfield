@@ -73,6 +73,14 @@ export interface DiscoverWorkshop {
   };
   leaders_count: number;
   sessions_count: number;
+  // Extended fields for discover page UI
+  first_leader?: {
+    first_name: string;
+    last_name: string;
+    profile_image_url?: string | null;
+  };
+  spots_remaining?: number | null;
+  category?: string;
 }
 
 export interface DiscoverResponse {
@@ -107,6 +115,7 @@ export async function discoverWorkshops(params: {
   type?: string;
   date_from?: string;
   date_to?: string;
+  category?: string;
   page?: number;
 }): Promise<DiscoverResponse | null> {
   const qs = new URLSearchParams();
@@ -114,6 +123,7 @@ export async function discoverWorkshops(params: {
   if (params.type && params.type !== 'all') qs.set('type', params.type);
   if (params.date_from) qs.set('date_from', params.date_from);
   if (params.date_to) qs.set('date_to', params.date_to);
+  if (params.category && params.category !== 'All') qs.set('category', params.category);
   qs.set('page', String(params.page ?? 1));
   qs.set('per_page', '12');
   const query = qs.toString();

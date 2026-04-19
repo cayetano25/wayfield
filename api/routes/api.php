@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\V1\ApiKeyController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
+use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use App\Http\Controllers\Api\V1\FileUploadController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
+use App\Http\Controllers\Api\V1\LeaderDashboardController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
 use App\Http\Controllers\Api\V1\LocationController;
@@ -21,6 +23,8 @@ use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\ParticipantController;
+use App\Http\Controllers\Api\V1\ParticipantDashboardController;
+use App\Http\Controllers\Api\V1\PlansController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
@@ -31,10 +35,12 @@ use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\PublicDiscoverController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\V1\ReportingController;
+use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
@@ -72,7 +78,15 @@ Route::prefix('v1')->group(function () {
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
+        Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
+
+    // ─── Plans (public — no auth required) ───────────────────────────────────
+    Route::get('plans', [PlansController::class, 'index']);
+
+    // ─── Stripe webhook (no auth — signature verification inside controller) ─
+    Route::post('billing/webhook', [BillingController::class, 'webhook'])
+        ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
     // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
     Route::get('sso/{organization:slug}/login', [SsoController::class, 'login']);
@@ -123,17 +137,31 @@ Route::prefix('v1')->group(function () {
             Route::get('recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
         });
 
+        // Participant personal dashboard — open to any authenticated user
+        Route::get('me/dashboard', [ParticipantDashboardController::class, 'show']);
+
+        // Leader personal dashboard
+        Route::get('leader/dashboard', [LeaderDashboardController::class, 'show']);
+
         // Profile
         Route::get('me', [ProfileController::class, 'show']);
         Route::patch('me', [ProfileController::class, 'update']);
         Route::post('me/password', [ProfileController::class, 'changePassword']);
         Route::get('me/organizations', [ProfileController::class, 'organizations']);
 
-        // Onboarding
+        // Onboarding — step endpoints under /onboarding/*
+        Route::prefix('onboarding')->group(function () {
+            Route::get('status', [OnboardingController::class, 'status']);
+            Route::patch('profile', [OnboardingController::class, 'updateProfile']);
+            Route::post('complete', [OnboardingController::class, 'complete']);
+        });
+
+        // Legacy onboarding route (kept for backwards compatibility)
         Route::post('me/onboarding/complete', [OnboardingController::class, 'complete']);
 
         // Organizations
-        Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index']);
+        Route::get('organizations/{organization}/dashboard', [DashboardController::class, 'index'])
+            ->middleware('onboarding.complete');
         Route::get('organizations', [OrganizationController::class, 'index']);
         Route::post('organizations', [OrganizationController::class, 'store']);
         Route::get('organizations/{organization}', [OrganizationController::class, 'show']);
@@ -261,26 +289,32 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/subscription', [SubscriptionController::class, 'show']);
         Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
 
+        // ─── Billing / Stripe Checkout (Phase 15) ─────────────────────────────
+        Route::post('billing/checkout', [BillingController::class, 'checkout']);
+        Route::post('billing/portal', [BillingController::class, 'portal']);
+        Route::get('billing/status', [BillingController::class, 'status']);
+
         // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
 
         // ─── Reporting (Phase 8) ─────────────────────────────────────────────
-        // Attendance and workshop reports require Starter+ (reporting feature).
         // Usage report is available to all plans.
-        Route::get(
-            'organizations/{organization}/reports/attendance',
-            [ReportingController::class, 'attendance']
-        )->middleware('feature:reporting');
-
-        Route::get(
-            'organizations/{organization}/reports/workshops',
-            [ReportingController::class, 'workshops']
-        )->middleware('feature:reporting');
-
         Route::get(
             'organizations/{organization}/reports/usage',
             [ReportingController::class, 'usage']
         );
+
+        // ─── Enhanced Reports (Phase 15) ─────────────────────────────────────
+        // All report endpoints require Starter+ — gated in ReportsController
+        // (plan code always resolved from DB, never from request).
+        Route::prefix('organizations/{organization}/reports')
+            ->middleware('onboarding.complete')
+            ->group(function () {
+                Route::get('attendance', [ReportsController::class, 'attendance']);
+                Route::get('workshops', [ReportsController::class, 'workshops']);
+                Route::get('participants', [ReportsController::class, 'participants']);
+                Route::get('export', [ReportsController::class, 'export']);
+            });
 
         // ─── Webhooks (Phase 9) ───────────────────────────────────────────────
         Route::get('organizations/{organization}/webhooks', [WebhookController::class, 'index']);

@@ -10,7 +10,6 @@ import {
   CreditCard,
   BarChart3,
   HelpCircle,
-  LogOut,
   X,
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
@@ -57,39 +56,13 @@ function NavLink({ href, label, icon: Icon, active }: NavItem & { active: boolea
   );
 }
 
-function UserAvatar({
-  firstName,
-  lastName,
-  imageUrl,
-}: {
-  firstName: string;
-  lastName: string;
-  imageUrl?: string | null;
-}) {
-  if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={`${firstName} ${lastName}`}
-        className="w-8 h-8 rounded-full object-cover shrink-0"
-      />
-    );
-  }
-  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
-  return (
-    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-semibold shrink-0">
-      {initials}
-    </div>
-  );
-}
-
 interface SidebarProps {
   onClose?: () => void;
 }
 
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { user, currentOrg, logout } = useUser();
+  const { currentOrg } = useUser();
 
   const role = currentOrg?.role ?? '';
   const canSeeBilling = BILLING_ROLES.includes(role);
@@ -149,40 +122,8 @@ export function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* Help */}
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-4">
         <NavLink href="/help" label="Help" icon={HelpCircle} active={isActive('/help')} />
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-border-gray px-4 py-4">
-        {user && (
-          <div className="flex items-center gap-3">
-            <UserAvatar
-              firstName={user.first_name}
-              lastName={user.last_name}
-              imageUrl={user.profile_image_url}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-dark truncate">
-                {user.first_name} {user.last_name}
-              </p>
-              <Link
-                href="/profile"
-                className="text-xs text-light-gray hover:text-primary transition-colors"
-              >
-                Profile
-              </Link>
-            </div>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="text-light-gray hover:text-dark transition-colors p-1"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
     </aside>
   );

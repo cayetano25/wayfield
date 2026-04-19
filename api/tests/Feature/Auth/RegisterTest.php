@@ -14,8 +14,8 @@ test('user can register with first_name, last_name, email, and password', functi
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     $response->assertStatus(201)
@@ -40,8 +40,8 @@ test('registration requires first_name', function () {
     $response = $this->postJson('/api/v1/auth/register', [
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     $response->assertStatus(422)
@@ -52,8 +52,8 @@ test('registration requires last_name', function () {
     $response = $this->postJson('/api/v1/auth/register', [
         'first_name' => 'Jane',
         'email' => 'jane@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     $response->assertStatus(422)
@@ -67,8 +67,8 @@ test('registration rejects duplicate email', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'taken@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     $response->assertStatus(422)
@@ -82,8 +82,8 @@ test('verification email is queued on registration', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     Mail::assertQueued(EmailVerificationMail::class, function ($mail) {
@@ -98,8 +98,8 @@ test('password_hash is never exposed in response', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
     ]);
 
     $response->assertJsonMissing(['password_hash', 'password']);

@@ -15,29 +15,14 @@ use App\Models\Workshop;
 class ResolveOrganizationEntitlementsService
 {
     /**
-     * Plan-level limits. null = unlimited.
+     * Map config/plans.php limit keys to the legacy keys returned by resolve().
+     * The legacy keys are stable API surface consumed by GET /entitlements and
+     * EnforceFeatureGateService::assertCan* methods.
      */
-    private const PLAN_LIMITS = [
-        'free' => [
-            'max_active_workshops' => 2,
-            'max_participants_per_workshop' => 75,
-            'max_managers' => 1,
-        ],
-        'starter' => [
-            'max_active_workshops' => 10,
-            'max_participants_per_workshop' => 250,
-            'max_managers' => 5,
-        ],
-        'pro' => [
-            'max_active_workshops' => null,
-            'max_participants_per_workshop' => null,
-            'max_managers' => null,
-        ],
-        'enterprise' => [
-            'max_active_workshops' => null,
-            'max_participants_per_workshop' => null,
-            'max_managers' => null,
-        ],
+    private const LIMIT_KEY_MAP = [
+        'active_workshops' => 'max_active_workshops',
+        'participants_per_workshop' => 'max_participants_per_workshop',
+        'organizers' => 'max_managers',
     ];
 
     /**
@@ -131,7 +116,7 @@ class ResolveOrganizationEntitlementsService
         $planCode = $subscription?->plan_code ?? 'free';
         $subStatus = $subscription?->status ?? 'none';
 
-        $limits = self::PLAN_LIMITS[$planCode] ?? self::PLAN_LIMITS['free'];
+        $limits = $this->resolveLimits($planCode);
         $features = self::PLAN_FEATURES[$planCode] ?? self::PLAN_FEATURES['free'];
 
         // Apply manual_override rows from feature_flags
@@ -181,10 +166,31 @@ class ResolveOrganizationEntitlementsService
     }
 
     /**
-     * Return plan limits constant for external use.
+     * Resolve plan limits from config/plans.php, mapped to legacy key names.
+     * Legacy keys are stable API surface; config keys are the source of truth.
+     */
+    private function resolveLimits(string $planCode): array
+    {
+        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.free', []));
+        $mapped = [];
+        foreach (self::LIMIT_KEY_MAP as $configKey => $legacyKey) {
+            $mapped[$legacyKey] = $configLimits[$configKey] ?? null;
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Return plan limits for external use (reads from config).
      */
     public static function planLimits(string $planCode): array
     {
-        return self::PLAN_LIMITS[$planCode] ?? self::PLAN_LIMITS['free'];
+        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.free', []));
+        $mapped = [];
+        foreach (self::LIMIT_KEY_MAP as $configKey => $legacyKey) {
+            $mapped[$legacyKey] = $configLimits[$configKey] ?? null;
+        }
+
+        return $mapped;
     }
 }
