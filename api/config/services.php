@@ -48,4 +48,32 @@ return [
         'cloudfront_url' => env('AWS_CLOUDFRONT_URL'),
     ],
 
+    'nominatim' => [
+        'base_url' => env('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org'),
+        'user_agent' => env('NOMINATIM_USER_AGENT', 'Wayfield/1.0 (contact@wayfield.app)'),
+        'timeout' => (int) env('NOMINATIM_TIMEOUT_SECONDS', 10),
+        'retries' => (int) env('NOMINATIM_MAX_RETRIES', 2),
+    ],
+
+    'geocoding' => [
+        'provider' => env('GEOCODING_PROVIDER', 'nominatim'),
+        'cache_ttl_days' => (int) env('GEOCODE_CACHE_TTL_DAYS', 90),
+        'failed_ttl_hours' => (int) env('GEOCODE_FAILED_TTL_HOURS', 24),
+        'max_attempts' => (int) env('GEOCODE_MAX_ATTEMPTS', 3),
+        // Nominatim policy: max 1 request/second.
+        // This delay is added between queue job retries and should be
+        // enforced at the queue dispatcher level.
+        //
+        // IMPORTANT: The geocoding queue worker must run with a single process.
+        // For production (Supervisor or AWS), configure:
+        //
+        //   [program:wayfield-geocoding]
+        //   command=php artisan queue:work --queue=geocoding --sleep=3 --tries=3 --max-jobs=50
+        //   numprocs=1   ← CRITICAL: only one worker to respect Nominatim rate limit
+        //
+        // For local development:
+        //   php artisan queue:work --queue=geocoding,default
+        'queue_delay_seconds' => (int) env('GEOCODE_QUEUE_DELAY_SECONDS', 2),
+    ],
+
 ];
