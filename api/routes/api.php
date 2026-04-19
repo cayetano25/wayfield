@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
+use App\Http\Controllers\Api\V1\JoinCodePreviewController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use App\Http\Controllers\Api\V1\FileUploadController;
 use App\Http\Controllers\Api\V1\LeaderAdminController;
@@ -101,6 +102,10 @@ Route::prefix('v1')->group(function () {
     // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
     Route::get('sso/{organization:slug}/login', [SsoController::class, 'login']);
     Route::post('sso/{organization:slug}/callback', [SsoController::class, 'callback']);
+
+    // ─── Join code preview (no auth required, optional auth for user state) ────
+    Route::get('join/{join_code}', [JoinCodePreviewController::class, 'show'])
+        ->middleware('throttle:20,1');
 
     // ─── Public Workshop Discovery (no auth required) ─────────────────────────
     Route::prefix('discover')->group(function () {
