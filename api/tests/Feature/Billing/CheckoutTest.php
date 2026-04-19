@@ -29,7 +29,7 @@ function billingOrg(string $plan = 'free', string $role = 'owner'): array
     return [$org, $user];
 }
 
-// ─── POST /api/v1/billing/checkout ───────────────────────────────────────────
+// ─── POST /api/v1/organizations/{organization}/billing/checkout ───────────────
 
 test('owner can create a checkout session for starter plan', function () {
     [$org, $user] = billingOrg('free', 'owner');
@@ -38,8 +38,7 @@ test('owner can create a checkout session for starter plan', function () {
     // with stripe_not_configured — which proves the owner cleared the auth check.
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'starter',
         'billing' => 'monthly',
     ]);
@@ -53,8 +52,7 @@ test('owner can create a checkout session for starter plan', function () {
 test('staff cannot create a checkout session', function () {
     [$org, $user] = billingOrg('free', 'staff');
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'starter',
         'billing' => 'monthly',
     ]);
@@ -65,8 +63,7 @@ test('staff cannot create a checkout session', function () {
 test('admin cannot create a checkout session', function () {
     [$org, $user] = billingOrg('free', 'admin');
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'starter',
         'billing' => 'monthly',
     ]);
@@ -80,8 +77,7 @@ test('billing_admin can initiate a checkout session', function () {
     // Ensure no price ID so controller reaches the Stripe-not-configured check
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'starter',
         'billing' => 'monthly',
     ]);
@@ -95,8 +91,7 @@ test('billing_admin can initiate a checkout session', function () {
 test('free plan cannot be submitted to checkout endpoint', function () {
     [$org, $user] = billingOrg('free', 'owner');
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'free',
         'billing' => 'monthly',
     ]);
@@ -107,8 +102,7 @@ test('free plan cannot be submitted to checkout endpoint', function () {
 test('enterprise plan cannot be submitted to checkout endpoint', function () {
     [$org, $user] = billingOrg('free', 'owner');
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'enterprise',
         'billing' => 'monthly',
     ]);
@@ -122,8 +116,7 @@ test('checkout returns 422 when no Stripe price is configured for the plan', fun
     // Ensure no price ID is set
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
-    $response = $this->actingAs($user)->postJson('/api/v1/billing/checkout', [
-        'org_id' => $org->id,
+    $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'starter',
         'billing' => 'monthly',
     ]);

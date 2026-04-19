@@ -50,7 +50,9 @@ test('overlapping session selection is rejected', function () {
             'session_id' => $session2->id,
         ])
         ->assertStatus(422)
-        ->assertJsonPath('message', "This session overlaps with '{$session1->title}' which you have already selected.");
+        ->assertJsonPath('error', 'time_conflict')
+        ->assertJsonPath('conflict_with.session_id', $session1->id)
+        ->assertJsonPath('conflict_with.title', $session1->title);
 });
 
 test('non-overlapping sessions can both be selected', function () {
@@ -120,7 +122,7 @@ test('participant can deselect a session', function () {
 
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$session->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     $this->assertDatabaseHas('session_selections', [
         'registration_id' => $reg->id,
@@ -159,7 +161,7 @@ test('after deselecting a session, the slot can be selected again', function () 
     // Deselect session 1.
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$session1->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     // Now session 2 should succeed.
     $this->actingAs($user, 'sanctum')

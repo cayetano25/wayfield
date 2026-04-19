@@ -29,19 +29,18 @@ class BillingController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // POST /api/v1/billing/checkout
+    // POST /api/v1/organizations/{organization}/billing/checkout
     // Auth: owner or billing_admin only
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function checkout(Request $request): JsonResponse
+    public function checkout(Request $request, Organization $organization): JsonResponse
     {
         $data = $request->validate([
-            'org_id' => ['required', 'integer', 'exists:organizations,id'],
             'plan_code' => ['required', Rule::in(['starter', 'pro'])],
             'billing' => ['required', Rule::in(['monthly', 'annual'])],
         ]);
 
-        $org = Organization::findOrFail($data['org_id']);
+        $org = $organization;
 
         // Only owner or billing_admin may manage billing.
         if (! $org->hasBillingAccess($request->user())) {
@@ -80,17 +79,13 @@ class BillingController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // POST /api/v1/billing/portal
+    // POST /api/v1/organizations/{organization}/billing/portal
     // Auth: owner or billing_admin only
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function portal(Request $request): JsonResponse
+    public function portal(Request $request, Organization $organization): JsonResponse
     {
-        $data = $request->validate([
-            'org_id' => ['required', 'integer', 'exists:organizations,id'],
-        ]);
-
-        $org = Organization::findOrFail($data['org_id']);
+        $org = $organization;
 
         if (! $org->hasBillingAccess($request->user())) {
             return response()->json(['error' => 'Unauthorized'], 403);
@@ -149,17 +144,13 @@ class BillingController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // GET /api/v1/billing/status?org_id=
+    // GET /api/v1/organizations/{organization}/billing/status
     // Auth: any authenticated org member (data filtered by role in response)
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function status(Request $request): JsonResponse
+    public function status(Request $request, Organization $organization): JsonResponse
     {
-        $data = $request->validate([
-            'org_id' => ['required', 'integer', 'exists:organizations,id'],
-        ]);
-
-        $org = Organization::findOrFail($data['org_id']);
+        $org = $organization;
         $this->authorize('view', $org);
 
         $subscription = $org->subscriptions()

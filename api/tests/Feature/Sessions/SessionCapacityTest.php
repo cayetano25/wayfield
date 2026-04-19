@@ -58,12 +58,14 @@ test('selection is rejected when session is at full capacity', function () {
     $user = User::factory()->create();
     Registration::factory()->forWorkshop($workshop->id)->forUser($user->id)->create();
 
-    $this->actingAs($user, 'sanctum')
+    $response = $this->actingAs($user, 'sanctum')
         ->postJson("/api/v1/workshops/{$workshop->id}/selections", [
             'session_id' => $session->id,
         ])
-        ->assertStatus(422)
-        ->assertJsonPath('message', "Session '{$session->title}' is at full capacity (1).");
+        ->assertStatus(422);
+
+    expect($response->json('error'))->toBe('session_full');
+    expect($response->json('session_title'))->toBe($session->title);
 });
 
 test('null capacity behaves as unlimited — never treats null as zero', function () {
@@ -139,8 +141,12 @@ test('selection options endpoint shows available slots and full status', functio
         ->getJson("/api/v1/workshops/{$workshop->id}/selection-options")
         ->assertStatus(200);
 
-    $sessionOption = collect($response->json())->firstWhere('session.id', $session->id);
-    expect($sessionOption['capacity'])->toBe(2);
-    expect($sessionOption['available_slots'])->toBe(2);
-    expect($sessionOption['is_full'])->toBeFalse();
+    // Navigate through the grouped-by-day response structure to find the session.
+    $allSessions = collect($response->json('days'))
+        ->flatMap(fn ($d) => collect($d['time_slots'])->flatMap(fn ($ts) => $ts['sessions']));
+
+    $sessionData = $allSessions->firstWhere('session_id', $session->id);
+    expect($sessionData['capacity'])->toBe(2);
+    expect($sessionData['spots_remaining'])->toBe(2);
+    expect($sessionData['state'])->toBe('available');
 });

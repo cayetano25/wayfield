@@ -48,8 +48,8 @@ class AcceptLeaderInvitationAction
             $leader = Leader::where('user_id', $user->id)->first()
                 ?? Leader::create([
                     'user_id' => $user->id,
-                    'first_name' => $profileData['first_name'],
-                    'last_name' => $profileData['last_name'],
+                    'first_name' => $profileData['first_name'] ?? $user->first_name,
+                    'last_name' => $profileData['last_name'] ?? $user->last_name,
                     'bio' => $profileData['bio'] ?? null,
                     'website_url' => $profileData['website_url'] ?? null,
                     'phone_number' => $profileData['phone_number'] ?? null,
@@ -65,8 +65,8 @@ class AcceptLeaderInvitationAction
             // If leader already existed, update profile fields they provided
             if ($leader->wasRecentlyCreated === false) {
                 $leader->update(array_filter([
-                    'first_name' => $profileData['first_name'],
-                    'last_name' => $profileData['last_name'],
+                    'first_name' => $profileData['first_name'] ?? $leader->first_name,
+                    'last_name' => $profileData['last_name'] ?? $leader->last_name,
                     'bio' => $profileData['bio'] ?? $leader->bio,
                     'website_url' => $profileData['website_url'] ?? $leader->website_url,
                     'phone_number' => $profileData['phone_number'] ?? $leader->phone_number,

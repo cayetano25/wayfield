@@ -13,15 +13,15 @@ uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeOrgWithRole(string $role): array
+function makeOrgForInviteTest(string $role): array
 {
-    $org  = Organization::factory()->create();
+    $org = Organization::factory()->create();
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $user->id,
-        'role'            => $role,
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => $role,
+        'is_active' => true,
     ]);
 
     return [$org, $user];
@@ -32,8 +32,8 @@ function makeInvitationWithToken(array $overrides = []): array
     $rawToken = Str::random(64);
     $invitation = OrganizationInvitation::factory()->create(array_merge([
         'invitation_token_hash' => hash('sha256', $rawToken),
-        'expires_at'            => now()->addDays(7),
-        'status'                => 'pending',
+        'expires_at' => now()->addDays(7),
+        'status' => 'pending',
     ], $overrides));
 
     return [$invitation, $rawToken];
@@ -43,12 +43,12 @@ function makeInvitationWithToken(array $overrides = []): array
 
 test('owner can send an invitation to a new email', function () {
     Mail::fake();
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'newmember@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(201)
         ->assertJsonPath('message', 'Invitation sent.')
@@ -56,44 +56,44 @@ test('owner can send an invitation to a new email', function () {
 
     $this->assertDatabaseHas('organization_invitations', [
         'organization_id' => $org->id,
-        'invited_email'   => 'newmember@example.com',
-        'role'            => 'staff',
-        'status'          => 'pending',
+        'invited_email' => 'newmember@example.com',
+        'role' => 'staff',
+        'status' => 'pending',
     ]);
 });
 
 test('admin can send invitation for staff role', function () {
     Mail::fake();
-    [$org, $admin] = makeOrgWithRole('admin');
+    [$org, $admin] = makeOrgForInviteTest('admin');
 
     $this->actingAs($admin, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'staffer@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(201);
 });
 
 test('admin can send invitation for billing_admin role', function () {
     Mail::fake();
-    [$org, $admin] = makeOrgWithRole('admin');
+    [$org, $admin] = makeOrgForInviteTest('admin');
 
     $this->actingAs($admin, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'billing@example.com',
-            'role'          => 'billing_admin',
+            'role' => 'billing_admin',
         ])
         ->assertStatus(201);
 });
 
 test('admin cannot send invitation for owner role', function () {
     Mail::fake();
-    [$org, $admin] = makeOrgWithRole('admin');
+    [$org, $admin] = makeOrgForInviteTest('admin');
 
     $this->actingAs($admin, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'someone@example.com',
-            'role'          => 'owner',
+            'role' => 'owner',
         ])
         // 'owner' is not in the allowed role enum — validation rejects it.
         ->assertStatus(422);
@@ -102,12 +102,12 @@ test('admin cannot send invitation for owner role', function () {
 test('admin cannot send invitation for admin role', function () {
     // Per ROLE_MODEL.md: only owner can invite another admin.
     Mail::fake();
-    [$org, $admin] = makeOrgWithRole('admin');
+    [$org, $admin] = makeOrgForInviteTest('admin');
 
     $this->actingAs($admin, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'newadmin@example.com',
-            'role'          => 'admin',
+            'role' => 'admin',
         ])
         ->assertStatus(403)
         ->assertJsonPath('error', 'insufficient_role');
@@ -115,31 +115,31 @@ test('admin cannot send invitation for admin role', function () {
 
 test('staff cannot send any invitation', function () {
     Mail::fake();
-    [$org, $staff] = makeOrgWithRole('staff');
+    [$org, $staff] = makeOrgForInviteTest('staff');
 
     $this->actingAs($staff, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'someone@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(403);
 });
 
 test('duplicate pending invitation returns 422', function () {
     Mail::fake();
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
 
     // Create a pending invitation for this email already.
     OrganizationInvitation::factory()->forOrganization($org->id)->create([
         'invited_email' => 'person@example.com',
-        'status'        => 'pending',
-        'expires_at'    => now()->addDays(7),
+        'status' => 'pending',
+        'expires_at' => now()->addDays(7),
     ]);
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'person@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(422)
         ->assertJsonPath('error', 'invitation_pending');
@@ -147,21 +147,21 @@ test('duplicate pending invitation returns 422', function () {
 
 test('invitation to existing member returns 422', function () {
     Mail::fake();
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
 
     // Create an active member with this email.
     $existingUser = User::factory()->create(['email' => 'existing@example.com']);
     OrganizationUser::factory()->create([
         'organization_id' => $org->id,
-        'user_id'         => $existingUser->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $existingUser->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'existing@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(422)
         ->assertJsonPath('error', 'already_a_member');
@@ -169,12 +169,12 @@ test('invitation to existing member returns 422', function () {
 
 test('invitation email is queued after store', function () {
     Mail::fake();
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
 
     $this->actingAs($owner, 'sanctum')
         ->postJson("/api/v1/organizations/{$org->id}/invitations", [
             'invited_email' => 'queued@example.com',
-            'role'          => 'staff',
+            'role' => 'staff',
         ])
         ->assertStatus(201);
 
@@ -187,7 +187,7 @@ test('resolve endpoint returns correct org and role information', function () {
     $org = Organization::factory()->create();
     [$invitation, $rawToken] = makeInvitationWithToken([
         'organization_id' => $org->id,
-        'role'            => 'admin',
+        'role' => 'admin',
     ]);
 
     $this->getJson("/api/v1/org-invitations/{$rawToken}")
@@ -223,7 +223,7 @@ test('resolve returns 404 for invalid token', function () {
 test('accept creates organization_users row with correct role', function () {
     [$invitation, $rawToken] = makeInvitationWithToken([
         'invited_email' => 'jane@example.com',
-        'role'          => 'staff',
+        'role' => 'staff',
     ]);
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
@@ -235,9 +235,9 @@ test('accept creates organization_users row with correct role', function () {
 
     $this->assertDatabaseHas('organization_users', [
         'organization_id' => $invitation->organization_id,
-        'user_id'         => $user->id,
-        'role'            => 'staff',
-        'is_active'       => true,
+        'user_id' => $user->id,
+        'role' => 'staff',
+        'is_active' => true,
     ]);
 
     $invitation->refresh();
@@ -258,8 +258,8 @@ test('accept returns 403 when logged-in user email does not match', function () 
 test('accept returns 422 for already-accepted invitation', function () {
     [$invitation, $rawToken] = makeInvitationWithToken([
         'invited_email' => 'jane@example.com',
-        'status'        => 'accepted',
-        'responded_at'  => now(),
+        'status' => 'accepted',
+        'responded_at' => now(),
     ]);
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
@@ -271,7 +271,7 @@ test('accept returns 422 for already-accepted invitation', function () {
 test('accept returns 422 for expired invitation', function () {
     [$invitation, $rawToken] = makeInvitationWithToken([
         'invited_email' => 'jane@example.com',
-        'expires_at'    => now()->subDay(),
+        'expires_at' => now()->subDay(),
     ]);
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
@@ -291,8 +291,8 @@ test('accept writes audit log', function () {
     $org = Organization::factory()->create();
     [$invitation, $rawToken] = makeInvitationWithToken([
         'organization_id' => $org->id,
-        'invited_email'   => 'jane@example.com',
-        'role'            => 'staff',
+        'invited_email' => 'jane@example.com',
+        'role' => 'staff',
     ]);
     $user = User::factory()->create(['email' => 'jane@example.com']);
 
@@ -302,9 +302,9 @@ test('accept writes audit log', function () {
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,
-        'actor_user_id'   => $user->id,
-        'entity_type'     => 'organization_invitation',
-        'action'          => 'org_invitation.accepted',
+        'actor_user_id' => $user->id,
+        'entity_type' => 'organization_invitation',
+        'action' => 'org_invitation.accepted',
     ]);
 });
 
@@ -333,7 +333,7 @@ test('decline updates status to declined', function () {
 // ─── DELETE destroy — cancel invitation ───────────────────────────────────────
 
 test('owner can cancel a pending invitation', function () {
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
     [$invitation] = makeInvitationWithToken(['organization_id' => $org->id]);
 
     $this->actingAs($owner, 'sanctum')
@@ -346,11 +346,11 @@ test('owner can cancel a pending invitation', function () {
 });
 
 test('cannot cancel an already-accepted invitation', function () {
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
     [$invitation] = makeInvitationWithToken([
         'organization_id' => $org->id,
-        'status'          => 'accepted',
-        'responded_at'    => now(),
+        'status' => 'accepted',
+        'responded_at' => now(),
     ]);
 
     $this->actingAs($owner, 'sanctum')
@@ -359,7 +359,7 @@ test('cannot cancel an already-accepted invitation', function () {
 });
 
 test('staff cannot cancel invitations', function () {
-    [$org, $staff] = makeOrgWithRole('staff');
+    [$org, $staff] = makeOrgForInviteTest('staff');
     [$invitation] = makeInvitationWithToken(['organization_id' => $org->id]);
 
     $this->actingAs($staff, 'sanctum')
@@ -371,7 +371,7 @@ test('staff cannot cancel invitations', function () {
 
 test('index lists pending and recent invitations for owner', function () {
     Mail::fake();
-    [$org, $owner] = makeOrgWithRole('owner');
+    [$org, $owner] = makeOrgForInviteTest('owner');
 
     OrganizationInvitation::factory()->forOrganization($org->id)->count(3)->create([
         'status' => 'pending',
@@ -384,7 +384,7 @@ test('index lists pending and recent invitations for owner', function () {
 });
 
 test('index is denied for staff', function () {
-    [$org, $staff] = makeOrgWithRole('staff');
+    [$org, $staff] = makeOrgForInviteTest('staff');
 
     $this->actingAs($staff, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/invitations")

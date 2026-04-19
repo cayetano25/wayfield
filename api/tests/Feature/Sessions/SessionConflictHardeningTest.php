@@ -47,7 +47,8 @@ test('cannot select an overlapping session', function () {
         ->assertStatus(422);
 
     // The error must name Session A (the already-selected conflicting session).
-    expect($response->json('message'))->toContain($sessionA->title);
+    expect($response->json('error'))->toBe('time_conflict');
+    expect($response->json('conflict_with.title'))->toBe($sessionA->title);
 });
 
 test('can select adjacent non-overlapping sessions', function () {
@@ -105,7 +106,7 @@ test('can select a previously conflicting session after deselecting the blocking
     // Deselect A.
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$sessionA->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     // B is now selectable.
     $this->actingAs($user, 'sanctum')
@@ -139,5 +140,6 @@ test('conflict error message names the conflicting session title', function () {
         ->postJson("/api/v1/workshops/{$workshop->id}/selections", ['session_id' => $sessionB->id])
         ->assertStatus(422);
 
-    expect($response->json('message'))->toContain('Morning Landscape Walk');
+    expect($response->json('error'))->toBe('time_conflict');
+    expect($response->json('conflict_with.title'))->toContain('Morning Landscape Walk');
 });

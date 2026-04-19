@@ -12,15 +12,15 @@ class OrganizationInvitationFactory extends Factory
     public function definition(): array
     {
         return [
-            'organization_id'    => Organization::factory(),
-            'invited_email'      => $this->faker->unique()->safeEmail(),
+            'organization_id' => Organization::factory(),
+            'invited_email' => $this->faker->unique()->safeEmail(),
             'invited_first_name' => $this->faker->firstName(),
-            'invited_last_name'  => $this->faker->lastName(),
-            'role'               => $this->faker->randomElement(['admin', 'staff', 'billing_admin']),
-            'status'             => 'pending',
+            'invited_last_name' => $this->faker->lastName(),
+            'role' => $this->faker->randomElement(['admin', 'staff', 'billing_admin']),
+            'status' => 'pending',
             'invitation_token_hash' => hash('sha256', Str::random(64)),
-            'expires_at'         => now()->addDays(7),
-            'responded_at'       => null,
+            'expires_at' => now()->addDays(7),
+            'responded_at' => null,
             'created_by_user_id' => User::factory(),
         ];
     }
@@ -38,7 +38,7 @@ class OrganizationInvitationFactory extends Factory
     public function accepted(): static
     {
         return $this->state([
-            'status'       => 'accepted',
+            'status' => 'accepted',
             'responded_at' => now(),
         ]);
     }
@@ -46,7 +46,7 @@ class OrganizationInvitationFactory extends Factory
     public function declined(): static
     {
         return $this->state([
-            'status'       => 'declined',
+            'status' => 'declined',
             'responded_at' => now(),
         ]);
     }
@@ -55,7 +55,7 @@ class OrganizationInvitationFactory extends Factory
     {
         return $this->state([
             'expires_at' => now()->subDay(),
-            'status'     => 'pending',
+            'status' => 'pending',
         ]);
     }
 }

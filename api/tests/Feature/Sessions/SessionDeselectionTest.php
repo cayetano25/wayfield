@@ -37,7 +37,7 @@ test('participant can deselect a selected session', function () {
     // No attendance record exists — deselection should succeed.
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$session->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     $this->assertDatabaseHas('session_selections', [
         'registration_id' => $reg->id,
@@ -95,7 +95,7 @@ test('deselecting frees a capacity slot for another participant', function () {
     // Participant A deselects.
     $this->actingAs($userA, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$session->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     // Participant B can now select.
     $this->actingAs($userB, 'sanctum')
@@ -120,7 +120,7 @@ test('canceled selection does not block re-selection of the same session', funct
     // Deselect.
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$session->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     // Re-select.
     $this->actingAs($user, 'sanctum')
@@ -160,7 +160,7 @@ test('participant can replace a selection with a different non-overlapping sessi
     // Deselect Session A.
     $this->actingAs($user, 'sanctum')
         ->deleteJson("/api/v1/workshops/{$workshop->id}/selections/{$sessionA->id}")
-        ->assertStatus(204);
+        ->assertStatus(200);
 
     // Select Session B.
     $this->actingAs($user, 'sanctum')

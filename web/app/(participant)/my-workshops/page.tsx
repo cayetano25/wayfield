@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Target, Plus, AlertCircle } from 'lucide-react';
-import { apiGet } from '@/lib/api/client';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Plus, AlertCircle, CalendarDays, X } from 'lucide-react';
+import { apiGet, apiPost } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { apiPost } from '@/lib/api/client';
 import { ActiveWorkshopCard } from './components/ActiveWorkshopCard';
 import { SessionTimeline } from './components/SessionTimeline';
 import { WorkshopInfoCard } from './components/WorkshopInfoCard';
@@ -33,7 +33,8 @@ function Skeleton({ height, className = '' }: { height: number; className?: stri
 
 /* ─── Empty state ─────────────────────────────────────────────────────── */
 
-function EmptyState({ onJoined }: { onJoined: () => void }) {
+function EmptyState({ onJoined }: { onJoined: (workshopId?: number) => void }) {
+  const router = useRouter();
   const [joinOpen, setJoinOpen] = useState(false);
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
@@ -43,11 +44,15 @@ function EmptyState({ onJoined }: { onJoined: () => void }) {
     if (!trimmed) return;
     setJoining(true);
     try {
-      await apiPost('/workshops/join', { join_code: trimmed });
-      toast.success('Joined workshop!');
+      const result = await apiPost<{ workshop?: { id: number } }>('/workshops/join', { join_code: trimmed });
       setCode('');
       setJoinOpen(false);
-      onJoined();
+      const wid = result?.workshop?.id;
+      if (wid) {
+        router.push(`/my-workshops?joined=1&workshop=${wid}`);
+      } else {
+        onJoined();
+      }
     } catch {
       toast.error('Invalid join code. Please check with your organizer.');
     } finally {
@@ -135,13 +140,104 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/* ─── Joined banner ───────────────────────────────────────────────────── */
+
+interface JoinedBannerProps {
+  workshopTitle: string;
+  isSessionBased: boolean;
+  selectHref: string;
+  onDismiss: () => void;
+}
+
+function JoinedBanner({ workshopTitle, isSessionBased, selectHref, onDismiss }: JoinedBannerProps) {
+  return (
+    <div
+      className="flex items-start justify-between gap-4 rounded-xl mb-6"
+      style={{
+        backgroundColor: '#0FA3B1',
+        padding: '16px 20px',
+        boxShadow: '0 4px 16px rgba(15,163,177,0.25)',
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <p
+          className="font-heading font-bold mb-1"
+          style={{ fontSize: 16, color: 'white' }}
+        >
+          🎉 Welcome to {workshopTitle}!
+        </p>
+        <p className="font-sans" style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>
+          {isSessionBased
+            ? 'Now choose your sessions to build your schedule.'
+            : 'Your schedule is set. See you there!'}
+        </p>
+        {isSessionBased && (
+          <Link
+            href={selectHref}
+            className="inline-block font-sans font-bold rounded-lg mt-3"
+            style={{
+              fontSize: 14,
+              padding: '8px 18px',
+              backgroundColor: 'white',
+              color: '#0FA3B1',
+            }}
+            onClick={onDismiss}
+          >
+            Select Sessions →
+          </Link>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="shrink-0 mt-0.5"
+        aria-label="Dismiss"
+        style={{ color: 'rgba(255,255,255,0.7)' }}
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
+}
+
+/* ─── Quick Actions row ────────────────────────────────────────────────── */
+
+function QuickActions({ workshopId }: { workshopId: number }) {
+  return (
+    <div className="flex gap-3 mb-6">
+      <Link
+        href={`/workshops/${workshopId}/select-sessions`}
+        className="inline-flex items-center gap-2 font-sans font-semibold rounded-lg transition-colors hover:bg-[#F0FDFF]"
+        style={{
+          fontSize: 14,
+          height: 40,
+          padding: '0 16px',
+          color: '#0FA3B1',
+          border: '1.5px solid #0FA3B1',
+          backgroundColor: 'white',
+        }}
+      >
+        <CalendarDays size={15} />
+        Select Sessions
+      </Link>
+    </div>
+  );
+}
+
 /* ─── Page ────────────────────────────────────────────────────────────── */
 
-export default function MyWorkshopsPage() {
+function MyWorkshopsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<ParticipantDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // "just joined" banner state
+  const [joinedWorkshopId, setJoinedWorkshopId] = useState<number | null>(null);
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchDashboard = useCallback(() => {
     setLoading(true);
@@ -152,6 +248,28 @@ export default function MyWorkshopsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Read ?joined=1&workshop={id} on mount
+  useEffect(() => {
+    const joined = searchParams.get('joined');
+    const wid = searchParams.get('workshop');
+    if (joined === '1' && wid) {
+      setJoinedWorkshopId(Number(wid));
+      setBannerVisible(true);
+      // Strip query params from URL
+      router.replace('/my-workshops', { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  // Auto-dismiss banner after 8 seconds
+  useEffect(() => {
+    if (bannerVisible) {
+      bannerTimerRef.current = setTimeout(() => setBannerVisible(false), 8000);
+    }
+    return () => {
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    };
+  }, [bannerVisible]);
+
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
@@ -161,6 +279,21 @@ export default function MyWorkshopsPage() {
     !error &&
     data?.active_workshop === null &&
     (data?.other_workshops ?? []).length === 0;
+
+  // Resolve the joined workshop from loaded data
+  const joinedWorkshop =
+    bannerVisible && joinedWorkshopId
+      ? (data?.active_workshop?.workshop_id === joinedWorkshopId
+          ? data.active_workshop
+          : null)
+      : null;
+
+  // Show Quick Actions when active workshop is session-based with unselected sessions
+  const showQuickActions =
+    !loading &&
+    !error &&
+    data?.active_workshop?.workshop_type === 'session_based' &&
+    (data.active_workshop.total_selected < data.active_workshop.total_selectable);
 
   return (
     <>
@@ -175,6 +308,18 @@ export default function MyWorkshopsPage() {
         className="mx-auto"
         style={{ maxWidth: 720, padding: '32px 16px' }}
       >
+        {/* Joined banner */}
+        {bannerVisible && joinedWorkshopId && (
+          <JoinedBanner
+            workshopTitle={joinedWorkshop?.title ?? 'your new workshop'}
+            isSessionBased={
+              (joinedWorkshop?.workshop_type ?? '') === 'session_based'
+            }
+            selectHref={`/workshops/${joinedWorkshopId}/select-sessions`}
+            onDismiss={() => setBannerVisible(false)}
+          />
+        )}
+
         {loading ? (
           <div className="flex flex-col gap-6">
             <Skeleton height={220} />
@@ -187,6 +332,11 @@ export default function MyWorkshopsPage() {
           <EmptyState onJoined={fetchDashboard} />
         ) : (
           <div className="flex flex-col gap-6">
+            {/* Quick Actions row */}
+            {showQuickActions && data?.active_workshop && (
+              <QuickActions workshopId={data.active_workshop.workshop_id} />
+            )}
+
             {/* Section 1 — Active workshop hero */}
             {data?.active_workshop && (
               <ActiveWorkshopCard workshop={data.active_workshop} />
@@ -221,5 +371,13 @@ export default function MyWorkshopsPage() {
         )}
       </div>
     </>
+  );
+}
+
+export default function MyWorkshopsPage() {
+  return (
+    <Suspense>
+      <MyWorkshopsPageInner />
+    </Suspense>
   );
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrganizerLeaderResource;
 use App\Models\Leader;
+use App\Models\LeaderInvitation;
 use App\Models\Workshop;
 use App\Models\WorkshopLeader;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,36 @@ class WorkshopLeaderController extends Controller
                 ];
             });
 
-        return response()->json($leaders);
+        // Also include pending invitations that have no linked leader record yet.
+        // These exist when an invitation was sent but the recipient has not yet
+        // accepted, so no leaders row or workshop_leaders pivot entry exists.
+        $pendingInvitations = LeaderInvitation::where('workshop_id', $workshop->id)
+            ->where('status', 'pending')
+            ->whereNull('leader_id')
+            ->get()
+            ->map(function (LeaderInvitation $invitation) {
+                return [
+                    'id' => -$invitation->id, // negative sentinel — no real leader record
+                    'first_name' => $invitation->invited_first_name ?? '',
+                    'last_name' => $invitation->invited_last_name ?? '',
+                    'display_name' => null,
+                    'bio' => null,
+                    'profile_image_url' => null,
+                    'website_url' => null,
+                    'city' => null,
+                    'state_or_region' => null,
+                    'phone_number' => null,
+                    'invited_email' => $invitation->invited_email,
+                    'invitation_status' => 'pending',
+                    'invitation_id' => $invitation->id,
+                    'invitation_created_at' => $invitation->created_at?->toIso8601String(),
+                    'is_confirmed' => false,
+                    'assigned_sessions' => [],
+                    'sessions_count' => 0,
+                ];
+            });
+
+        return response()->json($leaders->concat($pendingInvitations));
     }
 
     /**

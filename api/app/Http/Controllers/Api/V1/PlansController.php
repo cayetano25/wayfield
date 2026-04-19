@@ -33,6 +33,6 @@ class PlansController extends Controller
             })->values()->all();
         });
 
-        return response()->json(['plans' => $plans]);
+        return response()->json($plans);
     }
 }

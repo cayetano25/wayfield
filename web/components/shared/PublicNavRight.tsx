@@ -151,34 +151,33 @@ export function PublicNavRight({ user }: PublicNavRightProps) {
     );
   }
 
-  if (!onboardingComplete) {
-    return (
-      <Link
-        href="/onboarding"
-        className="font-sans text-sm font-semibold rounded-lg transition-colors hover:opacity-90"
-        style={{ padding: '8px 18px', backgroundColor: '#0FA3B1', color: 'white' }}
-      >
-        Complete Setup
-      </Link>
-    );
-  }
-
   return (
-    <div ref={menuRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setMenuOpen((o) => !o)}
-        className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] focus:ring-offset-2"
-      >
-        <UserAvatar user={user} />
-      </button>
-      {menuOpen && (
-        <UserMenuDropdown
-          user={user}
-          onClose={() => setMenuOpen(false)}
-          onLogout={handleLogout}
-        />
+    <div className="flex items-center gap-3">
+      {!onboardingComplete && (
+        <Link
+          href="/onboarding"
+          className="font-sans text-sm font-semibold rounded-lg transition-colors hover:opacity-90"
+          style={{ padding: '8px 18px', backgroundColor: '#0FA3B1', color: 'white' }}
+        >
+          Complete Setup
+        </Link>
       )}
+      <div ref={menuRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((o) => !o)}
+          className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] focus:ring-offset-2"
+        >
+          <UserAvatar user={user} />
+        </button>
+        {menuOpen && (
+          <UserMenuDropdown
+            user={user}
+            onClose={() => setMenuOpen(false)}
+            onLogout={handleLogout}
+          />
+        )}
+      </div>
     </div>
   );
 }

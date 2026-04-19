@@ -31,6 +31,9 @@ export interface ParticipantActiveWorkshop {
   title: string;
   description: string | null;
   header_image_url: string | null;
+  workshop_type: 'session_based' | 'event_based';
+  total_selectable: number;
+  total_selected: number;
   next_session: ParticipantNextSession | null;
   sessions: ParticipantSession[];
   logistics: ParticipantLogistics | null;
@@ -43,6 +46,7 @@ export interface ParticipantOtherWorkshop {
   start_date: string;
   end_date: string;
   status: 'upcoming' | 'completed';
+  workshop_type: 'session_based' | 'event_based';
   sessions_count: number;
   checked_in_count: number;
   total_sessions: number;

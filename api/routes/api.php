@@ -20,9 +20,9 @@ use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OfflineSyncController;
 use App\Http\Controllers\Api\V1\OnboardingController;
-use App\Http\Controllers\Api\V1\OrgInvitationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
+use App\Http\Controllers\Api\V1\OrgInvitationController;
 use App\Http\Controllers\Api\V1\ParticipantController;
 use App\Http\Controllers\Api\V1\ParticipantDashboardController;
 use App\Http\Controllers\Api\V1\PlansController;
@@ -242,6 +242,7 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{workshop}/selection-options', [SessionSelectionController::class, 'options']);
         Route::post('workshops/{workshop}/selections', [SessionSelectionController::class, 'store']);
         Route::delete('workshops/{workshop}/selections/{session}', [SessionSelectionController::class, 'destroy']);
+        Route::get('workshops/{workshop}/my-selections', [SessionSelectionController::class, 'mySelections']);
 
         // My schedule (participant)
         Route::get('workshops/{workshop}/my-schedule', [MyScheduleController::class, 'show']);
