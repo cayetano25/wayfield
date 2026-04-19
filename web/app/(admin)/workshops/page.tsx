@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Copy, Check, CalendarDays, Users, AlertCircle } from 'lucide-react';
+import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import toast from 'react-hot-toast';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
@@ -20,6 +21,7 @@ interface WorkshopSummary {
   start_date: string;
   end_date: string;
   join_code: string;
+  public_slug?: string | null;
   sessions_count: number;
   participants_count: number;
 }
@@ -263,6 +265,13 @@ export default function WorkshopsPage() {
                       <Copy className="w-3.5 h-3.5" />
                     )}
                   </button>
+                  {workshop.status === 'published' && workshop.public_slug && (
+                    <ShareWorkshopButton
+                      workshopTitle={workshop.title}
+                      publicUrl={`/w/${workshop.public_slug}`}
+                      variant="participant"
+                    />
+                  )}
                 </div>
               </Card>
             </Link>

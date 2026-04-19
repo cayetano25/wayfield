@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CalendarDays, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { apiPost } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
+import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import toast from 'react-hot-toast';
 import type { ParticipantActiveWorkshop } from '@/lib/types/participant';
 
@@ -193,6 +194,13 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                     View Details
                   </Button>
                 </Link>
+              )}
+              {workshop.public_slug && workshop.public_page_enabled && (
+                <ShareWorkshopButton
+                  workshopTitle={workshop.title}
+                  publicUrl={`/w/${workshop.public_slug}`}
+                  variant="participant"
+                />
               )}
             </div>
 

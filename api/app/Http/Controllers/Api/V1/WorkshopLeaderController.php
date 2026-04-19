@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Leaders\Actions\RemoveLeaderFromWorkshopAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrganizerLeaderResource;
 use App\Models\Leader;
@@ -133,5 +134,32 @@ class WorkshopLeaderController extends Controller
         );
 
         return response()->json(new OrganizerLeaderResource($leader), 201);
+    }
+
+    /**
+     * DELETE /api/v1/workshops/{workshop}/leaders/{leader}
+     * Remove an accepted leader from a workshop and all its sessions.
+     * Sets workshop_leaders.is_confirmed = false and deletes session_leaders rows.
+     */
+    public function destroy(
+        Workshop $workshop,
+        Leader $leader,
+        RemoveLeaderFromWorkshopAction $action,
+    ): JsonResponse {
+        $this->authorize('removeFromWorkshop', [Leader::class, $workshop->organization]);
+
+        $workshopLeader = WorkshopLeader::where('workshop_id', $workshop->id)
+            ->where('leader_id', $leader->id)
+            ->first();
+
+        if (! $workshopLeader) {
+            return response()->json([
+                'message' => 'This leader is not associated with this workshop.',
+            ], 404);
+        }
+
+        $action->execute($workshop, $leader, request()->user());
+
+        return response()->json(['message' => 'Leader removed from workshop.']);
     }
 }

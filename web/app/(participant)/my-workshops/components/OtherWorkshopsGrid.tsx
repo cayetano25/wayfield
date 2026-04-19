@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Clock } from 'lucide-react';
+import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { apiPost } from '@/lib/api/client';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -96,15 +97,25 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
             </span>
           )}
         </div>
-        {workshop.public_slug && workshop.public_page_enabled && (
-          <Link
-            href={`/w/${workshop.public_slug}`}
-            className="font-sans font-semibold hover:underline shrink-0"
-            style={{ fontSize: 12, color: '#0FA3B1' }}
-          >
-            View Details →
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {workshop.public_slug && workshop.public_page_enabled && (
+            <Link
+              href={`/w/${workshop.public_slug}`}
+              className="font-sans font-semibold hover:underline shrink-0"
+              style={{ fontSize: 12, color: '#0FA3B1' }}
+            >
+              View Details →
+            </Link>
+          )}
+          {workshop.public_slug && workshop.public_page_enabled && (
+            <ShareWorkshopButton
+              workshopTitle={workshop.title}
+              publicUrl={`/w/${workshop.public_slug}`}
+              variant="participant"
+              className="p-1 rounded text-gray-400 hover:text-[#0FA3B1] hover:bg-[#F0FDFF] transition-colors"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,9 @@
+PLACEHOLDER - Replace this file with the actual Apple Pay domain association file
+downloaded from the Apple Developer portal under:
+  Certificates, Identifiers & Profiles → Merchant IDs → your merchant ID → Download Domain Association File
+
+This file must be served at:
+  https://yourdomain.com/.well-known/apple-developer-merchantid-domain-association
+
+Do not remove or rename this file — its presence at this exact path is required for
+Apple Pay domain verification. The production file is binary (DER-encoded).

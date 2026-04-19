@@ -8,6 +8,7 @@ import {
   CalendarDays, MapPin, Phone, ParkingSquare, DoorOpen, Info,
 } from 'lucide-react';
 import { QRCodeModal } from '@/components/workshops/QRCodeModal';
+import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { apiGet, apiPost, apiPut, ApiError } from '@/lib/api/client';
@@ -68,7 +69,11 @@ interface Workshop {
   timezone: string;
   join_code: string;
   public_page_enabled: boolean;
+  public_slug: string | null;
   header_image_url: string | null;
+  social_share_image_url?: string | null;
+  social_share_title?: string | null;
+  social_share_description?: string | null;
   sessions_count: number;
   participants_count: number;
   confirmed_leaders: Leader[];
@@ -319,6 +324,13 @@ export default function WorkshopOverviewPage() {
                 Edit
               </Button>
             </Link>
+            <ShareWorkshopButton
+              workshopTitle={workshop.title}
+              publicUrl={workshop.public_slug ? `/w/${workshop.public_slug}` : ''}
+              variant="organizer"
+              disabled={workshop.status !== 'published' || !workshop.public_slug}
+              disabledTooltip="Publish this workshop to enable sharing."
+            />
             {workshop.status === 'draft' && (
               <Button size="sm" onClick={() => setPublishOpen(true)}>
                 Publish
@@ -375,6 +387,31 @@ export default function WorkshopOverviewPage() {
           </button>
         </div>
       </Card>
+
+      {/* Social metadata warnings — shown for published workshops with a public page */}
+      {workshop.status === 'published' && workshop.public_slug && (
+        <div className="space-y-2">
+          {!workshop.social_share_image_url && (
+            <div className="flex items-start gap-3 bg-secondary/5 border border-secondary/20 rounded-xl p-4">
+              <AlertTriangle className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+              <p className="text-sm text-dark">
+                <span className="font-medium">No social image set.</span>{' '}
+                Links shared to Facebook, LinkedIn, and X will not show a preview image.
+                Add a social image for better reach.
+              </p>
+            </div>
+          )}
+          {(!workshop.social_share_title || !workshop.social_share_description) && (
+            <div className="flex items-start gap-3 bg-surface border border-border-gray rounded-xl p-4">
+              <Info className="w-4 h-4 text-info shrink-0 mt-0.5" />
+              <p className="text-sm text-medium-gray">
+                Using workshop title and description as share preview text.
+                You can customize these in the Public Page settings.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

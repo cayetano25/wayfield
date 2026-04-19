@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\LeaderInvitation;
 use App\Models\Organization;
 use App\Models\User;
 
@@ -21,6 +22,14 @@ class LeaderInvitationPolicy
     public function create(User $user, Organization $organization): bool
     {
         return $this->isOrganizerOrAbove($user, $organization->id);
+    }
+
+    /**
+     * Only owner/admin can rescind pending/expired invitations.
+     */
+    public function rescind(User $user, LeaderInvitation $invitation): bool
+    {
+        return $this->isOrganizerOrAbove($user, $invitation->organization_id);
     }
 
     private function isOrganizerOrAbove(User $user, int $organizationId): bool

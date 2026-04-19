@@ -64,11 +64,17 @@ export interface PublicLocation {
 export interface PublicWorkshop {
   title: string;
   description: string;
+  public_summary?: string | null;
   workshop_type: 'session_based' | 'event_based';
   start_date: string;
   end_date: string;
   timezone: string;
   public_slug: string;
+  public_page_is_indexable: boolean;
+  canonical_url: string;
+  social_share_title?: string | null;
+  social_share_description?: string | null;
+  social_share_image_url?: string | null;
   hero_image_url?: string;
   hero_title?: string;
   hero_subtitle?: string;

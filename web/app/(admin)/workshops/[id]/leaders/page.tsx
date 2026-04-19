@@ -8,6 +8,7 @@ import {
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
+import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, apiDelete, apiPatch, ApiError } from '@/lib/api/client';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import { Card } from '@/components/ui/Card';
@@ -34,7 +35,13 @@ interface AssignedSession {
   role_label: string | null;
 }
 
-type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'removed';
+type InvitationStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'expired'
+  | 'removed'
+  | 'rescinded';
 
 interface Leader {
   id: number; // negative when invitation has no linked leader record yet (pending-only)
@@ -63,14 +70,21 @@ interface Session {
   start_at: string;
 }
 
+interface ConfirmActionState {
+  type: 'rescind' | 'remove_leader' | 'remove_session';
+  leader: Leader;
+  session?: AssignedSession;
+}
+
 /* --- Invitation status badge ------------------------------------------ */
 
 const statusBadgeClasses: Record<InvitationStatus, string> = {
-  pending:  'bg-amber-100 text-amber-700',
-  accepted: 'bg-emerald-100 text-emerald-700',
-  declined: 'bg-danger/10 text-danger',
-  expired:  'bg-surface text-light-gray',
-  removed:  'bg-surface text-light-gray',
+  pending:   'bg-amber-100 text-amber-700',
+  accepted:  'bg-emerald-100 text-emerald-700',
+  declined:  'bg-danger/10 text-danger',
+  expired:   'bg-surface text-light-gray',
+  removed:   'bg-surface text-light-gray',
+  rescinded: 'bg-surface text-light-gray',
 };
 
 function InviteStatusBadge({ status }: { status: InvitationStatus }) {
@@ -114,54 +128,6 @@ function LeaderAvatar({
       className={`${sizeClasses[size]} rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0 select-none`}
     >
       {initials}
-    </div>
-  );
-}
-
-/* --- Leader card (grid item) ------------------------------------------ */
-
-function LeaderCard({
-  leader,
-  onView,
-}: {
-  leader: Leader;
-  onView: () => void;
-}) {
-  const location = [leader.city, leader.state_or_region].filter(Boolean).join(', ');
-  const sessionCount = (leader.assigned_sessions ?? []).length;
-  const displayName = `${leader.first_name} ${leader.last_name}`.trim() || leader.invited_email || 'Invited Leader';
-
-  return (
-    <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start gap-3">
-        <LeaderAvatar leader={leader} size="md" />
-        <div className="flex-1 min-w-0">
-          <p className="font-heading font-semibold text-dark text-sm leading-snug truncate">
-            {displayName}
-          </p>
-          <p className="text-[13px] text-medium-gray mt-0.5 truncate">
-            {sessionCount === 0
-              ? 'Not assigned to any sessions'
-              : `Leading ${sessionCount} session${sessionCount === 1 ? '' : 's'}`}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <InviteStatusBadge status={leader.invitation_status} />
-        {location && (
-          <span className="text-xs text-medium-gray truncate">{location}</span>
-        )}
-      </div>
-
-      <Button
-        variant="secondary"
-        size="sm"
-        className="w-full"
-        onClick={onView}
-      >
-        View
-      </Button>
     </div>
   );
 }
@@ -395,6 +361,9 @@ function LeaderSlideOver({
     leader?.address ?? null,
   );
   const [savingAddress, setSavingAddress] = useState(false);
+  // Local session-removal confirmation within the slide-over
+  const [removeSessionTarget, setRemoveSessionTarget] = useState<AssignedSession | null>(null);
+  const [removingSession, setRemovingSession] = useState(false);
 
   // Sync address when leader changes
   useEffect(() => {
@@ -429,15 +398,18 @@ function LeaderSlideOver({
     }
   }
 
-  async function handleRemoveSession(sessionId: number) {
-    if (!leader) return;
-    if (!confirm('Remove this leader from the session?')) return;
+  async function handleConfirmRemoveSession() {
+    if (!leader || !removeSessionTarget) return;
+    setRemovingSession(true);
     try {
-      await apiDelete(`/sessions/${sessionId}/leaders/${leader.id}`);
+      await apiDelete(`/sessions/${removeSessionTarget.id}/leaders/${leader.id}`);
       toast.success('Removed from session');
+      setRemoveSessionTarget(null);
       onUpdated();
     } catch {
-      toast.error('Failed to remove leader');
+      toast.error('Failed to remove leader from session');
+    } finally {
+      setRemovingSession(false);
     }
   }
 
@@ -445,7 +417,6 @@ function LeaderSlideOver({
     if (!leader?.invitation_id) return;
     setResending(true);
     try {
-      // Resend by creating a new invitation for the same leader
       toast.success('Invitation resent');
     } catch {
       toast.error('Failed to resend invitation');
@@ -455,7 +426,6 @@ function LeaderSlideOver({
   }
 
   // Negative id means a pending invitation with no linked leader record yet.
-  // Profile editing, address, and session assignment don't apply until the invitation is accepted.
   const isPendingOnly = !!leader && leader.id < 0;
 
   const assignedSessionIds = new Set((leader?.assigned_sessions ?? []).map((s) => s.id));
@@ -472,6 +442,8 @@ function LeaderSlideOver({
   const fullName = leader
     ? `${leader.first_name} ${leader.last_name}`.trim()
     : '';
+
+  const removeSessionLeaderName = fullName || leader?.invited_email || 'this leader';
 
   return (
     <>
@@ -518,7 +490,7 @@ function LeaderSlideOver({
                       shape="circle"
                       width={80}
                       height={80}
-                      onUploadComplete={(url) => onUpdated()}
+                      onUploadComplete={() => onUpdated()}
                       onRemove={async () => {
                         await apiPatch(`/leaders/${leader.id}`, { profile_image_url: null });
                         onUpdated();
@@ -637,58 +609,350 @@ function LeaderSlideOver({
 
             {/* Assigned sessions — only for accepted leaders */}
             {!isPendingOnly && (
-            <div className="px-6 py-5">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-medium text-medium-gray uppercase tracking-wide">
-                  Assigned Sessions
-                </p>
-                {assigning && (
-                  <span className="text-xs text-medium-gray">Saving…</span>
-                )}
-              </div>
-
-              {(leader.assigned_sessions ?? []).length === 0 ? (
-                <p className="text-sm text-light-gray mb-3">
-                  Not assigned to any sessions yet.
-                </p>
-              ) : (
-                <div className="space-y-2 mb-3">
-                  {(leader.assigned_sessions ?? []).map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-border-gray bg-surface px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-dark truncate">{s.title}</p>
-                        <p className="text-xs text-medium-gray">{formatSessionTime(s.start_at)}</p>
-                        {s.role_label && (
-                          <p className="text-xs text-primary mt-0.5">{s.role_label}</p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSession(s.id)}
-                        className="p-1 rounded text-light-gray hover:text-danger hover:bg-danger/5 transition-colors shrink-0"
-                        title="Remove from session"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+              <div className="px-6 py-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-medium-gray uppercase tracking-wide">
+                    Assigned Sessions
+                  </p>
+                  {assigning && (
+                    <span className="text-xs text-medium-gray">Saving…</span>
+                  )}
                 </div>
-              )}
 
-              <SessionAssignSelector
-                sessions={sessions}
-                assignedSessionIds={assignedSessionIds}
-                onAssign={handleAssign}
-              />
-            </div>
+                {(leader.assigned_sessions ?? []).length === 0 ? (
+                  <p className="text-sm text-light-gray mb-3">
+                    Not assigned to any sessions yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2 mb-3">
+                    {(leader.assigned_sessions ?? []).map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border-gray bg-surface px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-dark truncate">{s.title}</p>
+                          <p className="text-xs text-medium-gray">{formatSessionTime(s.start_at)}</p>
+                          {s.role_label && (
+                            <p className="text-xs text-primary mt-0.5">{s.role_label}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveSessionTarget(s)}
+                          className="p-1 rounded text-light-gray hover:text-danger hover:bg-danger/5 transition-colors shrink-0"
+                          title="Remove from session"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <SessionAssignSelector
+                  sessions={sessions}
+                  assignedSessionIds={assignedSessionIds}
+                  onAssign={handleAssign}
+                />
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Session removal confirmation — scoped to this slide-over */}
+      <Modal
+        open={!!removeSessionTarget}
+        onClose={() => setRemoveSessionTarget(null)}
+        title={`Remove ${removeSessionLeaderName} from ${removeSessionTarget?.title ?? 'this session'}?`}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setRemoveSessionTarget(null)}
+              className="text-primary border-primary hover:bg-primary/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmRemoveSession}
+              loading={removingSession}
+            >
+              Remove
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-medium-gray">
+          They will lose roster access for this session.
+        </p>
+      </Modal>
     </>
+  );
+}
+
+/* --- Confirm modal (rescind / remove leader / table session chip) ----- */
+
+function ConfirmModal({
+  action,
+  confirming,
+  onConfirm,
+  onCancel,
+}: {
+  action: ConfirmActionState | null;
+  confirming: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!action) return null;
+
+  const fullName =
+    `${action.leader.first_name} ${action.leader.last_name}`.trim() ||
+    action.leader.invited_email ||
+    'this leader';
+
+  let title: string;
+  let description: string;
+  let confirmLabel: string;
+  let cancelLabel: string;
+
+  if (action.type === 'rescind') {
+    title = `Rescind invitation to ${fullName}?`;
+    description = 'They will no longer be able to accept this invitation.';
+    confirmLabel = 'Rescind';
+    cancelLabel = 'Keep Invitation';
+  } else if (action.type === 'remove_leader') {
+    title = `Remove ${fullName} from this workshop?`;
+    description = 'They will lose access to all assigned sessions and rosters.';
+    confirmLabel = 'Remove Leader';
+    cancelLabel = 'Keep Leader';
+  } else {
+    title = `Remove ${fullName} from ${action.session?.title ?? 'this session'}?`;
+    description = '';
+    confirmLabel = 'Remove';
+    cancelLabel = 'Cancel';
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onCancel}
+      title={title}
+      size="sm"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            onClick={onCancel}
+            className="text-primary border-primary hover:bg-primary/5"
+          >
+            {cancelLabel}
+          </Button>
+          <Button variant="danger" onClick={onConfirm} loading={confirming}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      {description && <p className="text-sm text-medium-gray">{description}</p>}
+    </Modal>
+  );
+}
+
+/* --- Session chips cell (table) --------------------------------------- */
+
+function SessionChipsCell({
+  leader,
+  canRemove,
+  onRemoveFromSession,
+}: {
+  leader: Leader;
+  canRemove: boolean;
+  onRemoveFromSession: (session: AssignedSession) => void;
+}) {
+  if (leader.invitation_status !== 'accepted') {
+    return <span className="text-light-gray text-sm">—</span>;
+  }
+
+  const sessions = leader.assigned_sessions ?? [];
+  if (sessions.length === 0) {
+    return <span className="text-xs text-light-gray italic">No sessions assigned</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {sessions.map((s) => (
+        <span
+          key={s.id}
+          className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium max-w-[200px]"
+        >
+          <span className="truncate">{s.title}</span>
+          {canRemove && (
+            <button
+              type="button"
+              onClick={() => onRemoveFromSession(s)}
+              className="shrink-0 ml-0.5 text-primary/50 hover:text-danger transition-colors rounded-full"
+              title={`Remove from ${s.title}`}
+              aria-label={`Remove from ${s.title}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* --- Leader table row ------------------------------------------------- */
+
+function LeaderTableRow({
+  leader,
+  canRemove,
+  timezone,
+  onView,
+  onConfirmAction,
+}: {
+  leader: Leader;
+  canRemove: boolean;
+  timezone: string;
+  onView: () => void;
+  onConfirmAction: (action: ConfirmActionState) => void;
+}) {
+  const isInactive = ['removed', 'rescinded', 'declined', 'expired'].includes(
+    leader.invitation_status,
+  );
+  const displayName =
+    `${leader.first_name} ${leader.last_name}`.trim() ||
+    leader.invited_email ||
+    'Invited Leader';
+  const email = leader.invited_email || '—';
+  const sentDate = leader.invitation_created_at
+    ? formatInTimeZone(new Date(leader.invitation_created_at), timezone, 'MMM d, yyyy')
+    : null;
+
+  return (
+    <tr
+      className={`border-b border-border-gray last:border-b-0 transition-opacity ${
+        isInactive ? 'opacity-50' : ''
+      }`}
+    >
+      {/* Leader identity */}
+      <td className="py-3.5 pl-5 pr-4">
+        <div className="flex items-center gap-3">
+          <LeaderAvatar leader={leader} size="sm" />
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={onView}
+              className="text-sm font-medium text-dark hover:text-primary transition-colors text-left leading-snug block truncate max-w-[180px]"
+            >
+              {displayName}
+            </button>
+            {email !== '—' && (
+              <p className="text-xs text-medium-gray truncate max-w-[180px]">{email}</p>
+            )}
+          </div>
+        </div>
+      </td>
+
+      {/* Status + sent date */}
+      <td className="py-3.5 px-4 whitespace-nowrap">
+        <InviteStatusBadge status={leader.invitation_status} />
+        {sentDate && (
+          <p className="text-xs text-light-gray mt-1">{sentDate}</p>
+        )}
+      </td>
+
+      {/* Sessions column */}
+      <td className="py-3.5 px-4">
+        <SessionChipsCell
+          leader={leader}
+          canRemove={canRemove && !isInactive}
+          onRemoveFromSession={(session) =>
+            onConfirmAction({ type: 'remove_session', leader, session })
+          }
+        />
+      </td>
+
+      {/* Actions */}
+      <td className="py-3.5 pl-4 pr-5 text-right whitespace-nowrap">
+        {leader.invitation_status === 'pending' && canRemove && (
+          <button
+            type="button"
+            onClick={() => onConfirmAction({ type: 'rescind', leader })}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
+          >
+            Rescind Invitation
+          </button>
+        )}
+        {leader.invitation_status === 'accepted' && canRemove && (
+          <button
+            type="button"
+            onClick={() => onConfirmAction({ type: 'remove_leader', leader })}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
+          >
+            Remove Leader
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/* --- Leaders table ---------------------------------------------------- */
+
+function LeadersTable({
+  leaders,
+  canRemove,
+  timezone,
+  onView,
+  onConfirmAction,
+}: {
+  leaders: Leader[];
+  canRemove: boolean;
+  timezone: string;
+  onView: (leader: Leader) => void;
+  onConfirmAction: (action: ConfirmActionState) => void;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
+          <thead>
+            <tr className="border-b border-border-gray bg-surface/50">
+              <th className="py-3 pl-5 pr-4 text-left text-xs font-medium text-medium-gray uppercase tracking-wide">
+                Leader
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-medium-gray uppercase tracking-wide">
+                Status
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-medium-gray uppercase tracking-wide">
+                Sessions
+              </th>
+              <th className="py-3 pl-4 pr-5 text-right text-xs font-medium text-medium-gray uppercase tracking-wide">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaders.map((leader) => (
+              <LeaderTableRow
+                key={leader.invitation_id ?? leader.id}
+                leader={leader}
+                canRemove={canRemove}
+                timezone={timezone}
+                onView={() => onView(leader)}
+                onConfirmAction={onConfirmAction}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
@@ -717,6 +981,11 @@ function EmptyLeaders({ onInvite }: { onInvite: () => void }) {
 export default function WorkshopLeadersPage() {
   const { id } = useParams<{ id: string }>();
   const { setPage } = usePage();
+  const { currentOrg } = useUser();
+
+  // owner and admin can rescind invitations and remove leaders; staff cannot.
+  const canRemove =
+    currentOrg?.role === 'owner' || currentOrg?.role === 'admin';
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [leaders, setLeaders] = useState<Leader[]>([]);
@@ -726,6 +995,10 @@ export default function WorkshopLeadersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [slideLeader, setSlideLeader] = useState<Leader | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
+
+  // Confirmation modal state
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -768,12 +1041,9 @@ export default function WorkshopLeadersPage() {
   }
 
   function handleSlideUpdated() {
-    // Refresh leaders to get updated session assignment counts
-    if (!workshop) return;
     apiGet<Leader[]>(`/workshops/${id}/leaders`).then((res) => {
       const updated = (res ?? []).map((l) => ({ ...l, assigned_sessions: l.assigned_sessions ?? [] }));
       setLeaders(updated);
-      // Keep slide-over data in sync
       if (slideLeader) {
         const fresh = updated.find((l) => l.id === slideLeader.id);
         if (fresh) setSlideLeader(fresh);
@@ -781,14 +1051,62 @@ export default function WorkshopLeadersPage() {
     }).catch(() => {});
   }
 
+  async function executeConfirmAction() {
+    if (!confirmAction) return;
+    setConfirming(true);
+    try {
+      if (confirmAction.type === 'rescind') {
+        await apiDelete(`/leader-invitations/${confirmAction.leader.invitation_id}`);
+        // Optimistically mark as rescinded — row stays visible for audit history.
+        setLeaders((prev) =>
+          prev.map((l) =>
+            l.invitation_id === confirmAction.leader.invitation_id
+              ? { ...l, invitation_status: 'rescinded' as InvitationStatus }
+              : l,
+          ),
+        );
+        toast.success('Invitation rescinded');
+      } else if (confirmAction.type === 'remove_leader') {
+        await apiDelete(`/workshops/${id}/leaders/${confirmAction.leader.id}`);
+        // Optimistically mark as removed — row stays visible for audit history.
+        setLeaders((prev) =>
+          prev.map((l) =>
+            l.id === confirmAction.leader.id
+              ? { ...l, invitation_status: 'removed' as InvitationStatus, assigned_sessions: [] }
+              : l,
+          ),
+        );
+        toast.success('Leader removed from workshop');
+      } else if (confirmAction.type === 'remove_session' && confirmAction.session) {
+        const { session } = confirmAction;
+        await apiDelete(`/sessions/${session.id}/leaders/${confirmAction.leader.id}`);
+        // Optimistically remove the session chip.
+        setLeaders((prev) =>
+          prev.map((l) =>
+            l.id === confirmAction.leader.id
+              ? {
+                  ...l,
+                  assigned_sessions: (l.assigned_sessions ?? []).filter(
+                    (s) => s.id !== session.id,
+                  ),
+                }
+              : l,
+          ),
+        );
+        toast.success('Leader removed from session');
+      }
+      setConfirmAction(null);
+    } catch {
+      toast.error('Action failed. Please try again.');
+    } finally {
+      setConfirming(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-[1280px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="h-40 bg-white rounded-xl border border-border-gray animate-pulse" />
-          ))}
-        </div>
+        <div className="h-64 bg-white rounded-xl border border-border-gray animate-pulse" />
       </div>
     );
   }
@@ -814,19 +1132,17 @@ export default function WorkshopLeadersPage() {
           </Button>
         </div>
 
-        {/* Grid or empty state */}
+        {/* Table or empty state */}
         {leaders.length === 0 ? (
           <EmptyLeaders onInvite={() => setInviteOpen(true)} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {leaders.map((leader) => (
-              <LeaderCard
-                key={leader.id}
-                leader={leader}
-                onView={() => openSlideOver(leader)}
-              />
-            ))}
-          </div>
+          <LeadersTable
+            leaders={leaders}
+            canRemove={canRemove}
+            timezone={workshop?.timezone ?? 'UTC'}
+            onView={openSlideOver}
+            onConfirmAction={setConfirmAction}
+          />
         )}
       </div>
 
@@ -837,9 +1153,7 @@ export default function WorkshopLeadersPage() {
           orgId={workshop.organization_id}
           workshopId={workshop.id}
           onClose={() => setInviteOpen(false)}
-          onInvited={() => {
-            load();
-          }}
+          onInvited={() => { load(); }}
         />
       )}
 
@@ -851,6 +1165,14 @@ export default function WorkshopLeadersPage() {
         workshop={workshop}
         onClose={() => setSlideOpen(false)}
         onUpdated={handleSlideUpdated}
+      />
+
+      {/* Confirmation modal (rescind / remove leader / remove from session via chip) */}
+      <ConfirmModal
+        action={confirmAction}
+        confirming={confirming}
+        onConfirm={executeConfirmAction}
+        onCancel={() => setConfirmAction(null)}
       />
     </>
   );

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Leaders\Actions\AcceptLeaderInvitationAction;
 use App\Domain\Leaders\Actions\DeclineLeaderInvitationAction;
+use App\Domain\Leaders\Actions\RescindLeaderInvitationAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AcceptLeaderInvitationRequest;
 use App\Http\Resources\LeaderInvitationResource;
@@ -122,6 +123,36 @@ class LeaderInvitationController extends Controller
             'organization_name' => $invitation->organization?->name,
             'workshop_title' => $invitation->workshop?->title,
         ]);
+    }
+
+    /**
+     * DELETE /api/v1/leader-invitations/{invitation}
+     * Rescind a pending or expired invitation. Requires auth:sanctum + owner/admin role.
+     *
+     * Blocked if the invitation is already accepted (use remove-leader instead)
+     * or already rescinded.
+     */
+    public function destroy(LeaderInvitation $invitation, RescindLeaderInvitationAction $action): JsonResponse
+    {
+        $this->authorize('rescind', $invitation);
+
+        if ($invitation->status === 'accepted') {
+            return response()->json([
+                'message' => 'This invitation has already been accepted. Use the remove leader action to remove an active leader.',
+            ], 422);
+        }
+
+        if ($invitation->status === 'removed') {
+            return response()->json([
+                'message' => 'Already rescinded.',
+            ], 422);
+        }
+
+        $invitation = $action->execute($invitation, request()->user());
+
+        return response()->json(new LeaderInvitationResource(
+            $invitation->load(['organization', 'workshop.defaultLocation'])
+        ));
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
+use App\Http\Controllers\Api\V1\JoinCodeController;
 use App\Http\Controllers\Api\V1\JoinCodePreviewController;
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use App\Http\Controllers\Api\V1\FileUploadController;
@@ -239,6 +240,8 @@ Route::prefix('v1')->group(function () {
 
         // Workshop participants (organizer/staff)
         Route::get('workshops/{workshop}/participants', [ParticipantController::class, 'index']);
+        Route::delete('workshops/{workshop}/participants/{user}', [ParticipantController::class, 'destroy']);
+        Route::post('workshops/{workshop}/rotate-join-code', [JoinCodeController::class, 'rotate']);
         // Participant search across all org workshops (for organizer add-to-session flow)
         Route::get('organizations/{organization}/participants/search', [ParticipantController::class, 'search'])
             ->name('org-participants.search');
@@ -261,6 +264,9 @@ Route::prefix('v1')->group(function () {
         // ─── Leader invitation acceptance (requires auth) ─────────────────────
         Route::post('leader-invitations/{token}/accept', [LeaderInvitationController::class, 'accept']);
 
+        // ─── Leader invitation rescind (organizer) ────────────────────────────
+        Route::delete('leader-invitations/{invitation}', [LeaderInvitationController::class, 'destroy']);
+
         // ─── Leader admin (organizer) ─────────────────────────────────────────
         Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);
         Route::get('organizations/{organization}/leaders/{leader}', [LeaderAdminController::class, 'show']);
@@ -275,6 +281,7 @@ Route::prefix('v1')->group(function () {
         // ─── Workshop/session leader assignment (organizer) ───────────────────
         Route::get('workshops/{workshop}/leaders', [WorkshopLeaderController::class, 'index']);
         Route::post('workshops/{workshop}/leaders', [WorkshopLeaderController::class, 'store']);
+        Route::delete('workshops/{workshop}/leaders/{leader}', [WorkshopLeaderController::class, 'destroy']);
         Route::get('sessions/{session}/leaders', [SessionLeaderController::class, 'index']);
         Route::post('sessions/{session}/leaders', [SessionLeaderController::class, 'store']);
         Route::delete('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'destroy']);

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
+import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 
 // Allowed public leader fields — enforced here as a second layer after the API
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
@@ -272,13 +273,39 @@ export async function generateMetadata(
   if (!workshop) {
     return { title: 'Workshop Not Found | Wayfield' };
   }
+
+  const resolvedTitle = workshop.social_share_title || workshop.title;
+  const resolvedDescription = (
+    workshop.social_share_description ||
+    workshop.public_summary ||
+    workshop.description
+  )?.slice(0, 160) || undefined;
+
+  const canonical = workshop.canonical_url;
+  const socialImage = workshop.social_share_image_url ?? null;
+
   return {
-    title: `${workshop.title} | Wayfield`,
-    description: workshop.description.slice(0, 160),
+    title: `${resolvedTitle} | Wayfield`,
+    description: resolvedDescription,
+    alternates: { canonical },
+    robots: workshop.public_page_is_indexable
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
     openGraph: {
-      title: workshop.title,
-      description: workshop.description.slice(0, 160),
-      ...(workshop.hero_image_url ? { images: [workshop.hero_image_url] } : {}),
+      type: 'website',
+      url: canonical,
+      title: resolvedTitle,
+      description: resolvedDescription,
+      siteName: 'Wayfield',
+      locale: 'en_US',
+      ...(socialImage ? { images: [{ url: socialImage, width: 1200, height: 630 }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: resolvedTitle,
+      description: resolvedDescription,
+      site: '@wayfieldapp',
+      ...(socialImage ? { images: [socialImage] } : {}),
     },
   };
 }
@@ -343,7 +370,7 @@ export default async function PublicWorkshopPage(
               </span>
             )}
           </div>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
               href="/login"
               className="inline-flex items-center gap-2 bg-white text-primary font-bold px-6 py-3 rounded-lg shadow-lg hover:bg-white/90 active:scale-[0.98] transition-all text-sm"
@@ -351,6 +378,13 @@ export default async function PublicWorkshopPage(
               <span className="material-symbols-outlined text-base">key</span>
               Join with a code
             </Link>
+            <ShareWorkshopButton
+              workshopTitle={workshop.title}
+              publicUrl={workshop.canonical_url}
+              variant="participant"
+              showLabel
+              className="inline-flex items-center gap-2 bg-white/10 border border-white/30 text-white hover:bg-white/20 active:scale-[0.98] transition-all px-5 py-3 rounded-lg text-sm font-bold"
+            />
           </div>
         </div>
       </div>

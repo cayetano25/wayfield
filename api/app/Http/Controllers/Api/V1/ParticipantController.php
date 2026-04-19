@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Workshops\Actions\RemoveParticipantFromWorkshopAction;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\Registration;
@@ -27,7 +28,7 @@ class ParticipantController extends Controller
         $showPhone = $workshop->organization->isOperationalMember($request->user());
 
         $participants = Registration::where('workshop_id', $workshop->id)
-            ->where('registration_status', 'registered')
+            ->whereIn('registration_status', ['registered', 'waitlisted'])
             ->with(['user', 'selections.session'])
             ->get()
             ->map(function (Registration $registration) use ($showPhone) {
@@ -52,6 +53,7 @@ class ParticipantController extends Controller
                     'registered_at' => $registration->registered_at,
                     'sessions_count' => $selectedSessions->count(),
                     'sessions' => $selectedSessions,
+                    'joined_via_code' => $registration->joined_via_code !== null,
                 ];
 
                 if ($showPhone) {
@@ -62,6 +64,44 @@ class ParticipantController extends Controller
             });
 
         return response()->json($participants);
+    }
+
+    /**
+     * DELETE /api/v1/workshops/{workshop}/participants/{user}
+     *
+     * Remove a participant from a workshop entirely.
+     * Cancels all their session selections and marks not-checked-in attendance as no_show.
+     * Does not delete their Wayfield account — only removes this workshop registration.
+     * Requires owner or admin role.
+     */
+    public function destroy(
+        Request $request,
+        Workshop $workshop,
+        User $user,
+        RemoveParticipantFromWorkshopAction $action,
+    ): JsonResponse {
+        $this->authorize('removeParticipant', $workshop);
+
+        $registration = Registration::where('workshop_id', $workshop->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        if ($registration->registration_status === 'removed') {
+            return response()->json(['message' => 'Participant is already removed.'], 422);
+        }
+
+        if (! in_array($registration->registration_status, ['registered', 'waitlisted'], true)) {
+            return response()->json(['message' => 'This participant cannot be removed.'], 422);
+        }
+
+        $action->execute(
+            workshop: $workshop,
+            registration: $registration,
+            actor: $request->user(),
+            removalReason: $request->input('reason'),
+        );
+
+        return response()->json(['message' => 'Participant removed.']);
     }
 
     /**

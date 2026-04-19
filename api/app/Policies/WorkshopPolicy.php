@@ -72,6 +72,22 @@ class WorkshopPolicy
     }
 
     /**
+     * Only owner/admin can remove a participant from a workshop.
+     */
+    public function removeParticipant(User $user, Workshop $workshop): bool
+    {
+        return $this->isOrganizerOrAbove($user, $workshop->organization_id);
+    }
+
+    /**
+     * Only owner/admin can rotate the workshop join code.
+     */
+    public function rotateJoinCode(User $user, Workshop $workshop): bool
+    {
+        return $this->isOrganizerOrAbove($user, $workshop->organization_id);
+    }
+
+    /**
      * Sync package access: registered participants, assigned leaders, and org members.
      */
     public function syncDownload(User $user, Workshop $workshop): bool

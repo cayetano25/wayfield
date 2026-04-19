@@ -4,6 +4,7 @@ namespace App\Domain\Workshops\Actions;
 
 use App\Domain\Webhooks\WebhookDispatcher;
 use App\Domain\Workshops\Exceptions\WorkshopPublishException;
+use App\Domain\Workshops\Services\SlugGeneratorService;
 use App\Models\Workshop;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +12,10 @@ use Illuminate\Support\Facades\Schema;
 
 class PublishWorkshopAction
 {
-    public function __construct(private readonly WebhookDispatcher $webhookDispatcher) {}
+    public function __construct(
+        private readonly WebhookDispatcher $webhookDispatcher,
+        private readonly SlugGeneratorService $slugGenerator,
+    ) {}
 
     public function execute(Workshop $workshop): Workshop
     {
@@ -29,6 +33,12 @@ class PublishWorkshopAction
 
         if (! empty($errors)) {
             throw new WorkshopPublishException($errors);
+        }
+
+        // Generate slug on first publish only — never overwrite an existing one.
+        if (blank($workshop->public_slug)) {
+            $this->slugGenerator->generateAndSave($workshop);
+            $workshop->refresh();
         }
 
         $workshop->update(['status' => 'published']);

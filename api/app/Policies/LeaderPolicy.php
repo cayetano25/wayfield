@@ -49,6 +49,14 @@ class LeaderPolicy
     }
 
     /**
+     * Only owner/admin can remove a leader from a workshop entirely.
+     */
+    public function removeFromWorkshop(User $user, Organization $organization): bool
+    {
+        return $this->isOrganizerOrAbove($user, $organization->id);
+    }
+
+    /**
      * A leader can update their own profile.
      * The leader record must be linked to the authenticated user's account.
      */
