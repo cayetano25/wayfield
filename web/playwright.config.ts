@@ -1,47 +1,31 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
-  fullyParallel: false,
+  testDir: './e2e/tests',
+  outputDir: './test-results',
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 4 : 2,
-  reporter: [
-    ['html', { open: 'on-failure' }],
-    ['list'],
-  ],
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [['html', { outputFolder: 'playwright-report' }]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'on-first-retry',
     actionTimeout: 8000,
-    navigationTimeout: 15000,
   },
   projects: [
-    // Runs auth setup once before all tests
-    { name: 'setup', testMatch: /.*\.setup\.ts/ },
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/owner.json' },
-      dependencies: ['setup'],
-    },
+    { name: 'guest', use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/guest.json' } },
+    { name: 'owner', use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/owner.json' } },
+    { name: 'participant', use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/participant.json' } },
+    { name: 'leader', use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/leader.json' } },
+    { name: 'staff', use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/staff.json' } },
     {
       name: 'mobile-chrome',
-      use: { ...devices['Pixel 7'], storageState: 'e2e/.auth/participant.json' },
-      dependencies: ['setup'],
+      use: { ...devices['Pixel 5'], storageState: 'e2e/.auth/guest.json' },
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'], storageState: 'e2e/.auth/owner.json' },
-      dependencies: ['setup'],
+      use: { ...devices['Desktop Firefox'], storageState: 'e2e/.auth/guest.json' },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
-  globalSetup: require.resolve('./e2e/global-setup'),
-})
+});

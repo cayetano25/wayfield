@@ -102,6 +102,12 @@ export function LoginForm() {
       }
       setStoredUser(userWithContexts)
       clearNavCache()
+      const pendingJoin = sessionStorage.getItem('pendingJoin')
+      if (pendingJoin) {
+        sessionStorage.removeItem('pendingJoin')
+        router.push(pendingJoin)
+        return
+      }
       router.push(getPostLoginRedirect(userWithContexts))
     } catch (err) {
       if (err instanceof ApiError) {

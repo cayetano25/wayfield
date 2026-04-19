@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "wayfield_token",
+      "value": "150%7CNwelQnrw08LOBf9vGLUnG7PG3IFTvu0cx19BFw3Fd822ed35",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776982151.222,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "wayfield_user",
+      "value": "%7B%22id%22%3A37%2C%22first_name%22%3A%22Alex%22%2C%22last_name%22%3A%22Rivera%22%2C%22email%22%3A%22owner%40e2e.wayfield.test%22%2C%22profile_image_url%22%3Anull%2C%22email_verified%22%3Atrue%2C%22email_verified_at%22%3A%222026-04-16T22%3A08%3A51%2B00%3A00%22%2C%22is_active%22%3Atrue%2C%22last_login_at%22%3A%222026-04-16T22%3A09%3A11%2B00%3A00%22%2C%22onboarding_intent%22%3Anull%2C%22onboarding_completed_at%22%3A%222026-04-16T22%3A08%3A51%2B00%3A00%22%2C%22created_at%22%3A%222026-04-16T22%3A08%3A51%2B00%3A00%22%2C%22contexts%22%3A%7B%22organization_roles%22%3A%5B%22owner%22%5D%2C%22is_leader%22%3Afalse%2C%22leader_id%22%3Anull%7D%7D",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1776982151.222,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
