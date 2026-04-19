@@ -38,6 +38,15 @@ class AttendancePolicy
         return $this->isOrgStaffOrAbove($user, $session->workshop->organization_id);
     }
 
+    /**
+     * Revert attendance: assigned leader for the session OR org owner/admin/staff.
+     */
+    public function revert(User $user, Session $session): bool
+    {
+        return $this->isLeaderAssignedToSession($user, $session)
+            || $this->isOrgStaffOrAbove($user, $session->workshop->organization_id);
+    }
+
     private function isLeaderAssignedToSession(User $user, Session $session): bool
     {
         $leader = Leader::where('user_id', $user->id)->first();

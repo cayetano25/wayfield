@@ -50,9 +50,12 @@ export interface PricingPageProps {
 
   currentPlanCode?: string     // set in billing/upgrade context
   orgId?: number               // set in billing/upgrade context
+  orgName?: string             // used in success toast
   limitHitKey?: string         // set in upgrade context only — highlights the right card
   onPlanSelected?: (planCode: string, billing: BillingCycle) => void
   // Called in onboarding context when user picks a plan before checkout
+  onSuccess?: () => void
+  // Called after a successful subscription checkout — typically refreshes billing data
   onClose?: () => void
   // Called in upgrade context (modal) when user dismisses
 }

@@ -209,4 +209,79 @@ return [
     */
     'order' => ['free', 'starter', 'pro', 'enterprise'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Plan Catalog
+    |--------------------------------------------------------------------------
+    | Marketing-facing metadata for the billing UI. Separate from limits and
+    | feature flags so display copy can change without touching business logic.
+    */
+    'catalog' => [
+        'free' => [
+            'tagline'      => 'Run your first workshops without friction.',
+            'monthly_price' => 0,
+            'annual_price'  => 0,
+            'annual_total'  => 0,
+            'highlight'     => null,
+            'features'      => [
+                'Up to 2 active workshops',
+                'Up to 75 participants per workshop',
+                'Session scheduling & selection',
+                'Participant self check-in',
+                'Leader invitations & profile completion',
+                'Basic organizer notifications',
+                'Core offline access',
+            ],
+        ],
+        'starter' => [
+            'tagline'      => 'Run workshops consistently—without losing control.',
+            'monthly_price' => 49,
+            'annual_price'  => 41.65,
+            'annual_total'  => 499.80,
+            'highlight'     => 'Most Practical',
+            'features'      => [
+                'Everything in Foundation',
+                'Up to 5 organization managers',
+                'Up to 10 active workshops',
+                'Up to 250 participants per workshop',
+                'Capacity enforcement & waitlists',
+                'Leader day-of-session notifications',
+                'Reminder automation',
+                'Basic analytics & attendance summaries',
+            ],
+        ],
+        'pro' => [
+            'tagline'      => 'Operate your workshop program like a system.',
+            'monthly_price' => 149,
+            'annual_price'  => 126.65,
+            'annual_total'  => 1519.80,
+            'highlight'     => 'Best for Serious Operators',
+            'features'      => [
+                'Everything in Creator',
+                'Unlimited workshops & participants',
+                'Advanced automation & segmentation',
+                'Multi-workshop reporting',
+                'API access & webhooks',
+                'Custom branding',
+                'Advanced role-based permissions',
+                'Priority support',
+            ],
+        ],
+        'enterprise' => [
+            'tagline'      => 'Full control for workshop organizations at scale.',
+            'monthly_price' => null,
+            'annual_price'  => null,
+            'annual_total'  => null,
+            'highlight'     => null,
+            'features'      => [
+                'Everything in Studio',
+                'SSO & enterprise authentication',
+                'White-label',
+                'SLA & dedicated onboarding',
+                'Custom integrations',
+                'Advanced governance',
+            ],
+        ],
+    ],
+
 ];

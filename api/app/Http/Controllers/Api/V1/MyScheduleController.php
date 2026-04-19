@@ -23,6 +23,8 @@ class MyScheduleController extends Controller
     {
         $user = Auth::user();
 
+        $workshop->load(['defaultLocation', 'logistics', 'logistics.hotelAddress']);
+
         $registration = Registration::where('workshop_id', $workshop->id)
             ->where('user_id', $user->id)
             ->first();
@@ -37,18 +39,31 @@ class MyScheduleController extends Controller
                 ->pluck('session_id');
 
             $sessions = Session::whereIn('id', $selectedSessionIds)
-                ->with(['track', 'location'])
+                ->with(['track', 'location', 'workshop.defaultLocation'])
                 ->orderBy('start_at')
                 ->get();
         } else {
-            // Event-based: full published schedule is the participant's schedule.
             $sessions = Session::where('workshop_id', $workshop->id)
                 ->where('is_published', true)
-                ->with(['track', 'location'])
+                ->with(['track', 'location', 'workshop.defaultLocation'])
                 ->orderBy('start_at')
                 ->get();
         }
 
-        return response()->json(ParticipantSessionResource::collection($sessions));
+        $logistics = $workshop->logistics;
+
+        return response()->json([
+            'workshop' => [
+                'id' => $workshop->id,
+                'title' => $workshop->title,
+                'timezone' => $workshop->timezone,
+                'default_location_id' => $workshop->default_location_id,
+            ],
+            'workshop_logistics' => $logistics ? [
+                'hotel_name' => $logistics->hotel_name,
+                'hotel_address' => $logistics->hotel_address ?? $logistics->hotelAddress?->formatted_address,
+            ] : null,
+            'sessions' => ParticipantSessionResource::collection($sessions),
+        ]);
     }
 }

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { getParticipantsReport, type ParticipantReportItem } from '@/lib/api/reports';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 function fmtDate(s: string | null) {
   if (!s) return '—';
@@ -22,7 +22,7 @@ function fmtDateTime(s: string | null) {
 type SortField = 'name' | 'registered_at' | 'sessions_selected' | 'sessions_attended' | 'last_check_in_at';
 type SortDir = 'asc' | 'desc';
 
-/* ─── Avatar ──────────────────────────────────────────────────────────── */
+/* --- Avatar ------------------------------------------------------------ */
 
 function ParticipantAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
@@ -36,7 +36,7 @@ function ParticipantAvatar({ firstName, lastName }: { firstName: string; lastNam
   );
 }
 
-/* ─── Sort header ─────────────────────────────────────────────────────── */
+/* --- Sort header ------------------------------------------------------- */
 
 function SortTh({
   field,
@@ -68,7 +68,7 @@ function SortTh({
   );
 }
 
-/* ─── ParticipantsReport ──────────────────────────────────────────────── */
+/* --- ParticipantsReport ------------------------------------------------ */
 
 interface ParticipantsReportProps {
   orgId: number;

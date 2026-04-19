@@ -65,7 +65,7 @@ class LeaderDashboardController extends Controller
         return Session::whereIn('id', $sessionIds)
             ->where('start_at', '>=', now()->subDay())
             ->where('start_at', '<=', now()->addDays(61))
-            ->with(['workshop', 'selections', 'attendanceRecords'])
+            ->with(['workshop', 'workshop.defaultLocation', 'location', 'selections', 'attendanceRecords'])
             ->orderBy('start_at')
             ->get();
     }
@@ -146,13 +146,18 @@ class LeaderDashboardController extends Controller
         $enrolledCount = $session->selections->where('selection_status', 'selected')->count();
         $checkedInCount = $session->attendanceRecords->where('status', 'checked_in')->count();
 
+        [$location, $workshopDefaultLocationId] = $this->buildLocationPayload($session);
+
         return [
             'session_id' => $session->id,
             'workshop_title' => $session->workshop->title,
+            'workshop_timezone' => $session->workshop->timezone,
             'session_title' => $session->title,
             'start_at' => $session->start_at->toIso8601String(),
             'end_at' => $session->end_at->toIso8601String(),
+            'location' => $location,
             'location_display' => $this->simpleLocationDisplay($session),
+            'workshop_default_location_id' => $workshopDefaultLocationId,
             'enrolled_count' => $enrolledCount,
             'checked_in_count' => $checkedInCount,
             'is_live' => $isLive,
@@ -170,13 +175,20 @@ class LeaderDashboardController extends Controller
         $sessionDate = Carbon::parse($session->start_at)->setTimezone($tz);
         $enrolledCount = $session->selections->where('selection_status', 'selected')->count();
 
+        [$location, $workshopDefaultLocationId] = $this->buildLocationPayload($session);
+
         return [
             'session_id' => $session->id,
             'session_title' => $session->title,
             'workshop_title' => $session->workshop->title,
+            'workshop_timezone' => $session->workshop->timezone,
             'start_at' => $session->start_at->toIso8601String(),
             'end_at' => $session->end_at->toIso8601String(),
+            'location' => $location,
+            'location_display' => $this->simpleLocationDisplay($session),
+            'workshop_default_location_id' => $workshopDefaultLocationId,
             'enrolled_count' => $enrolledCount,
+            'capacity' => $session->capacity,
             'day_label' => strtoupper($sessionDate->format('D j')),
         ];
     }
@@ -185,13 +197,60 @@ class LeaderDashboardController extends Controller
     {
         $enrolledCount = $session->selections->where('selection_status', 'selected')->count();
 
+        [$location, $workshopDefaultLocationId] = $this->buildLocationPayload($session);
+
         return [
             'session_id' => $session->id,
             'session_title' => $session->title,
             'workshop_title' => $session->workshop->title,
+            'workshop_timezone' => $session->workshop->timezone,
             'start_at' => $session->start_at->toIso8601String(),
+            'end_at' => $session->end_at->toIso8601String(),
+            'location' => $location,
+            'location_display' => $this->simpleLocationDisplay($session),
+            'workshop_default_location_id' => $workshopDefaultLocationId,
             'enrolled_count' => $enrolledCount,
             'capacity' => $session->capacity,
+        ];
+    }
+
+    /**
+     * Resolves the effective location for a session and returns it as a payload array
+     * alongside the workshop's default_location_id (for "same as workshop venue" comparison).
+     *
+     * Hotel-type sessions resolve to the workshop's default location. Coordinate-only
+     * locations are included even if no address text is present.
+     *
+     * @return array{0: array<string, mixed>|null, 1: int|null}
+     */
+    private function buildLocationPayload(Session $session): array
+    {
+        $workshopDefaultLocationId = $session->workshop->default_location_id;
+
+        $loc = null;
+        if ($session->location_type === Session::LOCATION_TYPE_HOTEL) {
+            $loc = $session->workshop->defaultLocation ?? null;
+        } elseif ($session->location_id && $session->location) {
+            $loc = $session->location;
+        }
+
+        if (! $loc) {
+            return [null, $workshopDefaultLocationId];
+        }
+
+        return [
+            [
+                'id' => $loc->id,
+                'name' => $loc->name,
+                'address_line_1' => $loc->address_line_1,
+                'address_line_2' => $loc->address_line_2,
+                'city' => $loc->city,
+                'state_or_region' => $loc->state_or_region,
+                'postal_code' => $loc->postal_code,
+                'latitude' => $loc->latitude !== null ? (float) $loc->latitude : null,
+                'longitude' => $loc->longitude !== null ? (float) $loc->longitude : null,
+            ],
+            $workshopDefaultLocationId,
         ];
     }
 

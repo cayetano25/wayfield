@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Megaphone, ChevronRight, CheckCheck, Menu, User, Backpack, LogOut } from 'lucide-react';
+import { Bell, Megaphone, ChevronRight, CheckCheck, Menu, User, LogOut } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import type { AdminUser } from '@/lib/auth/session';
 import { usePage } from '@/contexts/PageContext';
@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { formatDistanceToNow } from 'date-fns';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ---------------------------------------------------------------- */
 
 interface InAppNotification {
   id: number;           // notification_recipient id
@@ -23,7 +23,7 @@ interface InAppNotification {
   created_at: string;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
+/* --- Helpers -------------------------------------------------------------- */
 
 const typeColors: Record<InAppNotification['notification_type'], string> = {
   informational: 'bg-info/10 text-info',
@@ -70,9 +70,9 @@ function UserMenuDropdown({
   onLogout: () => Promise<void>;
 }) {
   return (
-    <div className="absolute top-full left-0 mt-2 w-[220px] bg-white rounded-lg border border-[#E5E7EB] shadow-lg z-50 overflow-hidden">
+    <div className="absolute top-full right-0 mt-2 w-[220px] bg-white rounded-lg border border-[#E5E7EB] shadow-lg z-50 overflow-hidden">
       {/* Identity header — not clickable */}
-      <div className="px-4 py-3 flex items-center gap-3 border-b border-[#F3F4F6]">
+      <div className="px-4 py-3 flex items-center gap-3 border-b border-[#F3F4F6]" style={{ backgroundColor: '#FAFAFA' }}>
         <UserAvatar
           firstName={user.first_name}
           lastName={user.last_name}
@@ -80,17 +80,17 @@ function UserMenuDropdown({
           size="md"
         />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#374151] truncate">
+          <p className="text-sm font-semibold text-[#2E2E2E] truncate">
             {user.first_name} {user.last_name}
           </p>
-          <p className="text-xs text-[#6B7280] truncate">{user.email}</p>
+          <p className="text-xs text-[#9CA3AF] truncate">{user.email}</p>
         </div>
       </div>
 
       {/* Menu items */}
       <div className="py-1">
         <Link
-          href="/admin/profile"
+          href="/profile"
           onClick={onClose}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
         >
@@ -99,15 +99,12 @@ function UserMenuDropdown({
         </Link>
 
         <Link
-          href="/my-workshops"
+          href="/notifications"
           onClick={onClose}
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F9FAFB] transition-colors"
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
         >
-          <Backpack className="w-4 h-4 shrink-0 text-[#6B7280] mt-0.5" />
-          <div>
-            <p className="text-sm text-[#374151]">My Workshops</p>
-            <p className="text-[11px] text-[#9CA3AF]">Workshops I&apos;m attending</p>
-          </div>
+          <Bell className="w-4 h-4 shrink-0 text-[#6B7280]" />
+          Notifications
         </Link>
       </div>
 
@@ -118,7 +115,7 @@ function UserMenuDropdown({
         <button
           type="button"
           onClick={() => { onClose(); void onLogout(); }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#EF4444] hover:bg-[#F9FAFB] transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#EF4444] hover:bg-[#F9FAFB] transition-colors font-medium"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           Sign Out
@@ -128,7 +125,7 @@ function UserMenuDropdown({
   );
 }
 
-/* ─── Notification dropdown ─────────────────────────────────────────── */
+/* --- Notification dropdown ------------------------------------------------ */
 
 function NotificationDropdown({
   notifications,
@@ -209,7 +206,7 @@ function NotificationDropdown({
   );
 }
 
-/* ─── TopBar ─────────────────────────────────────────────────────────── */
+/* --- TopBar --------------------------------------------------------------- */
 
 export interface Breadcrumb {
   label: string;
@@ -340,7 +337,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="relative p-2 rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
           title="Announcements"
         >
           <Megaphone className="w-5 h-5" />
@@ -350,7 +347,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         <div ref={bellRef} className="relative">
           <button
             type="button"
-            className="relative p-2 rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
+            className="relative w-9 h-9 flex items-center justify-center rounded-lg text-medium-gray hover:bg-surface hover:text-dark transition-colors"
             title="Notifications"
             onClick={() => setDropdownOpen((o) => !o)}
           >
@@ -373,20 +370,31 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         </div>
 
         {user && (
-          <div ref={userMenuRef} className="relative ml-2 pl-3 border-l border-border-gray">
+          <div ref={userMenuRef} className="relative ml-1 pl-3 border-l border-border-gray">
             <button
               type="button"
               onClick={() => setUserMenuOpen((o) => !o)}
-              className="flex items-center gap-2.5 rounded-lg hover:bg-surface transition-colors p-1 -m-1"
+              className="flex items-center gap-2 px-1 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors hover:bg-surface"
+              aria-label="Open user menu"
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
             >
-              <span className="text-sm font-medium text-dark hidden sm:block">
-                {user.first_name} {user.last_name}
-              </span>
               <UserAvatar
                 firstName={user.first_name}
                 lastName={user.last_name}
                 imageUrl={user.profile_image_url}
               />
+              <span
+                className="hidden sm:block max-w-[140px] truncate"
+                style={{
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontSize:   13,
+                  fontWeight: 500,
+                  color:      '#374151',
+                }}
+              >
+                {user.first_name} {user.last_name}
+              </span>
             </button>
 
             {userMenuOpen && (

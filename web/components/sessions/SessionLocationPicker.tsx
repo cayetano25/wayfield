@@ -6,7 +6,7 @@ import { AddressForm } from '@/components/ui/AddressForm';
 import type { AddressFormData } from '@/lib/types/address';
 import type { SessionLocationFormData, SessionLocationType } from '@/lib/types/session-location';
 
-/* ─── Coordinate validation ──────────────────────────────────────────── */
+/* --- Coordinate validation -------------------------------------------- */
 
 function isValidLatitude(val: string): boolean {
   const n = parseFloat(val);
@@ -18,7 +18,7 @@ function isValidLongitude(val: string): boolean {
   return !isNaN(n) && n >= -180 && n <= 180;
 }
 
-/* ─── Exported validation helper ─────────────────────────────────────── */
+/* --- Exported validation helper --------------------------------------- */
 
 export function isSessionLocationValid(data: SessionLocationFormData): boolean {
   if (data.location_type === null) return true;
@@ -32,7 +32,7 @@ export function isSessionLocationValid(data: SessionLocationFormData): boolean {
   return true;
 }
 
-/* ─── Notes placeholders ─────────────────────────────────────────────── */
+/* --- Notes placeholders ----------------------------------------------- */
 
 const NOTE_PLACEHOLDERS: Record<NonNullable<SessionLocationType>, string> = {
   hotel:       'e.g. Conference room B, Ballroom level',
@@ -40,7 +40,7 @@ const NOTE_PLACEHOLDERS: Record<NonNullable<SessionLocationType>, string> = {
   coordinates: 'e.g. At the rear of the parking lot, Trail starts here',
 };
 
-/* ─── Props ──────────────────────────────────────────────────────────── */
+/* --- Props ------------------------------------------------------------ */
 
 interface SessionLocationPickerProps {
   value: SessionLocationFormData;
@@ -51,7 +51,7 @@ interface SessionLocationPickerProps {
   disabled?: boolean;
 }
 
-/* ─── Component ──────────────────────────────────────────────────────── */
+/* --- Component -------------------------------------------------------- */
 
 export function SessionLocationPicker({
   value,
@@ -97,7 +97,7 @@ export function SessionLocationPicker({
   const btnDefault = 'bg-[#F5F5F5] text-[#2E2E2E] hover:bg-[#E8E8E8]';
   const btnDisabled = 'bg-[#F5F5F5] text-[#C0C0C0] cursor-not-allowed opacity-60';
 
-  /* ── map link for coordinates ── */
+  /* -- map link for coordinates -- */
   const lat = parseFloat(value.latitude);
   const lng = parseFloat(value.longitude);
   const coordsValid =
@@ -193,7 +193,7 @@ export function SessionLocationPicker({
         >
           <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-          {/* ── Hotel panel ── */}
+          {/* -- Hotel panel -- */}
           {value.location_type === 'hotel' && (
             <div
               className="flex items-start gap-2.5 rounded-lg px-3 py-2.5"
@@ -206,7 +206,7 @@ export function SessionLocationPicker({
             </div>
           )}
 
-          {/* ── Address panel ── */}
+          {/* -- Address panel -- */}
           {value.location_type === 'address' && (
             <AddressForm
               value={value.address}
@@ -218,7 +218,7 @@ export function SessionLocationPicker({
             />
           )}
 
-          {/* ── Coordinates panel ── */}
+          {/* -- Coordinates panel -- */}
           {value.location_type === 'coordinates' && (
             <div className="space-y-3">
               {/* Lat / Lng row */}
@@ -324,7 +324,7 @@ export function SessionLocationPicker({
             </div>
           )}
 
-          {/* ── Notes (all types) ── */}
+          {/* -- Notes (all types) -- */}
           <div className="space-y-1">
             <label className="block text-[13px] font-medium text-[#2E2E2E]">
               Location Notes

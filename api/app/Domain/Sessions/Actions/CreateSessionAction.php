@@ -26,7 +26,7 @@ class CreateSessionAction
             'meeting_id' => $data['meeting_id'] ?? null,
             'meeting_passcode' => $data['meeting_passcode'] ?? null,
             'notes' => $data['notes'] ?? null,
-            'is_published' => false,
+            'is_published' => $data['is_published'] ?? false,
         ]);
     }
 }

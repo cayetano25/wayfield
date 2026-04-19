@@ -7,7 +7,7 @@ import type {
   SelectionOptionsResponse,
 } from '@/lib/types/session-selection';
 
-// ─── Custom error classes ────────────────────────────────────────────────────
+// --- Custom error classes ----------------------------------------------------
 
 export class TimeConflictError extends Error {
   constructor(public data: ConflictError) {
@@ -23,7 +23,7 @@ export class SessionFullError extends Error {
   }
 }
 
-// ─── Participant session-selection API ───────────────────────────────────────
+// --- Participant session-selection API ---------------------------------------
 
 export async function getSelectionOptions(
   workshopId: number,

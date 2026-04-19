@@ -5,10 +5,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { useNavContext } from '@/lib/hooks/useNavContext'
-import { NavLink }      from './NavLink'
-import { UserMenu }     from './UserMenu'
-import { GuestActions } from './GuestActions'
-import { MobileMenu }   from './MobileMenu'
+import { NavLink }            from './NavLink'
+import { UserMenu }           from './UserMenu'
+import { GuestActions }       from './GuestActions'
+import { MobileMenu }         from './MobileMenu'
+import { NotificationBell }   from '@/components/notifications/NotificationBell'
 
 export function AppTopNav() {
   const nav                         = useNavContext()
@@ -16,7 +17,7 @@ export function AppTopNav() {
 
   return (
     <>
-      {/* ── NAV BAR ───────────────────────────────────────────────── */}
+      {/* -- NAV BAR ------------------------------------------------- */}
       <header
         className="fixed top-0 left-0 right-0 z-50 bg-white"
         style={{
@@ -24,42 +25,41 @@ export function AppTopNav() {
           borderBottom: '1px solid #E5E7EB',
         }}
       >
-        <div
-          className="h-full flex items-center justify-between px-4 sm:px-6"
-          style={{ maxWidth: 1200, margin: '0 auto' }}
-        >
-          {/* ── LEFT: Logo ─────────────────────────────────────── */}
-          <Link
-            href="/"
-            className="flex-shrink-0 flex items-center"
-            style={{ textDecoration: 'none' }}
-            aria-label="Wayfield home"
-          >
-            <span
-              style={{
-                fontFamily: 'Sora, sans-serif',
-                fontWeight: 700,
-                fontSize:   20,
-                color:      '#2E2E2E',
-                letterSpacing: '-0.01em',
-              }}
+        <div className="h-full flex items-center px-4 sm:px-6">
+          {/* -- LEFT: Logo --------------------------------------- */}
+          <div className="flex-1 flex items-center">
+            <Link
+              href="/"
+              className="flex-shrink-0 flex items-center"
+              style={{ textDecoration: 'none' }}
+              aria-label="Wayfield home"
             >
-              Way
-            </span>
-            <span
-              style={{
-                fontFamily: 'Sora, sans-serif',
-                fontWeight: 700,
-                fontSize:   20,
-                color:      '#0FA3B1',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              field
-            </span>
-          </Link>
+              <span
+                style={{
+                  fontFamily: 'Sora, sans-serif',
+                  fontWeight: 700,
+                  fontSize:   20,
+                  color:      '#2E2E2E',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Way
+              </span>
+              <span
+                style={{
+                  fontFamily: 'Sora, sans-serif',
+                  fontWeight: 700,
+                  fontSize:   20,
+                  color:      '#0FA3B1',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                field
+              </span>
+            </Link>
+          </div>
 
-          {/* ── CENTER: Desktop nav links ───────────────────────── */}
+          {/* -- CENTER: Desktop nav links ------------------------- */}
           <nav
             className="hidden sm:flex items-center gap-7 h-full"
             aria-label="Main navigation"
@@ -83,8 +83,8 @@ export function AppTopNav() {
             )}
           </nav>
 
-          {/* ── RIGHT: Profile or guest actions ────────────────── */}
-          <div className="flex items-center gap-2">
+          {/* -- RIGHT: Profile or guest actions ------------------ */}
+          <div className="flex-1 flex items-center justify-end gap-2">
 
             {/* Loading skeleton — prevents layout shift */}
             {nav.isLoading && (
@@ -99,9 +99,12 @@ export function AppTopNav() {
               />
             )}
 
-            {/* Authenticated user */}
+            {/* Authenticated user — notification bell + user menu */}
             {!nav.isLoading && nav.isAuthenticated && nav.user && (
-              <UserMenu user={nav.user} />
+              <div className="flex items-center gap-2">
+                <NotificationBell isAuthenticated={nav.isAuthenticated} />
+                <UserMenu user={nav.user} />
+              </div>
             )}
 
             {/* Guest */}
@@ -136,7 +139,7 @@ export function AppTopNav() {
         </div>
       </header>
 
-      {/* ── MOBILE MENU ───────────────────────────────────────────── */}
+      {/* -- MOBILE MENU --------------------------------------------- */}
       {mobileOpen && (
         <MobileMenu
           nav={nav}

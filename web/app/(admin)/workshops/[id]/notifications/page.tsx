@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Bell, AlertCircle, Info, Clock, ChevronDown, Eye } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
@@ -14,10 +14,12 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { NotificationDetailSlideOver, SlideOverNotification } from '@/components/notifications/NotificationDetailSlideOver';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ----------------------------------------------------------- */
 
 type NotificationType = 'informational' | 'urgent' | 'reminder';
 type DeliveryScope = 'all_participants' | 'leaders' | 'session_participants' | 'custom';
+type SenderScope = 'organizer' | 'leader';
+type FilterScope = 'all' | 'organizer' | 'leader';
 
 interface Workshop {
   id: number;
@@ -37,20 +39,34 @@ interface SentNotification {
   message: string;
   notification_type: NotificationType;
   delivery_scope: DeliveryScope;
+  sender_scope: SenderScope;
   session_id: number | null;
   session_title?: string | null;
+  session_start_at?: string | null;
   recipient_count: number | null;
   sent_at: string | null;
   sent_by?: { first_name: string; last_name: string } | null;
   created_at: string;
 }
 
-/* ─── Constants ──────────────────────────────────────────────────────── */
+/* --- Constants -------------------------------------------------------- */
 
 const MAX_MESSAGE = 500;
 const OWNER_ADMIN_ROLES = ['owner', 'admin'] as const;
 
-/* ─── Type pill toggle ───────────────────────────────────────────────── */
+const FILTER_TABS: Array<{ value: FilterScope; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'organizer', label: 'Organizer' },
+  { value: 'leader', label: 'Leader' },
+];
+
+const EMPTY_STATE_LABELS: Record<FilterScope, string> = {
+  all: 'No notifications sent yet.',
+  organizer: 'No organizer notifications yet.',
+  leader: 'No leader notifications yet.',
+};
+
+/* --- Type pill toggle ------------------------------------------------- */
 
 const typeConfig: Record<NotificationType, { label: string; icon: React.ReactNode; activeClass: string }> = {
   informational: {
@@ -104,7 +120,7 @@ function TypePillToggle({
   );
 }
 
-/* ─── Type badge (history) ───────────────────────────────────────────── */
+/* --- Type badge (history) --------------------------------------------- */
 
 const typeBadgeClasses: Record<NotificationType, string> = {
   informational: 'bg-info/10 text-info',
@@ -120,16 +136,29 @@ function TypeBadge({ type }: { type: NotificationType }) {
   );
 }
 
-/* ─── Scope label ────────────────────────────────────────────────────── */
+/* --- Scope label ------------------------------------------------------ */
 
 const scopeLabels: Record<DeliveryScope, string> = {
-  all_participants:   'All Participants',
-  leaders:            'Leaders Only',
+  all_participants:     'All Participants',
+  leaders:             'Leaders Only',
   session_participants: 'Session Participants',
-  custom:             'Custom',
+  custom:              'Custom',
 };
 
-/* ─── Compose section ────────────────────────────────────────────────── */
+function scopeLabel(n: SentNotification): string {
+  if (n.sender_scope === 'leader') {
+    return n.session_title ? `Session: ${n.session_title}` : 'Session Participants';
+  }
+  return scopeLabels[n.delivery_scope] ?? n.delivery_scope;
+}
+
+function senderLabel(n: SentNotification): string {
+  if (!n.sent_by) return '—';
+  const name = `${n.sent_by.first_name} ${n.sent_by.last_name}`;
+  return n.sender_scope === 'leader' ? `Leader: ${name}` : name;
+}
+
+/* --- Compose section -------------------------------------------------- */
 
 function ComposeSection({
   workshopId,
@@ -140,7 +169,7 @@ function ComposeSection({
   workshopId: string;
   sessions: Session[];
   isOwnerAdmin: boolean;
-  onSent: (notification: SentNotification) => void;
+  onSent: () => void;
 }) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -181,15 +210,11 @@ function ComposeSection({
         body.session_id = Number(sessionId);
       }
 
-      const result = await apiPost<SentNotification>(
-        `/workshops/${workshopId}/notifications`,
-        body,
-      );
+      await apiPost<SentNotification>(`/workshops/${workshopId}/notifications`, body);
 
       toast.success('Notification queued for delivery');
-      onSent(result);
+      onSent();
 
-      // Reset form
       setTitle('');
       setMessage('');
       setNotifType('informational');
@@ -212,7 +237,6 @@ function ComposeSection({
       <h2 className="font-heading text-base font-semibold text-dark mb-5">Compose</h2>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Title */}
         <Input
           label="Title"
           value={title}
@@ -221,7 +245,6 @@ function ComposeSection({
           error={titleError}
         />
 
-        {/* Message with char count */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-dark">Message</label>
@@ -239,10 +262,8 @@ function ComposeSection({
           />
         </div>
 
-        {/* Notification type */}
         <TypePillToggle value={notifType} onChange={setNotifType} />
 
-        {/* Delivery scope */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-dark">Delivery scope</label>
           <div className="relative">
@@ -269,7 +290,6 @@ function ComposeSection({
           </div>
         </div>
 
-        {/* Session selector — animated reveal */}
         <div
           className={`overflow-hidden transition-all duration-200 ${
             showSessionSelector ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
@@ -295,7 +315,6 @@ function ComposeSection({
           </div>
         </div>
 
-        {/* Submit */}
         <div className="pt-1">
           <Button type="submit" variant="primary" size="md" loading={sending} className="w-full">
             Send Notification
@@ -306,35 +325,88 @@ function ComposeSection({
   );
 }
 
-/* ─── History section ────────────────────────────────────────────────── */
+/* --- History skeleton ------------------------------------------------- */
+
+function HistorySkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <tr key={i}>
+          <td className="px-4 py-3"><div className="h-4 w-28 bg-border-gray rounded animate-pulse" /></td>
+          <td className="px-4 py-3"><div className="h-4 w-24 bg-border-gray rounded animate-pulse" /></td>
+          <td className="px-4 py-3"><div className="h-5 w-20 bg-border-gray rounded-full animate-pulse" /></td>
+          <td className="px-4 py-3"><div className="h-4 w-20 bg-border-gray rounded animate-pulse" /></td>
+          <td className="px-4 py-3"><div className="h-4 w-16 bg-border-gray rounded animate-pulse" /></td>
+          <td className="px-4 py-3"><div className="h-4 w-8 bg-border-gray rounded animate-pulse ml-auto" /></td>
+          <td className="px-4 py-3" />
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/* --- History section -------------------------------------------------- */
 
 function HistorySection({
   notifications,
+  filterScope,
+  onFilterChange,
+  loading,
   onView,
 }: {
   notifications: SentNotification[];
+  filterScope: FilterScope;
+  onFilterChange: (scope: FilterScope) => void;
+  loading: boolean;
   onView: (n: SentNotification) => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-border-gray overflow-hidden">
+      {/* Header + filter tabs */}
       <div className="px-5 py-4 border-b border-border-gray">
-        <h2 className="font-heading text-base font-semibold text-dark">History</h2>
+        <h2 className="font-heading text-base font-semibold text-dark mb-3">History</h2>
+        <div className="flex items-center gap-1.5">
+          {FILTER_TABS.map(({ value, label }) => {
+            const active = filterScope === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onFilterChange(value)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  active
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'text-medium-gray hover:text-dark hover:bg-surface border border-transparent'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {notifications.length === 0 ? (
-        <div className="py-16 px-6 flex flex-col items-center text-center">
+      {/* Empty state */}
+      {!loading && notifications.length === 0 && (
+        <div className="py-14 px-6 flex flex-col items-center text-center">
           <div className="w-12 h-12 rounded-full bg-surface border border-border-gray flex items-center justify-center mb-3">
             <Bell className="w-5 h-5 text-light-gray" />
           </div>
-          <p className="text-sm text-medium-gray">No notifications sent yet.</p>
+          <p className="text-sm text-medium-gray">{EMPTY_STATE_LABELS[filterScope]}</p>
         </div>
-      ) : (
+      )}
+
+      {/* Table */}
+      {(loading || notifications.length > 0) && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-gray bg-surface">
                 <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
                   Title
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
+                  Sender
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-medium-gray text-xs uppercase tracking-wide">
                   Type
@@ -352,44 +424,93 @@ function HistorySection({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-gray">
-              {notifications.map((n, index) => (
-                <tr key={`notification-${n.id}-${index}`} className="hover:bg-surface/50 transition-colors">
-                  <td className="px-4 py-3 max-w-[160px]">
-                    <button
-                      type="button"
-                      onClick={() => onView(n)}
-                      className="block truncate font-medium text-dark hover:text-primary transition-colors text-left w-full"
-                      title={n.title}
+              {loading ? (
+                <HistorySkeleton />
+              ) : (
+                notifications.map((n, index) => {
+                  const isLeader = n.sender_scope === 'leader';
+                  const sentAtFormatted = n.sent_at
+                    ? format(new Date(n.sent_at), "MMMM d, yyyy 'at' h:mm a")
+                    : undefined;
+
+                  return (
+                    <tr
+                      key={`notification-${n.id}-${index}`}
+                      className="hover:bg-surface/50 transition-colors"
                     >
-                      {n.title}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <TypeBadge type={n.notification_type} />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-medium-gray text-xs">
-                    {scopeLabels[n.delivery_scope] ?? n.delivery_scope}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-medium-gray text-xs">
-                    {n.sent_at
-                      ? formatDistanceToNow(new Date(n.sent_at), { addSuffix: true })
-                      : <span className="text-light-gray italic">Queued</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right text-medium-gray text-xs tabular-nums">
-                    {n.recipient_count ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onView(n)}
-                      title="View details"
-                      className="p-1.5 rounded-lg text-light-gray hover:text-primary hover:bg-primary/5 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      {/* TITLE — orange left border for leader rows */}
+                      <td
+                        className="px-4 py-3 max-w-[160px]"
+                        style={isLeader ? { borderLeft: '3px solid #E67E22' } : { borderLeft: '3px solid transparent' }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => onView(n)}
+                          className="block truncate font-medium text-dark hover:text-primary transition-colors text-left w-full"
+                          title={n.title}
+                        >
+                          {n.title}
+                        </button>
+                      </td>
+
+                      {/* SENDER */}
+                      <td className="px-4 py-3 whitespace-nowrap text-medium-gray text-xs">
+                        {isLeader ? (
+                          <span className="font-medium" style={{ color: '#92400E' }}>
+                            {senderLabel(n)}
+                          </span>
+                        ) : (
+                          senderLabel(n)
+                        )}
+                      </td>
+
+                      {/* TYPE + Leader badge */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <TypeBadge type={n.notification_type} />
+                          {isLeader && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700">
+                              Leader
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* SCOPE */}
+                      <td className="px-4 py-3 whitespace-nowrap text-medium-gray text-xs">
+                        {scopeLabel(n)}
+                      </td>
+
+                      {/* SENT — hover shows exact time */}
+                      <td
+                        className="px-4 py-3 whitespace-nowrap text-medium-gray text-xs"
+                        title={sentAtFormatted}
+                      >
+                        {n.sent_at
+                          ? formatDistanceToNow(new Date(n.sent_at), { addSuffix: true })
+                          : <span className="text-light-gray italic">Queued</span>}
+                      </td>
+
+                      {/* RECIPIENTS */}
+                      <td className="px-4 py-3 text-right text-medium-gray text-xs tabular-nums">
+                        {n.recipient_count ?? '—'}
+                      </td>
+
+                      {/* VIEW */}
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onView(n)}
+                          title="View details"
+                          className="p-1.5 rounded-lg text-light-gray hover:text-primary hover:bg-primary/5 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -398,7 +519,7 @@ function HistorySection({
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────────────── */
+/* --- Page ------------------------------------------------------------- */
 
 export default function WorkshopNotificationsPage() {
   const { id } = useParams<{ id: string }>();
@@ -413,23 +534,34 @@ export default function WorkshopNotificationsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [history, setHistory] = useState<SentNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [filterScope, setFilterScope] = useState<FilterScope>('all');
   const [selectedNotification, setSelectedNotification] = useState<SlideOverNotification | null>(null);
 
+  const loadHistory = useCallback(async (scope: FilterScope) => {
+    setHistoryLoading(true);
+    try {
+      const qs = scope !== 'all' ? `?sender_scope=${scope}` : '';
+      const raw = await apiGet<SentNotification[]>(`/workshops/${id}/notifications${qs}`).catch(() => []);
+      const unique = Array.from(
+        new Map((raw ?? []).map((n: SentNotification) => [n.id, n])).values(),
+      );
+      setHistory(unique);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [id]);
+
+  // Initial page load: workshop + sessions
   useEffect(() => {
     async function init() {
       try {
-        const [wRes, sRes, nRes] = await Promise.all([
+        const [wRes, sRes] = await Promise.all([
           apiGet<Workshop>(`/workshops/${id}`),
           apiGet<Session[]>(`/workshops/${id}/sessions`),
-          apiGet<SentNotification[]>(`/workshops/${id}/notifications`).catch(() => []),
         ]);
         setWorkshop(wRes);
         setSessions((sRes ?? []).filter((s) => s.is_published));
-        const raw = nRes ?? [];
-        const unique = Array.from(
-          new Map(raw.map((n: SentNotification) => [n.id, n])).values()
-        );
-        setHistory(unique);
       } catch {
         toast.error('Failed to load notifications');
       } finally {
@@ -438,6 +570,11 @@ export default function WorkshopNotificationsPage() {
     }
     init();
   }, [id]);
+
+  // Load (and reload) history whenever filter changes
+  useEffect(() => {
+    loadHistory(filterScope);
+  }, [filterScope, loadHistory]);
 
   useEffect(() => {
     const t = workshop?.title ?? 'Workshop';
@@ -448,11 +585,8 @@ export default function WorkshopNotificationsPage() {
     ]);
   }, [workshop, id, setPage]);
 
-  function handleSent(notification: SentNotification) {
-    setHistory((prev) => {
-      const merged = [notification, ...prev];
-      return Array.from(new Map(merged.map((n) => [n.id, n])).values());
-    });
+  function handleSent() {
+    loadHistory(filterScope);
   }
 
   if (loading) {
@@ -479,6 +613,9 @@ export default function WorkshopNotificationsPage() {
           {/* History — 40% */}
           <HistorySection
             notifications={history}
+            filterScope={filterScope}
+            onFilterChange={setFilterScope}
+            loading={historyLoading}
             onView={(n) => setSelectedNotification(n)}
           />
         </div>

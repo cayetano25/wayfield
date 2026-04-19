@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
-/* ─── Types ──────────────────────────────────────────────────────────── */
+/* --- Types ------------------------------------------------------------ */
 
 interface Workshop {
   id: number;
@@ -50,7 +50,7 @@ interface Participant {
   sessions: SelectedSession[];
 }
 
-/* ─── Constants ──────────────────────────────────────────────────────── */
+/* --- Constants -------------------------------------------------------- */
 
 const regStatusClasses: Record<RegistrationStatus, string> = {
   confirmed: 'bg-emerald-100 text-emerald-700',
@@ -58,7 +58,7 @@ const regStatusClasses: Record<RegistrationStatus, string> = {
   cancelled: 'bg-danger/10 text-danger',
 };
 
-/* ─── Avatar ─────────────────────────────────────────────────────────── */
+/* --- Avatar ----------------------------------------------------------- */
 
 function ParticipantAvatar({ first_name, last_name }: { first_name: string; last_name: string }) {
   const initials = `${first_name[0] ?? ''}${last_name[0] ?? ''}`.toUpperCase();
@@ -69,7 +69,7 @@ function ParticipantAvatar({ first_name, last_name }: { first_name: string; last
   );
 }
 
-/* ─── Registration status badge ──────────────────────────────────────── */
+/* --- Registration status badge ---------------------------------------- */
 
 function RegStatusBadge({ status }: { status: RegistrationStatus }) {
   return (
@@ -79,7 +79,7 @@ function RegStatusBadge({ status }: { status: RegistrationStatus }) {
   );
 }
 
-/* ─── Remove session confirmation modal ──────────────────────────────── */
+/* --- Remove session confirmation modal -------------------------------- */
 
 interface RemoveSessionTarget {
   workshopId: number;
@@ -149,7 +149,7 @@ function RemoveSessionModal({
   );
 }
 
-/* ─── Session add selector ───────────────────────────────────────────── */
+/* --- Session add selector --------------------------------------------- */
 
 function SessionAddSelector({
   sessions,
@@ -202,7 +202,7 @@ function SessionAddSelector({
   );
 }
 
-/* ─── Participant slide-over ─────────────────────────────────────────── */
+/* --- Participant slide-over ------------------------------------------- */
 
 function ParticipantSlideOver({
   open,
@@ -356,7 +356,7 @@ function ParticipantSlideOver({
   );
 }
 
-/* ─── Empty state ────────────────────────────────────────────────────── */
+/* --- Empty state ------------------------------------------------------ */
 
 function EmptyParticipants() {
   return (
@@ -372,7 +372,7 @@ function EmptyParticipants() {
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────────── */
+/* --- Main page -------------------------------------------------------- */
 
 export default function WorkshopParticipantsPage() {
   const { id } = useParams<{ id: string }>();

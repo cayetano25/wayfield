@@ -29,7 +29,7 @@ export function SessionLocationDisplay({
 
   const { type, notes, name, latitude, longitude, address, maps_url } = location;
 
-  /* ── Compact (single-line) mode ── */
+  /* -- Compact (single-line) mode -- */
   if (compact) {
     let text = '';
 
@@ -61,7 +61,7 @@ export function SessionLocationDisplay({
     return <span className="text-sm text-[#2E2E2E]">{text}</span>;
   }
 
-  /* ── Full card mode ── */
+  /* -- Full card mode -- */
   const TypeIcon = TYPE_ICONS[type];
   const typeLabel = TYPE_LABELS[type];
 

@@ -1,6 +1,6 @@
 import { apiGet } from './client';
 
-/* ─── Entitlements ────────────────────────────────────────────────────── */
+/* --- Entitlements ------------------------------------------------------ */
 
 export interface Entitlements {
   plan: string;
@@ -33,7 +33,7 @@ export async function getEntitlements(orgId: number): Promise<Entitlements> {
   return apiGet<Entitlements>(`/organizations/${orgId}/entitlements`);
 }
 
-/* ─── Attendance report ───────────────────────────────────────────────── */
+/* --- Attendance report ------------------------------------------------- */
 
 export interface AttendanceReportWorkshop {
   id: number;
@@ -80,7 +80,7 @@ export async function getAttendanceReport(
   return apiGet<AttendanceReport>(`/organizations/${orgId}/reports/attendance?${qs}`);
 }
 
-/* ─── Workshops report ────────────────────────────────────────────────── */
+/* --- Workshops report -------------------------------------------------- */
 
 export interface WorkshopsReportItem {
   id: number;
@@ -110,7 +110,7 @@ export async function getWorkshopsReport(orgId: number): Promise<WorkshopsReport
   return apiGet<WorkshopsReport>(`/organizations/${orgId}/reports/workshops`);
 }
 
-/* ─── Participants report ─────────────────────────────────────────────── */
+/* --- Participants report ----------------------------------------------- */
 
 export interface ParticipantReportItem {
   id: number;
@@ -137,7 +137,7 @@ export async function getParticipantsReport(
   );
 }
 
-/* ─── Registration trend ──────────────────────────────────────────────── */
+/* --- Registration trend ------------------------------------------------ */
 
 export interface TrendPoint {
   week_start: string;
@@ -158,7 +158,7 @@ export async function getRegistrationTrend(
   );
 }
 
-/* ─── Export ──────────────────────────────────────────────────────────── */
+/* --- Export ------------------------------------------------------------ */
 
 export async function exportReport(
   orgId: number,

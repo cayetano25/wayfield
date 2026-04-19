@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { clearToken, clearStoredUser } from '@/lib/auth/session';
 import type { AdminUser } from '@/lib/auth/session';
 
-/* ─── User avatar ─────────────────────────────────────────────────────── */
+/* --- User avatar ------------------------------------------------------- */
 
 function UserAvatar({ user }: { user: AdminUser }) {
   const initials = `${user.first_name[0] ?? ''}${user.last_name[0] ?? ''}`.toUpperCase();
@@ -28,7 +28,7 @@ function UserAvatar({ user }: { user: AdminUser }) {
   );
 }
 
-/* ─── User menu dropdown ──────────────────────────────────────────────── */
+/* --- User menu dropdown ------------------------------------------------ */
 
 function UserMenuDropdown({
   user,
@@ -92,7 +92,7 @@ function UserMenuDropdown({
   );
 }
 
-/* ─── PublicNavRight ──────────────────────────────────────────────────── */
+/* --- PublicNavRight ---------------------------------------------------- */
 
 interface PublicNavRightProps {
   user: AdminUser | null;

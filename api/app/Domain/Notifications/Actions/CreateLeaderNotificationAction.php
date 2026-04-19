@@ -5,6 +5,7 @@ namespace App\Domain\Notifications\Actions;
 use App\Domain\Notifications\Services\EnforceLeaderMessagingRulesService;
 use App\Domain\Notifications\Services\QueueNotificationDeliveryAction;
 use App\Domain\Shared\Services\AuditLogService;
+use App\Exceptions\LeaderMessagingDeniedException;
 use App\Models\Leader;
 use App\Models\Notification;
 use App\Models\NotificationRecipient;
@@ -57,6 +58,10 @@ class CreateLeaderNotificationAction
 
         // Resolve recipients from this session's participants only
         $recipientUserIds = $this->resolveSessionParticipants($session, $workshop->id);
+
+        if (empty($recipientUserIds)) {
+            throw LeaderMessagingDeniedException::noParticipants();
+        }
 
         foreach ($recipientUserIds as $recipientUserId) {
             NotificationRecipient::create([

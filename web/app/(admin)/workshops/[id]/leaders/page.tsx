@@ -18,7 +18,7 @@ import { Modal } from '@/components/ui/Modal';
 import { AddressForm } from '@/components/ui/AddressForm';
 import type { AddressFormData } from '@/lib/types/address';
 
-/* ─── Types ─────────────────────────────────────────────────────────── */
+/* --- Types ----------------------------------------------------------- */
 
 interface Workshop {
   id: number;
@@ -63,7 +63,7 @@ interface Session {
   start_at: string;
 }
 
-/* ─── Invitation status badge ────────────────────────────────────────── */
+/* --- Invitation status badge ------------------------------------------ */
 
 const statusBadgeClasses: Record<InvitationStatus, string> = {
   pending:  'bg-amber-100 text-amber-700',
@@ -83,7 +83,7 @@ function InviteStatusBadge({ status }: { status: InvitationStatus }) {
   );
 }
 
-/* ─── Avatar ─────────────────────────────────────────────────────────── */
+/* --- Avatar ----------------------------------------------------------- */
 
 function LeaderAvatar({
   leader,
@@ -118,7 +118,7 @@ function LeaderAvatar({
   );
 }
 
-/* ─── Leader card (grid item) ────────────────────────────────────────── */
+/* --- Leader card (grid item) ------------------------------------------ */
 
 function LeaderCard({
   leader,
@@ -166,7 +166,7 @@ function LeaderCard({
   );
 }
 
-/* ─── Invite modal ───────────────────────────────────────────────────── */
+/* --- Invite modal ----------------------------------------------------- */
 
 interface InviteForm {
   invited_email: string;
@@ -316,7 +316,7 @@ function InviteModal({
   );
 }
 
-/* ─── Session assignment selector ────────────────────────────────────── */
+/* --- Session assignment selector -------------------------------------- */
 
 function SessionAssignSelector({
   sessions,
@@ -372,7 +372,7 @@ function SessionAssignSelector({
   );
 }
 
-/* ─── Leader slide-over ──────────────────────────────────────────────── */
+/* --- Leader slide-over ------------------------------------------------ */
 
 function LeaderSlideOver({
   open,
@@ -692,7 +692,7 @@ function LeaderSlideOver({
   );
 }
 
-/* ─── Empty state ────────────────────────────────────────────────────── */
+/* --- Empty state ------------------------------------------------------ */
 
 function EmptyLeaders({ onInvite }: { onInvite: () => void }) {
   return (
@@ -712,7 +712,7 @@ function EmptyLeaders({ onInvite }: { onInvite: () => void }) {
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────────── */
+/* --- Main page -------------------------------------------------------- */
 
 export default function WorkshopLeadersPage() {
   const { id } = useParams<{ id: string }>();

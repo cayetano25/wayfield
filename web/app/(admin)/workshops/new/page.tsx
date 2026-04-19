@@ -39,17 +39,23 @@ export default function NewWorkshopPage() {
       // Create location first if location fields are filled
       if (values.location_name.trim()) {
         const addr = values.location_address_data;
+        const locationPayload: Record<string, unknown> = { name: values.location_name };
+        if (addr?.address_line_1) {
+          locationPayload.address = {
+            country_code: addr.country_code,
+            address_line_1: addr.address_line_1,
+            address_line_2: addr.address_line_2 ?? null,
+            address_line_3: addr.address_line_3 ?? null,
+            locality: addr.locality,
+            administrative_area: addr.administrative_area ?? null,
+            postal_code: addr.postal_code ?? null,
+            dependent_locality: addr.dependent_locality ?? null,
+            sorting_code: addr.sorting_code ?? null,
+          };
+        }
         const locationRes = await apiPost<{ id: number }>(
           `/organizations/${currentOrg.id}/locations`,
-          {
-            name: values.location_name,
-            address_line_1: addr?.address_line_1 || null,
-            address_line_2: addr?.address_line_2 || null,
-            city: addr?.locality || null,
-            state_or_region: addr?.administrative_area || null,
-            postal_code: addr?.postal_code || null,
-            country: addr?.country_code || null,
-          },
+          locationPayload,
         );
         defaultLocationId = locationRes.id;
       }

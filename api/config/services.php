@@ -36,8 +36,15 @@ return [
     ],
 
     'stripe' => [
-        'secret' => env('STRIPE_SECRET_KEY'),
+        'key'            => env('STRIPE_KEY'),
+        'secret'         => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'prices' => [
+            'creator_monthly' => env('STRIPE_PRICE_CREATOR_MONTHLY'),
+            'creator_annual'  => env('STRIPE_PRICE_CREATOR_ANNUAL'),
+            'studio_monthly'  => env('STRIPE_PRICE_STUDIO_MONTHLY'),
+            'studio_annual'   => env('STRIPE_PRICE_STUDIO_ANNUAL'),
+        ],
     ],
 
     'aws' => [

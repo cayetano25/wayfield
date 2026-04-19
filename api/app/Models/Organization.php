@@ -23,6 +23,7 @@ class Organization extends Model
         'primary_contact_email',
         'primary_contact_phone',
         'status',
+        'stripe_customer_id',
         'logo_url',
         'address_id',
     ];

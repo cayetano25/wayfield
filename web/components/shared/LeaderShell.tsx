@@ -8,7 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { apiGet } from '@/lib/api/client';
 import type { AdminUser } from '@/lib/auth/session';
 
-/* ─── User avatar ─────────────────────────────────────────────────────── */
+/* --- User avatar ------------------------------------------------------- */
 
 function UserAvatar({
   firstName,
@@ -41,7 +41,7 @@ function UserAvatar({
   );
 }
 
-/* ─── User menu dropdown ──────────────────────────────────────────────── */
+/* --- User menu dropdown ------------------------------------------------ */
 
 function UserMenuDropdown({
   user,
@@ -131,7 +131,7 @@ function UserMenuDropdown({
   );
 }
 
-/* ─── Nav link ────────────────────────────────────────────────────────── */
+/* --- Nav link ---------------------------------------------------------- */
 
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
@@ -153,7 +153,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-/* ─── Leader shell ────────────────────────────────────────────────────── */
+/* --- Leader shell ------------------------------------------------------ */
 
 export function LeaderShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useUser();

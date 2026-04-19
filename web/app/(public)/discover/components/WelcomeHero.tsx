@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import type { AdminUser } from '@/lib/auth/session';
 
-/* ─── Join workshop modal ─────────────────────────────────────────────── */
+/* --- Join workshop modal ----------------------------------------------- */
 
 function JoinModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [code, setCode] = useState('');
@@ -59,7 +59,7 @@ function JoinModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/* ─── Invitation modal ────────────────────────────────────────────────── */
+/* --- Invitation modal -------------------------------------------------- */
 
 function InvitationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [token, setToken] = useState('');
@@ -110,7 +110,7 @@ function InvitationModal({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
-/* ─── Action card ─────────────────────────────────────────────────────── */
+/* --- Action card ------------------------------------------------------- */
 
 function ActionCard({
   icon,
@@ -162,7 +162,7 @@ function ActionCard({
   return <button type="button" onClick={onClick} className="text-left">{content}</button>;
 }
 
-/* ─── WelcomeHero ─────────────────────────────────────────────────────── */
+/* --- WelcomeHero ------------------------------------------------------- */
 
 interface WelcomeHeroProps {
   user: AdminUser;

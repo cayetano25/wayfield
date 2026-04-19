@@ -29,47 +29,36 @@ class WorkshopNotificationController extends Controller
     /**
      * GET /api/v1/workshops/{workshop}/notifications
      *
-     * List notifications for a workshop.
-     * Organizers see all; leaders see only their session notifications.
+     * List all notifications for a workshop (organizer-only).
+     * Returns both organizer and leader notifications ordered newest first.
+     *
+     * Query params:
+     *   ?sender_scope=organizer|leader|all  (default: all)
+     *
+     * Allowed: owner, admin, staff
+     * Denied: leaders, participants, unauthenticated
      */
     public function index(Request $request, Workshop $workshop): JsonResponse
     {
         $user = $request->user();
 
-        // Tenant check — Allowed: owner, admin, staff
-        $isOrganizer = $workshop->organization->isOperationalMember($user);
-
-        if ($isOrganizer) {
-            $notifications = Notification::where('workshop_id', $workshop->id)
-                ->with(['createdBy', 'session'])
-                ->withCount('recipients')
-                ->orderByDesc('sent_at')
-                ->get();
-
-            return response()->json(NotificationResource::collection($notifications));
+        // Allowed: owner, admin, staff only
+        if (! $workshop->organization->isOperationalMember($user)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        // Leader: show only notifications for their assigned sessions
-        $leader = Leader::where('user_id', $user->id)->first();
+        $query = Notification::where('workshop_id', $workshop->id)
+            ->with(['createdBy.leader', 'session'])
+            ->withCount('recipients')
+            ->orderByDesc('sent_at');
 
-        if ($leader) {
-            $assignedSessionIds = $leader->sessionLeaders()
-                ->where('assignment_status', 'accepted')
-                ->whereHas('session', fn ($q) => $q->where('workshop_id', $workshop->id))
-                ->pluck('session_id');
+        $senderScope = $request->query('sender_scope', 'all');
 
-            $notifications = Notification::where('workshop_id', $workshop->id)
-                ->where('sender_scope', 'leader')
-                ->whereIn('session_id', $assignedSessionIds)
-                ->with(['createdBy', 'session'])
-                ->withCount('recipients')
-                ->orderByDesc('sent_at')
-                ->get();
-
-            return response()->json(NotificationResource::collection($notifications));
+        if (in_array($senderScope, ['organizer', 'leader'], true)) {
+            $query->where('sender_scope', $senderScope);
         }
 
-        return response()->json(['message' => 'Unauthorized.'], 403);
+        return response()->json(NotificationResource::collection($query->get()));
     }
 
     /**

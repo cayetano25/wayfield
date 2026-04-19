@@ -4,14 +4,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronDown,
-  ChevronUp,
-  UserCircle,
+  User,
   Bell,
   LogOut,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { clearNavCache } from '@/lib/hooks/useNavContext'
+import { apiPost } from '@/lib/api/client'
+import { clearToken, clearStoredUser } from '@/lib/auth/session'
 import type { NavUser } from '@/lib/types/nav'
 
 interface UserMenuProps {
@@ -25,7 +25,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const dropdownRef           = useRef<HTMLDivElement>(null)
   const router                = useRouter()
 
-  // ── Close on outside click ────────────────────────────────────────────
+  // -- Close on outside click --------------------------------------------
   useEffect(() => {
     if (!isOpen) return
 
@@ -44,7 +44,7 @@ export function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [isOpen])
 
-  // ── Close on Escape key ───────────────────────────────────────────────
+  // -- Close on Escape key -----------------------------------------------
   useEffect(() => {
     if (!isOpen) return
 
@@ -59,48 +59,38 @@ export function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [isOpen])
 
-  // ── Sign Out ──────────────────────────────────────────────────────────
+  // -- Sign Out ----------------------------------------------------------
   const handleSignOut = useCallback(async () => {
     setIsOpen(false)
     setIsLoggingOut(true)
     try {
-      await fetch('/api/v1/auth/logout', {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { Accept: 'application/json' },
-      })
+      await apiPost('/auth/logout')
     } catch {
       // Always redirect even if the API call fails
     } finally {
+      clearToken()
+      clearStoredUser()
       clearNavCache()
       router.push('/login')
     }
   }, [router])
 
-  // ── Navigate helper ───────────────────────────────────────────────────
+  // -- Navigate helper ---------------------------------------------------
   function navigateTo(href: string) {
     setIsOpen(false)
     router.push(href)
   }
 
-  // ── Display name in the trigger ───────────────────────────────────────
-  const displayName = buildDisplayName(user.first_name, user.last_name)
+  // -- Display name in the trigger ---------------------------------------
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Account'
 
   return (
-    <div className="relative" data-testid="user-menu-wrapper">
-      {/* ── TRIGGER ──────────────────────────────────────────────── */}
+    <div className="relative ml-1 pl-3 border-l border-border-gray" data-testid="user-menu-wrapper">
+      {/* -- TRIGGER ------------------------------------------------ */}
       <button
         ref={triggerRef}
         onClick={() => setIsOpen((o) => !o)}
-        className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors
-                   duration-100 cursor-pointer"
-        style={{ backgroundColor: isOpen ? '#F9FAFB' : 'transparent' }}
-        onMouseEnter={(e) => {
-          if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB'
-        }}
-        onMouseLeave={(e) => {
-          if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
-        }}
+        className="flex items-center gap-2 px-1 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors hover:bg-surface"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         data-testid="user-menu-trigger"
@@ -124,16 +114,9 @@ export function UserMenu({ user }: UserMenuProps) {
         >
           {displayName}
         </span>
-
-        <span className="hidden sm:block text-[#9CA3AF]" aria-hidden="true">
-          {isOpen
-            ? <ChevronUp  size={14} />
-            : <ChevronDown size={14} />
-          }
-        </span>
       </button>
 
-      {/* ── DROPDOWN ─────────────────────────────────────────────── */}
+      {/* -- DROPDOWN ----------------------------------------------- */}
       {isOpen && (
         <div
           ref={dropdownRef}
@@ -206,7 +189,7 @@ export function UserMenu({ user }: UserMenuProps) {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
             }}
           >
-            <UserCircle size={16} color="#6B7280" aria-hidden="true" />
+            <User size={16} color="#6B7280" aria-hidden="true" />
             <span
               style={{
                 fontFamily: 'Plus Jakarta Sans, sans-serif',
@@ -280,12 +263,3 @@ export function UserMenu({ user }: UserMenuProps) {
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function buildDisplayName(firstName: string, lastName: string): string {
-  const f = (firstName ?? '').trim()
-  const l = (lastName  ?? '').trim()
-  if (!f && !l) return 'Account'
-  if (!l)       return f
-  return `${f} ${l[0].toUpperCase()}.`
-}

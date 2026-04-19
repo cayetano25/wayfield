@@ -31,6 +31,7 @@ class CreateSessionRequest extends FormRequest
             'meeting_id' => ['nullable', 'string', 'max:255'],
             'meeting_passcode' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'is_published' => ['boolean'],
 
             // Location type fields
             'location_type' => ['nullable', Rule::in(Session::LOCATION_TYPES)],

@@ -28,5 +28,9 @@ class DatabaseSeeder extends Seeder
             'primary_contact_last_name' => 'User',
             'primary_contact_email' => 'seed@wayfield.dev',
         ]);
+
+        if (!app()->environment('production')) {
+            $this->call(E2ETestSeeder::class);
+        }
     }
 }

@@ -14,7 +14,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface OrgMember {
   id: number;
@@ -56,7 +56,7 @@ const INVITE_ROLE_OPTIONS: { value: InviteRole; label: string; description: stri
   { value: 'billing_admin', label: 'Billing Only',   description: 'Billing and invoices only' },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 function MemberAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
@@ -92,7 +92,7 @@ function daysAgo(iso: string): string {
   return `${days} days ago`;
 }
 
-// ─── Invite Member Slide-Over ─────────────────────────────────────────────────
+// --- Invite Member Slide-Over -------------------------------------------------
 
 interface InviteSlideOverProps {
   open: boolean;
@@ -343,7 +343,7 @@ function InviteSlideOver({ open, onClose, orgId, isOwner, onSuccess }: InviteSli
   );
 }
 
-// ─── Pending Invitations Section ──────────────────────────────────────────────
+// --- Pending Invitations Section ----------------------------------------------
 
 interface PendingInvitationsSectionProps {
   orgId: number;
@@ -474,7 +474,7 @@ function PendingInvitationsSection({ orgId, refreshKey, canManage }: PendingInvi
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// --- Main page ----------------------------------------------------------------
 
 export default function OrganizationMembersPage() {
   useSetPage('Members', [

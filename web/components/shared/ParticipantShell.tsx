@@ -8,7 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { apiGet } from '@/lib/api/client';
 import type { AdminUser } from '@/lib/auth/session';
 
-/* ─── User avatar ─────────────────────────────────────────────────────── */
+/* --- User avatar ------------------------------------------------------- */
 
 function UserAvatar({
   firstName,
@@ -41,7 +41,7 @@ function UserAvatar({
   );
 }
 
-/* ─── User menu dropdown ──────────────────────────────────────────────── */
+/* --- User menu dropdown ------------------------------------------------ */
 
 function UserMenuDropdown({
   user,
@@ -91,7 +91,7 @@ function UserMenuDropdown({
       {/* Links */}
       <div className="py-1">
         <Link
-          href="/admin/profile"
+          href="/profile"
           onClick={onClose}
           className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[#F9FAFB] transition-colors"
           style={{ color: '#374151' }}
@@ -131,7 +131,7 @@ function UserMenuDropdown({
   );
 }
 
-/* ─── Nav link ────────────────────────────────────────────────────────── */
+/* --- Nav link ---------------------------------------------------------- */
 
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
@@ -153,7 +153,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-/* ─── Participant shell ────────────────────────────────────────────────── */
+/* --- Participant shell -------------------------------------------------- */
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useUser();

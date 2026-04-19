@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Clock } from 'lucide-react';
 import { apiPost } from '@/lib/api/client';
 import { Modal } from '@/components/ui/Modal';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import type { ParticipantOtherWorkshop } from '@/lib/types/participant';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 function formatDateRange(start: string, end: string): string {
   if (!start) return '';
@@ -27,7 +28,7 @@ function formatDateRange(start: string, end: string): string {
   return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
-/* ─── Workshop card ────────────────────────────────────────────────────── */
+/* --- Workshop card ------------------------------------------------------ */
 
 function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop }) {
   const isUpcoming = workshop.status === 'upcoming';
@@ -77,28 +78,39 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
         </p>
       )}
 
-      {/* Bottom: session count + check-in rate */}
-      <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #F3F4F6' }}>
-        <span
-          className="inline-flex items-center px-2 py-0.5 rounded-full font-sans font-medium"
-          style={{ fontSize: 11, backgroundColor: '#F3F4F6', color: '#6B7280' }}
-        >
-          {workshop.sessions_count} session{workshop.sessions_count !== 1 ? 's' : ''}
-        </span>
-        {!isUpcoming && checkInRate !== null && (
+      {/* Bottom: session count + check-in rate + view details */}
+      <div className="flex items-center justify-between gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #F3F4F6' }}>
+        <div className="flex items-center gap-2">
           <span
-            className="font-sans font-medium"
-            style={{ fontSize: 11, color: '#9CA3AF' }}
+            className="inline-flex items-center px-2 py-0.5 rounded-full font-sans font-medium"
+            style={{ fontSize: 11, backgroundColor: '#F3F4F6', color: '#6B7280' }}
           >
-            {checkInRate}% attended
+            {workshop.sessions_count} session{workshop.sessions_count !== 1 ? 's' : ''}
           </span>
+          {!isUpcoming && checkInRate !== null && (
+            <span
+              className="font-sans font-medium"
+              style={{ fontSize: 11, color: '#9CA3AF' }}
+            >
+              {checkInRate}% attended
+            </span>
+          )}
+        </div>
+        {workshop.public_slug && workshop.public_page_enabled && (
+          <Link
+            href={`/w/${workshop.public_slug}`}
+            className="font-sans font-semibold hover:underline shrink-0"
+            style={{ fontSize: 12, color: '#0FA3B1' }}
+          >
+            View Details →
+          </Link>
         )}
       </div>
     </div>
   );
 }
 
-/* ─── Join workshop modal ──────────────────────────────────────────────── */
+/* --- Join workshop modal ------------------------------------------------ */
 
 function JoinWorkshopModal({
   open,
@@ -161,7 +173,7 @@ function JoinWorkshopModal({
   );
 }
 
-/* ─── OtherWorkshopsGrid ────────────────────────────────────────────────── */
+/* --- OtherWorkshopsGrid -------------------------------------------------- */
 
 interface OtherWorkshopsGridProps {
   workshops: ParticipantOtherWorkshop[];

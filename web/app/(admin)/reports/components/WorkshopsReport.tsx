@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { getWorkshopsReport, type WorkshopsReportItem, type WorkshopsReport } from '@/lib/api/reports';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 function fmtDate(s: string) {
   if (!s) return '';
@@ -74,7 +74,7 @@ function SkeletonRow() {
   );
 }
 
-/* ─── WorkshopsReport ─────────────────────────────────────────────────── */
+/* --- WorkshopsReport --------------------------------------------------- */
 
 interface WorkshopsReportProps {
   orgId: number;

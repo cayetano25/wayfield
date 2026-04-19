@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { getRegistrationTrend, type TrendPoint } from '@/lib/api/reports';
 import { ReportLockedState } from './ReportLockedState';
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
+/* --- Helpers ----------------------------------------------------------- */
 
 function toIso(d: Date) { return d.toISOString().split('T')[0]; }
 function daysAgo(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return toIso(d); }
@@ -27,7 +27,7 @@ function fmtWeek(s: string) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/* ─── Range options ───────────────────────────────────────────────────── */
+/* --- Range options ----------------------------------------------------- */
 
 const RANGES = [
   { label: 'Last 4 weeks',  start: () => daysAgo(27) },
@@ -35,7 +35,7 @@ const RANGES = [
   { label: 'Last 6 months', start: () => daysAgo(181) },
 ];
 
-/* ─── RegistrationTrend ───────────────────────────────────────────────── */
+/* --- RegistrationTrend ------------------------------------------------- */
 
 interface RegistrationTrendProps {
   orgId: number;

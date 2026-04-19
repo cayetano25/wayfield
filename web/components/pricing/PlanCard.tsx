@@ -82,8 +82,14 @@ const FEATURES: Record<string, { inherit?: string; items: FeatureItem[] }> = {
   },
 }
 
-function formatCents(cents: number): string {
-  return `$${Math.round(cents / 100)}`
+function formatMonthlyPrice(cents: number): string {
+  const dollars = cents / 100
+  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`
+}
+
+function formatAnnualTotal(cents: number): string {
+  const dollars = cents / 100
+  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`
 }
 
 function resolvesLimit(planCode: string, limitHitKey: string): string | null {
@@ -107,6 +113,18 @@ function resolvesLimit(planCode: string, limitHitKey: string): string | null {
   return resolutions[limitHitKey]?.[planCode] ?? null
 }
 
+// Determine upgrade vs downgrade vs same based on plan order
+const PLAN_ORDER = ['free', 'starter', 'pro', 'enterprise']
+
+function planRelation(currentCode: string | undefined, cardCode: string): 'current' | 'upgrade' | 'downgrade' | 'none' {
+  if (!currentCode) return 'upgrade'
+  if (currentCode === cardCode) return 'current'
+  const currentIdx = PLAN_ORDER.indexOf(currentCode)
+  const cardIdx = PLAN_ORDER.indexOf(cardCode)
+  if (currentIdx === -1 || cardIdx === -1) return 'none'
+  return cardIdx > currentIdx ? 'upgrade' : 'downgrade'
+}
+
 export function PlanCard({
   plan,
   billingCycle,
@@ -118,14 +136,15 @@ export function PlanCard({
   isLoading,
 }: PlanCardProps) {
   const isEnterprise = plan.code === 'enterprise'
-  const isCurrentPlan = currentPlanCode === plan.code
   const featureConfig = FEATURES[plan.code]
+  const relation = planRelation(currentPlanCode, plan.code)
 
   const cardStyle: React.CSSProperties = isEnterprise
     ? {
-        background: '#1A2535',
-        borderRadius: '12px',
+        background: '#2E2E2E',
+        borderRadius: '16px',
         padding: '28px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         display: 'flex',
         flexDirection: 'column',
       }
@@ -133,7 +152,7 @@ export function PlanCard({
       ? {
           background: 'white',
           border: '2px solid #0FA3B1',
-          borderRadius: '12px',
+          borderRadius: '16px',
           padding: '28px',
           boxShadow: '0 4px 20px rgba(15,163,177,0.15)',
           display: 'flex',
@@ -142,8 +161,9 @@ export function PlanCard({
       : {
           background: 'white',
           border: '1px solid #E5E7EB',
-          borderRadius: '12px',
+          borderRadius: '16px',
           padding: '28px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           display: 'flex',
           flexDirection: 'column',
         }
@@ -154,269 +174,135 @@ export function PlanCard({
   const featureTextColor = isEnterprise ? 'rgba(255,255,255,0.85)' : '#374151'
   const dividerColor = isEnterprise ? 'rgba(255,255,255,0.1)' : '#F3F4F6'
 
-  const badge =
-    plan.code === 'starter'
-      ? { text: 'MOST PRACTICAL FOR GROWING WORKSHOPS', bg: '#0FA3B1', color: 'white' }
-      : plan.code === 'pro'
-        ? { text: 'BEST FOR SERIOUS OPERATORS', bg: '#F0FDF4', color: '#065F46' }
-        : null
-
-  // Price
+  // Price block
   let priceDisplay: React.ReactNode
   if (isEnterprise) {
     priceDisplay = (
       <div style={{ marginTop: '20px' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '32px',
-            fontWeight: 700,
-            color: 'white',
-          }}
-        >
+        <span style={{ fontFamily: 'var(--font-heading)', fontSize: '40px', fontWeight: 700, color: 'white' }}>
           Custom
         </span>
-        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
           Contact us for pricing
         </div>
       </div>
     )
-  } else if (plan.monthly_cents === 0) {
+  } else if (plan.monthly_cents === 0 || plan.monthly_cents === null) {
     priceDisplay = (
       <div style={{ marginTop: '20px' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '36px',
-            fontWeight: 800,
-            color: textPrimary,
-          }}
-        >
+        <span style={{ fontFamily: 'var(--font-heading)', fontSize: '36px', fontWeight: 800, color: textPrimary }}>
           $0
         </span>
-        <span
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            color: '#9CA3AF',
-            marginLeft: '4px',
-          }}
-        >
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#9CA3AF', marginLeft: '4px' }}>
           /mo
         </span>
       </div>
     )
-  } else if (plan.monthly_cents !== null) {
-    const displayPrice =
-      billingCycle === 'monthly'
-        ? formatCents(plan.monthly_cents)
-        : formatCents(plan.annual_cents ?? plan.monthly_cents)
+  } else {
+    const annualMonthlyCents = plan.annual_cents !== null ? Math.round(plan.annual_cents / 12) : null
+    const displayCents = billingCycle === 'monthly' ? plan.monthly_cents : (annualMonthlyCents ?? plan.monthly_cents)
+    const monthlyStr = formatMonthlyPrice(displayCents)
+
     priceDisplay = (
       <div style={{ marginTop: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '36px',
-              fontWeight: 800,
-              color: textPrimary,
-            }}
-          >
-            {displayPrice}
+          <span style={{ fontFamily: 'var(--font-heading)', fontSize: '36px', fontWeight: 800, color: textPrimary }}>
+            {monthlyStr}
           </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '14px',
-              color: '#9CA3AF',
-            }}
-          >
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#9CA3AF' }}>
             /mo
           </span>
         </div>
-        {billingCycle === 'annual' && (
-          <div style={{ fontSize: '11px', color: '#0FA3B1', marginTop: '4px' }}>
-            Billed annually · Save 15%
-          </div>
-        )}
-        {isCurrentPlan && context !== 'onboarding' && (
-          <div style={{ marginTop: '8px' }}>
-            <span
-              style={{
-                background: '#F0FDF4',
-                color: '#065F46',
-                border: '1px solid #A7F3D0',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '4px 12px',
-                borderRadius: '9999px',
-              }}
-            >
-              Current Plan
-            </span>
+        {billingCycle === 'annual' && plan.annual_cents !== null && (
+          <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+            billed annually ({formatAnnualTotal(plan.annual_cents)}/yr)
           </div>
         )}
       </div>
     )
-  } else {
-    priceDisplay = null
   }
 
   // CTA button
   let ctaButton: React.ReactNode
-  if (isEnterprise) {
+
+  if (context === 'onboarding') {
+    if (isEnterprise) {
+      ctaButton = (
+        <button
+          type="button"
+          onClick={() => onSelectPlan(plan.code, billingCycle)}
+          style={enterpriseOutlineBtn}
+        >
+          Contact Us
+        </button>
+      )
+    } else if (plan.code === 'free') {
+      ctaButton = (
+        <button type="button" onClick={() => onSelectPlan(plan.code, billingCycle)} style={tealOutlineBtn}>
+          Start free
+        </button>
+      )
+    } else {
+      ctaButton = (
+        <button
+          type="button"
+          disabled={!!isLoading}
+          onClick={() => onSelectPlan(plan.code, billingCycle)}
+          style={tealFilledBtn(!!isLoading)}
+        >
+          {isLoading ? <Spinner /> : null}
+          {isLoading ? 'Redirecting…' : `Upgrade to ${plan.display_name}`}
+        </button>
+      )
+    }
+  } else if (isEnterprise) {
     ctaButton = (
       <button
         type="button"
         onClick={() => onSelectPlan(plan.code, billingCycle)}
-        style={{
-          marginTop: '24px',
-          width: '100%',
-          height: '44px',
-          borderRadius: '8px',
-          background: 'rgba(255,255,255,0.15)',
-          color: 'white',
-          border: '1px solid rgba(255,255,255,0.3)',
-          fontFamily: 'var(--font-sans)',
-          fontSize: '14px',
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.25)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
-        }}
+        style={enterpriseOutlineBtn}
       >
-        Talk to sales
+        Contact Us
       </button>
     )
-  } else if (plan.code === 'free') {
-    if (context === 'onboarding') {
-      ctaButton = (
-        <button
-          type="button"
-          onClick={() => onSelectPlan(plan.code, billingCycle)}
-          style={{
-            marginTop: '24px',
-            width: '100%',
-            height: '44px',
-            borderRadius: '8px',
-            background: 'white',
-            color: '#0FA3B1',
-            border: '1px solid #0FA3B1',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Start free
-        </button>
-      )
-    } else if (isCurrentPlan) {
-      ctaButton = (
-        <button
-          type="button"
-          disabled
-          style={{
-            marginTop: '24px',
-            width: '100%',
-            height: '44px',
-            borderRadius: '8px',
-            background: '#F3F4F6',
-            color: '#9CA3AF',
-            border: '1px solid #E5E7EB',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'not-allowed',
-          }}
-        >
-          Current Plan
-        </button>
-      )
-    } else {
-      ctaButton = null
-    }
-  } else {
-    if (isCurrentPlan) {
-      ctaButton = (
-        <button
-          type="button"
-          disabled
-          style={{
-            marginTop: '24px',
-            width: '100%',
-            height: '44px',
-            borderRadius: '8px',
-            background: '#F3F4F6',
-            color: '#9CA3AF',
-            border: '1px solid #E5E7EB',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'not-allowed',
-          }}
-        >
-          Current Plan
-        </button>
-      )
-    } else {
-      const label = isLoading
-        ? 'Redirecting to checkout…'
-        : `Upgrade to ${plan.display_name}`
-      ctaButton = (
-        <button
-          type="button"
-          disabled={isLoading}
-          onClick={() => onSelectPlan(plan.code, billingCycle)}
-          style={{
-            marginTop: '24px',
-            width: '100%',
-            height: '44px',
-            borderRadius: '8px',
-            background: isLoading ? '#7DD3D8' : '#0FA3B1',
-            color: 'white',
-            border: 'none',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
-          {isLoading && (
-            <span
-              style={{
-                width: '14px',
-                height: '14px',
-                border: '2px solid rgba(255,255,255,0.4)',
-                borderTopColor: 'white',
-                borderRadius: '50%',
-                animation: 'spin 0.6s linear infinite',
-                display: 'inline-block',
-                flexShrink: 0,
-              }}
-            />
-          )}
-          {label}
-        </button>
-      )
-    }
+  } else if (relation === 'current') {
+    ctaButton = (
+      <button type="button" disabled style={currentPlanBtn}>
+        Current Plan
+      </button>
+    )
+  } else if (relation === 'upgrade') {
+    ctaButton = (
+      <button
+        type="button"
+        disabled={!!isLoading}
+        onClick={() => onSelectPlan(plan.code, billingCycle)}
+        style={tealFilledBtn(!!isLoading)}
+      >
+        {isLoading ? <Spinner /> : null}
+        {isLoading ? 'Redirecting…' : `Upgrade to ${plan.display_name}`}
+      </button>
+    )
+  } else if (relation === 'downgrade') {
+    ctaButton = (
+      <button
+        type="button"
+        disabled={!!isLoading}
+        onClick={() => onSelectPlan(plan.code, billingCycle)}
+        style={downgradeBtn(!!isLoading)}
+      >
+        {isLoading ? <DowngradeSpinner /> : null}
+        {isLoading ? 'Redirecting…' : `Downgrade to ${plan.display_name}`}
+      </button>
+    )
   }
 
   const limitResolution = limitHitKey ? resolvesLimit(plan.code, limitHitKey) : null
 
   return (
     <div style={cardStyle}>
-      {/* Badge */}
-      {badge ? (
+      {/* Top badge — only for starter (highlighted) */}
+      {plan.code === 'starter' ? (
         <div style={{ marginBottom: '10px' }}>
           <span
             style={{
@@ -427,50 +313,39 @@ export function PlanCard({
               fontSize: '9px',
               fontWeight: 700,
               letterSpacing: '0.08em',
-              background: badge.bg,
-              color: badge.color,
-              height: '20px',
-              lineHeight: '14px',
+              background: '#0FA3B1',
+              color: 'white',
             }}
           >
-            {badge.text}
+            MOST PRACTICAL
           </span>
         </div>
       ) : (
-        <div style={{ marginBottom: '0' }} />
+        <div style={{ height: '22px', marginBottom: '10px' }} />
       )}
 
       {/* Plan name */}
       <div>
-        <div
-          style={{
-            fontSize: '10px',
-            color: isEnterprise ? 'rgba(255,255,255,0.5)' : '#9CA3AF',
-            letterSpacing: '0.1em',
-            fontFamily: 'var(--font-sans)',
-            textTransform: 'uppercase',
-          }}
-        >
-          {plan.code.toUpperCase()}
-        </div>
-        <div
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '22px',
-            fontWeight: 700,
-            color: textPrimary,
-          }}
-        >
+        {/* Small plan-tier label for pro */}
+        {plan.code === 'pro' && (
+          <div
+            style={{
+              fontSize: '9px',
+              color: '#0FA3B1',
+              letterSpacing: '0.12em',
+              fontFamily: 'var(--font-sans)',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              marginBottom: '2px',
+            }}
+          >
+            BEST FOR SERIOUS OPERATORS
+          </div>
+        )}
+        <div style={{ fontFamily: 'var(--font-heading)', fontSize: '22px', fontWeight: 700, color: textPrimary }}>
           {plan.display_name}
         </div>
-        <div
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '13px',
-            color: textSecondary,
-            marginTop: '4px',
-          }}
-        >
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: textSecondary, marginTop: '4px' }}>
           {TAGLINES[plan.code]}
         </div>
       </div>
@@ -490,7 +365,7 @@ export function PlanCard({
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
             fontFamily: 'var(--font-sans)',
-            marginBottom: '8px',
+            marginBottom: '6px',
           }}
         >
           Best For:
@@ -546,10 +421,7 @@ export function PlanCard({
         >
           {featureConfig?.items.map((item, i) => (
             <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-              <CheckCircle
-                size={14}
-                style={{ color: checkColor, flexShrink: 0, marginTop: '2px' }}
-              />
+              <CheckCircle size={14} style={{ color: checkColor, flexShrink: 0, marginTop: '2px' }} />
               <span
                 style={{
                   fontFamily: 'var(--font-sans)',
@@ -565,23 +437,137 @@ export function PlanCard({
         </div>
       </div>
 
-      {/* CTA */}
-      {ctaButton}
+      {/* CTA — pushed to bottom */}
+      <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+        {ctaButton}
+      </div>
 
       {/* Limit resolution hint */}
       {limitResolution && (
-        <div
-          style={{
-            marginTop: '8px',
-            fontSize: '11px',
-            color: '#0FA3B1',
-            textAlign: 'center',
-            fontFamily: 'var(--font-sans)',
-          }}
-        >
+        <div style={{ marginTop: '8px', fontSize: '11px', color: '#0FA3B1', textAlign: 'center', fontFamily: 'var(--font-sans)' }}>
           {limitResolution}
         </div>
       )}
     </div>
+  )
+}
+
+// ---- Shared button styles ----
+
+const tealFilledBtn = (loading: boolean): React.CSSProperties => ({
+  marginTop: '0',
+  width: '100%',
+  height: '44px',
+  borderRadius: '8px',
+  background: loading ? '#7DD3D8' : '#0FA3B1',
+  color: 'white',
+  border: 'none',
+  fontFamily: 'var(--font-sans)',
+  fontSize: '14px',
+  fontWeight: 600,
+  cursor: loading ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+})
+
+const tealOutlineBtn: React.CSSProperties = {
+  marginTop: '0',
+  width: '100%',
+  height: '44px',
+  borderRadius: '8px',
+  background: 'white',
+  color: '#0FA3B1',
+  border: '1px solid #0FA3B1',
+  fontFamily: 'var(--font-sans)',
+  fontSize: '14px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const currentPlanBtn: React.CSSProperties = {
+  marginTop: '0',
+  width: '100%',
+  height: '44px',
+  borderRadius: '8px',
+  background: '#F3F4F6',
+  color: '#9CA3AF',
+  border: '1px solid #E5E7EB',
+  fontFamily: 'var(--font-sans)',
+  fontSize: '14px',
+  fontWeight: 600,
+  cursor: 'not-allowed',
+}
+
+const downgradeBtn = (loading: boolean): React.CSSProperties => ({
+  marginTop: '0',
+  width: '100%',
+  height: '44px',
+  borderRadius: '8px',
+  background: 'white',
+  color: loading ? '#9CA3AF' : '#E67E22',
+  border: `1px solid ${loading ? '#E5E7EB' : '#E67E22'}`,
+  fontFamily: 'var(--font-sans)',
+  fontSize: '14px',
+  fontWeight: 600,
+  cursor: loading ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+})
+
+const enterpriseOutlineBtn: React.CSSProperties = {
+  marginTop: '0',
+  width: '100%',
+  height: '44px',
+  borderRadius: '8px',
+  background: 'rgba(255,255,255,0.12)',
+  color: 'white',
+  border: '1px solid rgba(255,255,255,0.3)',
+  fontFamily: 'var(--font-sans)',
+  fontSize: '14px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+function Spinner() {
+  return (
+    <span
+      style={{
+        width: '14px',
+        height: '14px',
+        border: '2px solid rgba(255,255,255,0.4)',
+        borderTopColor: 'white',
+        borderRadius: '50%',
+        animation: 'spin 0.6s linear infinite',
+        display: 'inline-block',
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
+function DowngradeSpinner() {
+  return (
+    <span
+      style={{
+        width: '14px',
+        height: '14px',
+        border: '2px solid rgba(230,126,34,0.3)',
+        borderTopColor: '#E67E22',
+        borderRadius: '50%',
+        animation: 'spin 0.6s linear infinite',
+        display: 'inline-block',
+        flexShrink: 0,
+      }}
+    />
   )
 }

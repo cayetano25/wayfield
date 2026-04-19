@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Leader;
 use App\Models\Session;
-use App\Models\SessionLeader;
 use App\Models\User;
 use App\Models\Workshop;
 
@@ -24,20 +23,17 @@ class NotificationPolicy
     }
 
     /**
-     * Leader can create a notification only for a session they are explicitly assigned to.
-     * Time-window enforcement is handled in EnforceLeaderMessagingRulesService, not here.
+     * Gate: the user must have a leader profile.
+     *
+     * Session-specific assignment is enforced in EnforceLeaderMessagingRulesService
+     * (returns 422), which runs after this gate. Separating the checks produces clear
+     * HTTP semantics: 403 = not a leader, 422 = leader but business rule violated.
+     *
+     * Allowed: any user with a linked leader profile (user_id on leaders table)
+     * Denied: users with no leader profile at all
      */
     public function createLeader(User $user, Session $session): bool
     {
-        $leader = Leader::where('user_id', $user->id)->first();
-
-        if (! $leader) {
-            return false;
-        }
-
-        return SessionLeader::where('session_id', $session->id)
-            ->where('leader_id', $leader->id)
-            ->where('assignment_status', 'accepted')
-            ->exists();
+        return Leader::where('user_id', $user->id)->exists();
     }
 }

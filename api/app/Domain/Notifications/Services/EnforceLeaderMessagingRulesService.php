@@ -82,13 +82,15 @@ class EnforceLeaderMessagingRulesService
 
         if ($now->lt($window['start']) || $now->gt($window['end'])) {
             $this->auditDenied($user, $session, 'outside_window', ['leader_id' => $leader->id]);
+
+            // Compute UTC window boundaries for the error response (start_at/end_at are stored UTC)
+            $utcWindowStart = Carbon::parse($session->start_at, 'UTC')->subHours(4);
+            $utcWindowEnd = Carbon::parse($session->end_at, 'UTC')->addHours(2);
+
             throw LeaderMessagingDeniedException::outsideWindow(
-                sprintf(
-                    'Messaging for this session is only allowed between %s and %s (%s).',
-                    $window['start']->toDateTimeString(),
-                    $window['end']->toDateTimeString(),
-                    $workshop->timezone
-                )
+                'Notifications can only be sent within the messaging window for this session.',
+                $utcWindowStart,
+                $utcWindowEnd
             );
         }
 

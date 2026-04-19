@@ -13,7 +13,7 @@ interface Props {
   isConfirming: boolean;
 }
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
+/* -- Helpers -------------------------------------------------------------- */
 
 function summaryLine(sessions: MyScheduleSession[]): string {
   if (sessions.length === 0) return '';
@@ -21,7 +21,7 @@ function summaryLine(sessions: MyScheduleSession[]): string {
   return `${sessions.length} session${sessions.length !== 1 ? 's' : ''} · ${days.join(' – ')}`;
 }
 
-/* ── Empty state ────────────────────────────────────────────────────────── */
+/* -- Empty state ---------------------------------------------------------- */
 
 function EmptySchedule() {
   return (
@@ -37,7 +37,7 @@ function EmptySchedule() {
   );
 }
 
-/* ── Confirm button ─────────────────────────────────────────────────────── */
+/* -- Confirm button ------------------------------------------------------- */
 
 function ConfirmButton({
   count,
@@ -74,7 +74,7 @@ function ConfirmButton({
   );
 }
 
-/* ── Mobile: bottom bar + sheet ─────────────────────────────────────────── */
+/* -- Mobile: bottom bar + sheet ------------------------------------------- */
 
 function MobileSheet({
   selectedSessions,
@@ -258,7 +258,7 @@ function MobileSheet({
   );
 }
 
-/* ── Desktop: right sidebar ─────────────────────────────────────────────── */
+/* -- Desktop: right sidebar ----------------------------------------------- */
 
 function DesktopSidebar({
   selectedSessions,
@@ -325,7 +325,7 @@ function DesktopSidebar({
   );
 }
 
-/* ── MyScheduleSheet (renders both) ─────────────────────────────────────── */
+/* -- MyScheduleSheet (renders both) --------------------------------------- */
 
 export function MyScheduleSheet(props: Props) {
   return (

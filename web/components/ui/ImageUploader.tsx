@@ -184,7 +184,7 @@ export function ImageUploader({
   const isUploading = uploadState === 'uploading';
   const hasImage = !!displayUrl;
 
-  // ─── Circle shape ────────────────────────────────────────────────────────────
+  // --- Circle shape ------------------------------------------------------------
   if (isCircle) {
     const size = Math.min(width, height);
     return (
@@ -278,7 +278,7 @@ export function ImageUploader({
     );
   }
 
-  // ─── Rectangle shape ─────────────────────────────────────────────────────────
+  // --- Rectangle shape ---------------------------------------------------------
   return (
     <div className="flex flex-col gap-1.5">
       {label && (

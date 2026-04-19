@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPatch, apiPost, ApiError } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
@@ -19,8 +18,6 @@ interface MeDetail {
 }
 
 export default function ProfilePage() {
-  useSetPage('Profile', [{ label: 'Profile' }]);
-
   const { user, refreshUser } = useUser();
 
   const [me, setMe] = useState<MeDetail | null>(null);
@@ -116,7 +113,7 @@ export default function ProfilePage() {
 
   if (loading || !me || !user) {
     return (
-      <div className="max-w-[720px] mx-auto space-y-5">
+      <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 space-y-5">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="h-40 bg-white rounded-xl border border-border-gray animate-pulse" />
         ))}
@@ -125,13 +122,38 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-[720px] mx-auto space-y-5">
+    <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 space-y-5">
+      {/* Page heading */}
+      <div>
+        <h1
+          style={{
+            fontFamily: 'Sora, sans-serif',
+            fontWeight: 700,
+            fontSize: 22,
+            color: '#2E2E2E',
+            margin: 0,
+          }}
+        >
+          Profile Settings
+        </h1>
+        <p
+          style={{
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: 14,
+            color: '#6B7280',
+            marginTop: 4,
+          }}
+        >
+          Manage your name, photo, and password.
+        </p>
+      </div>
+
       {/* Profile photo */}
       <Card>
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Profile Photo</h2>
           <p className="text-sm text-medium-gray mt-0.5">
-            Shown in the sidebar and across the platform.
+            Shown in the navigation bar and across the platform.
           </p>
         </div>
         <div className="px-6 py-6 flex justify-center">

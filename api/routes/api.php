@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\BillingController;
+use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
@@ -44,6 +45,7 @@ use App\Http\Controllers\Api\V1\ReportingController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\RosterController;
 use App\Http\Controllers\Api\V1\SessionController;
+use App\Http\Controllers\Api\V1\SessionNotificationController;
 use App\Http\Controllers\Api\V1\SessionLeaderController;
 use App\Http\Controllers\Api\V1\SessionParticipantController;
 use App\Http\Controllers\Api\V1\SessionSelectionController;
@@ -88,8 +90,12 @@ Route::prefix('v1')->group(function () {
     // ─── Plans (public — no auth required) ───────────────────────────────────
     Route::get('plans', [PlansController::class, 'index']);
 
-    // ─── Stripe webhook (no auth — signature verification inside controller) ─
+    // ─── Stripe webhooks (no auth — signature verification inside controller) ─
+    // Legacy route kept for backwards compatibility with existing Stripe config.
     Route::post('billing/webhook', [BillingController::class, 'webhook'])
+        ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
+    // New canonical webhook endpoint.
+    Route::post('stripe/webhook', [StripeWebhookController::class, 'handle'])
         ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
     // ─── SSO Stub endpoints (Phase 9 — returns 501 until SSO is activated) ───
@@ -281,6 +287,7 @@ Route::prefix('v1')->group(function () {
         // Leader manual check-in and no-show
         Route::post('sessions/{session}/attendance/{user}/leader-check-in', [AttendanceController::class, 'leaderCheckIn']);
         Route::post('sessions/{session}/attendance/{user}/no-show', [AttendanceController::class, 'markNoShow']);
+        Route::patch('sessions/{session}/attendance/{user}/revert', [AttendanceController::class, 'revertAttendance']);
 
         // ─── Roster (Phase 5) ─────────────────────────────────────────────────
         Route::get('sessions/{session}/roster', [RosterController::class, 'sessionRoster']);
@@ -291,8 +298,13 @@ Route::prefix('v1')->group(function () {
         Route::post('workshops/{workshop}/notifications', [WorkshopNotificationController::class, 'store']);
         Route::get('workshops/{workshop}/notifications/{notification}', [WorkshopNotificationController::class, 'show']);
 
+        // Leader session notifications — scoped to the session (no session_id in body)
+        Route::post('sessions/{session}/notifications', [SessionNotificationController::class, 'store']);
+
         // In-app notifications for current user
         Route::get('me/notifications', [UserNotificationController::class, 'index']);
+        Route::get('me/notifications/unread-count', [UserNotificationController::class, 'unreadCount']);
+        Route::post('me/notifications/read-all', [UserNotificationController::class, 'readAll']);
         Route::patch('me/notifications/{notificationRecipient}/read', [UserNotificationController::class, 'markRead']);
 
         // Push token registration
@@ -312,10 +324,17 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/subscription', [SubscriptionController::class, 'show']);
         Route::get('organizations/{organization}/entitlements', [SubscriptionController::class, 'entitlements']);
 
-        // ─── Billing / Stripe Checkout (Phase 15) ─────────────────────────────
-        Route::post('organizations/{organization}/billing/checkout', [BillingController::class, 'checkout']);
-        Route::post('organizations/{organization}/billing/portal', [BillingController::class, 'portal']);
-        Route::get('organizations/{organization}/billing/status', [BillingController::class, 'status']);
+        // ─── Billing (Phase 15 + in-app billing) ─────────────────────────────
+        Route::get('organizations/{organization}/billing',                  [BillingController::class, 'index']);
+        Route::post('organizations/{organization}/billing/setup-intent',    [BillingController::class, 'setupIntent']);
+        Route::post('organizations/{organization}/billing/subscribe',       [BillingController::class, 'subscribe']);
+        Route::post('organizations/{organization}/billing/cancel',          [BillingController::class, 'cancel']);
+        Route::post('organizations/{organization}/billing/resume',          [BillingController::class, 'resume']);
+        Route::get('organizations/{organization}/billing/portal',           [BillingController::class, 'billingPortal']);
+        // Legacy checkout and status routes kept for backwards compatibility
+        Route::post('organizations/{organization}/billing/checkout',        [BillingController::class, 'checkout']);
+        Route::post('organizations/{organization}/billing/portal',          [BillingController::class, 'portal']);
+        Route::get('organizations/{organization}/billing/status',           [BillingController::class, 'status']);
 
         // ─── Feature Flag Manual Override (Phase 8) ───────────────────────────
         Route::put('organizations/{organization}/feature-flags', [FeatureFlagController::class, 'update']);
@@ -421,3 +440,21 @@ Route::prefix('v1')->group(function () {
             Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
         });
 });
+
+// ─── Test-only routes (local / testing environments only) ────────────────────
+if (app()->environment(['testing', 'local'])) {
+    Route::post('/testing/reset', function () {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'E2ETestSeeder']);
+        return response()->json(['reset' => true]);
+    });
+
+    Route::get('/testing/invitation-token/{invitationId}', function ($id) {
+        $inv = \App\Models\LeaderInvitation::find($id);
+        if (!$inv) {
+            abort(404);
+        }
+        $rawToken = \Illuminate\Support\Str::random(64);
+        $inv->update(['invitation_token_hash' => hash('sha256', $rawToken)]);
+        return response()->json(['raw_token' => $rawToken]);
+    });
+}

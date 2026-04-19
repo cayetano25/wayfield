@@ -11,7 +11,7 @@ import { InvitationAuthGate } from '../components/InvitationAuthGate'
 import { WorkshopPreviewPanel } from '../components/WorkshopPreviewPanel'
 import type { LeaderInvitationData } from '@/lib/types/invitations'
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
+// --- Style helpers ------------------------------------------------------------
 
 const cardStyle: React.CSSProperties = {
   background: 'white',
@@ -22,7 +22,7 @@ const cardStyle: React.CSSProperties = {
   marginBottom: '16px',
 }
 
-// ─── Error states ─────────────────────────────────────────────────────────────
+// --- Error states -------------------------------------------------------------
 
 function NotFoundState() {
   return (
@@ -138,7 +138,7 @@ function AlreadyDeclinedState({
   )
 }
 
-// ─── Success state ────────────────────────────────────────────────────────────
+// --- Success state ------------------------------------------------------------
 
 function SuccessState({ orgName }: { orgName: string }) {
   const router = useRouter()
@@ -182,7 +182,7 @@ function SuccessState({ orgName }: { orgName: string }) {
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// --- Main page ----------------------------------------------------------------
 
 export default function AcceptInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
@@ -235,7 +235,7 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
     }
   }
 
-  // ── Loading ──────────────────────────────────────────────────────────────
+  // -- Loading --------------------------------------------------------------
 
   if (pageState === 'loading') {
     return (
@@ -248,20 +248,20 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
     )
   }
 
-  // ── Terminal states ──────────────────────────────────────────────────────
+  // -- Terminal states ------------------------------------------------------
 
   if (pageState === 'not_found') return <NotFoundState />
   if (pageState === 'expired') return <ExpiredState />
   if (pageState === 'accepted') return <AlreadyAcceptedState orgName={invitation?.organization.name ?? 'the organization'} />
   if (pageState === 'declined') return <AlreadyDeclinedState token={token} orgName={invitation?.organization.name ?? 'the organization'} />
 
-  // ── Success ──────────────────────────────────────────────────────────────
+  // -- Success --------------------------------------------------------------
 
   if (isSuccess) {
     return <SuccessState orgName={invitation?.organization.name ?? 'the organization'} />
   }
 
-  // ── Main flow ────────────────────────────────────────────────────────────
+  // -- Main flow ------------------------------------------------------------
 
   const inv = invitation!
 
