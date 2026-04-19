@@ -27,7 +27,7 @@ class SessionController extends Controller
         $this->authorize('view', $workshop);
 
         $sessions = Session::where('workshop_id', $workshop->id)
-            ->with(['workshop', 'track', 'location', 'location.address'])
+            ->with(['workshop', 'workshop.organization', 'track', 'location', 'location.address', 'leaders'])
             ->orderBy('start_at')
             ->get();
 
@@ -54,7 +54,16 @@ class SessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        return new OrganizerSessionResource($session->load(['workshop', 'track', 'location', 'location.address']));
+        $session->loadMissing([
+            'leaders',
+            'workshop',
+            'workshop.organization',
+            'track',
+            'location',
+            'location.address',
+        ]);
+
+        return new OrganizerSessionResource($session);
     }
 
     public function update(

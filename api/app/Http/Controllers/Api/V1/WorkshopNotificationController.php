@@ -7,6 +7,7 @@ use App\Domain\Notifications\Actions\CreateOrganizerNotificationAction;
 use App\Domain\Notifications\Exceptions\CustomDeliveryNotImplementedException;
 use App\Domain\Notifications\Exceptions\LeaderMessagingScopeException;
 use App\Domain\Notifications\Exceptions\LeaderMessagingWindowException;
+use App\Exceptions\LeaderMessagingDeniedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreateLeaderNotificationRequest;
 use App\Http\Requests\Api\V1\CreateOrganizerNotificationRequest;
@@ -35,12 +36,8 @@ class WorkshopNotificationController extends Controller
     {
         $user = $request->user();
 
-        // Tenant check
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin', 'staff'])
-            ->exists();
+        // Tenant check — Allowed: owner, admin, staff
+        $isOrganizer = $workshop->organization->isOperationalMember($user);
 
         if ($isOrganizer) {
             $notifications = Notification::where('workshop_id', $workshop->id)
@@ -87,11 +84,8 @@ class WorkshopNotificationController extends Controller
     {
         $user = $request->user();
 
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin'])
-            ->exists();
+        // Allowed: owner, admin
+        $isOrganizer = $workshop->organization->isElevatedMember($user);
 
         if ($isOrganizer) {
             return $this->storeOrganizerNotification($request, $workshop);
@@ -119,11 +113,8 @@ class WorkshopNotificationController extends Controller
 
         $user = $request->user();
 
-        $isOrganizer = $user->organizationUsers()
-            ->where('organization_id', $workshop->organization_id)
-            ->where('is_active', true)
-            ->whereIn('role', ['owner', 'admin', 'staff'])
-            ->exists();
+        // Allowed: owner, admin, staff
+        $isOrganizer = $workshop->organization->isOperationalMember($user);
 
         if (! $isOrganizer) {
             $leader = Leader::where('user_id', $user->id)->first();
@@ -224,6 +215,10 @@ class WorkshopNotificationController extends Controller
                 $session,
                 $formRequest->validated()
             );
+        } catch (LeaderMessagingDeniedException $e) {
+            $status = $e->getErrorCode() === 'messaging_window' ? 422 : 403;
+
+            return response()->json($e->getResponseData(), $status);
         } catch (LeaderMessagingScopeException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (LeaderMessagingWindowException $e) {

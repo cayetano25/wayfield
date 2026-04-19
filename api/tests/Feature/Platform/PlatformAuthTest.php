@@ -96,7 +96,9 @@ test('platform token cannot access tenant API routes', function () {
     $response = $this->withToken($token)
         ->getJson('/api/v1/me');
 
-    $response->assertStatus(401);
+    // 403 (not 401): the token IS authenticated but forbidden on tenant routes.
+    // EnsureTenantToken rejects non-User tokens with tenant_auth_required.
+    $response->assertStatus(403);
 });
 
 test('tenant token cannot access platform API routes', function () {

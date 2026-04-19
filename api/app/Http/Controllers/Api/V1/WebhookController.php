@@ -141,15 +141,8 @@ class WebhookController extends Controller
 
     private function authorizeOrgAccess(Organization $organization): void
     {
-        $user = Auth::user();
-
-        $isMember = $organization->organizationUsers()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin'])
-            ->where('is_active', true)
-            ->exists();
-
-        if (! $isMember) {
+        // Allowed: owner, admin
+        if (! $organization->isElevatedMember(Auth::user())) {
             abort(403, 'Requires owner or admin role.');
         }
     }

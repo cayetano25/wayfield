@@ -21,6 +21,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('platform/v1')->group(function () {
 
+    // ─── Health check — uses auth:sanctum + platform.auth so that a tenant token
+    //     receives 403 platform_auth_required instead of a guard-level 401.
+    //     This is also the canonical test route for identity system isolation.
+    Route::middleware(['auth:sanctum', 'platform.auth'])->group(function () {
+        Route::get('health', fn () => response()->json(['status' => 'platform ok']));
+    });
+
     // ─── Auth (unauthenticated) ───────────────────────────────────────────────
     Route::post('auth/login', [PlatformAuthController::class, 'login'])
         ->middleware('throttle:10,1');

@@ -1,106 +1,37 @@
-'use client';
+import type { Metadata } from 'next'
+import { LoginForm } from './components/LoginForm'
+import { MarketingPanel } from './components/MarketingPanel'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { ApiError, apiPost } from '@/lib/api/client';
-import { setStoredUser, setToken, type AdminUser } from '@/lib/auth/session';
-
-const schema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-type FormValues = z.infer<typeof schema>;
-
-interface LoginResponse {
-  token: string;
-  user: AdminUser;
+export const metadata: Metadata = {
+  title: 'Sign In — Wayfield',
+  description:
+    'Sign in to your Wayfield account to manage workshops, leaders, and participants.',
 }
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-  });
-
-  async function onSubmit(values: FormValues) {
-    setApiError(null);
-    try {
-      const res = await apiPost<LoginResponse>('/auth/login', {
-        ...values,
-        platform: 'web',
-      });
-      setToken(res.token);
-      setStoredUser(res.user);
-      router.push('/dashboard');
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setApiError(err.message);
-      } else {
-        setApiError('Something went wrong. Please try again.');
-      }
-    }
-  }
-
   return (
-    <div>
-      <h2 className="font-heading text-xl font-semibold text-dark mb-6">Sign in to your account</h2>
-
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-        <Input
-          label="Email address"
-          type="email"
-          autoComplete="email"
-          error={errors.email?.message ?? apiError ?? undefined}
-          {...register('email')}
-        />
-
-        <div className="flex flex-col gap-1.5">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="current-password"
-            error={errors.password?.message}
-            rightElement={
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-light-gray hover:text-dark transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            }
-            {...register('password')}
-          />
-          <div className="text-right">
-            <Link
-              href="/forgot-password"
-              className="text-xs text-primary hover:underline"
-            >
-              Forgot password?
-            </Link>
+    <main className="flex h-screen w-full overflow-hidden">
+      {/*
+       * LEFT PANEL — Login form
+       * ~45% width on desktop, full width on mobile
+       * Scrollable if content overflows on small/zoomed screens
+       */}
+      <div className="w-full md:w-[45%] lg:w-[44%] flex flex-col bg-white overflow-y-auto">
+        <div className="flex flex-1 items-center justify-center px-8 py-12">
+          <div className="w-full max-w-[400px]">
+            <LoginForm />
           </div>
         </div>
+      </div>
 
-        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
-          Sign in
-        </Button>
-      </form>
-    </div>
-  );
+      {/*
+       * RIGHT PANEL — Marketing / hero area
+       * Hidden on mobile — the form is the priority on small screens
+       * ~55% width on desktop
+       */}
+      <div className="hidden md:block md:w-[55%] lg:w-[56%] relative overflow-hidden">
+        <MarketingPanel />
+      </div>
+    </main>
+  )
 }

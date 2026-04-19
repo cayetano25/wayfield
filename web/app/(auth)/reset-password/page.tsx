@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError, apiPost } from '@/lib/api/client';
 import { ToastProvider } from '@/components/ui/Toast';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 const schema = z
   .object({
@@ -59,48 +60,50 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div>
-      <h2 className="font-heading text-xl font-semibold text-dark mb-2">Set new password</h2>
-      <p className="text-sm text-medium-gray mb-6">Choose a strong password for your account.</p>
+    <AuthCard>
+      <div>
+        <h2 className="font-heading text-xl font-semibold text-dark mb-2">Set new password</h2>
+        <p className="text-sm text-medium-gray mb-6">Choose a strong password for your account.</p>
 
-      {apiError && (
-        <div className="mb-4 px-4 py-3 bg-danger/8 border border-danger/20 rounded-lg text-sm text-danger">
-          {apiError}
-        </div>
-      )}
+        {apiError && (
+          <div className="mb-4 px-4 py-3 bg-danger/8 border border-danger/20 rounded-lg text-sm text-danger">
+            {apiError}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-        <Input
-          label="New password"
-          type={showPassword ? 'text' : 'password'}
-          autoComplete="new-password"
-          error={errors.password?.message}
-          rightElement={
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="text-light-gray hover:text-dark transition-colors"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          }
-          {...register('password')}
-        />
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
+          <Input
+            label="New password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            error={errors.password?.message}
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="text-light-gray hover:text-dark transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            }
+            {...register('password')}
+          />
 
-        <Input
-          label="Confirm new password"
-          type={showPassword ? 'text' : 'password'}
-          autoComplete="new-password"
-          error={errors.password_confirmation?.message}
-          {...register('password_confirmation')}
-        />
+          <Input
+            label="Confirm new password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            error={errors.password_confirmation?.message}
+            {...register('password_confirmation')}
+          />
 
-        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
-          Reset password
-        </Button>
-      </form>
-    </div>
+          <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
+            Reset password
+          </Button>
+        </form>
+      </div>
+    </AuthCard>
   );
 }
 

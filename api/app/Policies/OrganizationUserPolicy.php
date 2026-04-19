@@ -8,11 +8,15 @@ use App\Models\User;
 
 class OrganizationUserPolicy
 {
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function update(User $user, OrganizationUser $organizationUser): bool
     {
         return $this->isOrganizerOrAbove($user, $organizationUser->organization);
     }
 
+    // Allowed: owner, admin
+    // Denied: staff, billing_admin
     public function delete(User $user, OrganizationUser $organizationUser): bool
     {
         return $this->isOrganizerOrAbove($user, $organizationUser->organization);

@@ -99,15 +99,15 @@ Route::prefix('v1')->group(function () {
 
     // ─── Address / country config (authenticated) ─────────────────────────────
     // Country config is static — safe to expose to any authenticated user.
-    Route::middleware(['auth:sanctum', 'tenant.user'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
         Route::get('address/countries', [AddressController::class, 'countries']);
         Route::get('address/countries/{code}', [AddressController::class, 'country']);
         Route::get('address/infer-country', [AddressController::class, 'inferCountry']);
     });
 
     // ─── Authenticated routes ─────────────────────────────────────────────────
-    // tenant.user rejects platform AdminUser tokens — platform tokens must not work here
-    Route::middleware(['auth:sanctum', 'tenant.user'])->group(function () {
+    // tenant.auth (EnsureTenantToken) rejects platform AdminUser tokens with 403.
+    Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
 
         // Auth
         Route::post('auth/logout', [AuthController::class, 'logout']);

@@ -39,6 +39,8 @@ class OrganizerWorkshopResource extends JsonResource
                 'updated_at' => $this->publicPage->updated_at?->toIso8601String(),
             ] : null
             ),
+            'sessions_count' => $this->sessions_count ?? 0,
+            'participants_count' => $this->registrations_count ?? 0,
             'confirmed_leaders' => $this->whenLoaded('confirmedLeaders', fn () => $this->confirmedLeaders->map(fn ($leader) => [
                 'id' => $leader->id,
                 'first_name' => $leader->first_name,

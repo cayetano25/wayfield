@@ -21,6 +21,7 @@ use App\Policies\RosterPolicy;
 use App\Policies\SessionPolicy;
 use App\Policies\TrackPolicy;
 use App\Policies\WorkshopPolicy;
+use App\Services\Auth\RoleContextService;
 use App\Services\Sessions\SessionLocationService;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -41,6 +42,7 @@ class AppServiceProvider extends AuthServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(RoleContextService::class);
         $this->app->singleton(SessionLocationService::class);
     }
 

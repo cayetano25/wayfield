@@ -7,7 +7,7 @@ use App\Domain\Leaders\Actions\UpdateSessionLeaderStatusAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AttachLeaderToSessionRequest;
-use App\Http\Resources\SessionLeaderResource;
+use App\Http\Resources\SessionLeaderAssignmentResource;
 use App\Models\Leader;
 use App\Models\Session;
 use App\Models\SessionLeader;
@@ -26,7 +26,7 @@ class SessionLeaderController extends Controller
 
         $sessionLeaders = $session->sessionLeaders()->with('leader')->get();
 
-        return SessionLeaderResource::collection($sessionLeaders);
+        return SessionLeaderAssignmentResource::collection($sessionLeaders);
     }
 
     /**
@@ -57,7 +57,7 @@ class SessionLeaderController extends Controller
         }
 
         return response()->json(
-            new SessionLeaderResource($sessionLeader->load('leader')),
+            new SessionLeaderAssignmentResource($sessionLeader->load('leader')),
             201
         );
     }
@@ -85,7 +85,7 @@ class SessionLeaderController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(new SessionLeaderResource($sessionLeader->load('leader')));
+        return response()->json(new SessionLeaderAssignmentResource($sessionLeader->load('leader')));
     }
 
     /**
