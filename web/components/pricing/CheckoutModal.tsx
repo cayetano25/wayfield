@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Elements,
   PaymentElement,
@@ -386,18 +386,22 @@ export function CheckoutModal({ selectedPlan, orgId, onSuccess, onClose }: Check
   const [setupError, setSetupError] = useState<string | null>(null)
   const [isLoadingIntent, setIsLoadingIntent] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const fetchCountRef = useRef(0)
 
   const fetchIntent = useCallback(async () => {
+    const fetchId = ++fetchCountRef.current
     setIsLoadingIntent(true)
     setSetupError(null)
     setClientSecret(null)
     try {
       const { client_secret } = await createSetupIntent(orgId)
+      if (fetchId !== fetchCountRef.current) return
       setClientSecret(client_secret)
     } catch {
+      if (fetchId !== fetchCountRef.current) return
       setSetupError('Unable to initialize payment. Please try again.')
     } finally {
-      setIsLoadingIntent(false)
+      if (fetchId === fetchCountRef.current) setIsLoadingIntent(false)
     }
   }, [orgId])
 
@@ -572,6 +576,7 @@ export function CheckoutModal({ selectedPlan, orgId, onSuccess, onClose }: Check
         {/* Stripe Elements + form */}
         {!isLoadingIntent && !setupError && clientSecret && (
           <Elements
+            key={clientSecret}
             stripe={stripePromise}
             options={{ clientSecret, appearance: STRIPE_APPEARANCE }}
           >
