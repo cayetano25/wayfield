@@ -1,11 +1,14 @@
 <?php
 
+use App\Models\Leader;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\PublicPage;
+use App\Models\Registration;
 use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Models\WorkshopLeader;
 use App\Models\WorkshopLogistics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -120,7 +123,7 @@ test('public workshop response never exposes forbidden fields', function () {
     // Internal identity / state fields
     expect($body)->not->toHaveKey('join_code');
     expect($body)->not->toHaveKey('organization_id');
-    expect($body)->not->toHaveKey('status');
+    // 'status' is intentionally present — always 'published' on the public endpoint.
     expect($body)->not->toHaveKey('public_page_enabled');
     expect($body)->not->toHaveKey('created_at');
     expect($body)->not->toHaveKey('updated_at');
@@ -311,4 +314,248 @@ test('test_meeting_url_never_appears_in_public_response', function () {
     expect($sessions[0])->not->toHaveKey('meeting_passcode');
     expect($sessions[0])->not->toHaveKey('meeting_instructions');
     expect($sessions[0])->not->toHaveKey('meeting_platform');
+});
+
+// ─── Privacy regression tests (BLOCKING) ────────────────────────────────────
+// These tests assert that private leader and participant fields are NEVER present
+// in any public workshop response. CI must treat failures as blocking.
+
+test('public workshop response never exposes leader phone_number or email', function () {
+    $org = Organization::factory()->create();
+    $workshop = Workshop::factory()
+        ->forOrganization($org->id)
+        ->published()
+        ->create([
+            'public_page_enabled' => true,
+            'public_slug' => 'leader-privacy-check',
+        ]);
+
+    $leader = Leader::factory()->create([
+        'email' => 'leader@example.com',
+        'phone_number' => '+15550001234',
+        'address_line_1' => '123 Secret Street',
+    ]);
+
+    WorkshopLeader::factory()->confirmed()->create([
+        'workshop_id' => $workshop->id,
+        'leader_id' => $leader->id,
+    ]);
+
+    $response = $this->getJson('/api/v1/public/workshops/leader-privacy-check')
+        ->assertStatus(200);
+
+    $body = json_encode($response->json());
+
+    // Private leader fields must not appear anywhere in the serialized response.
+    expect($body)->not->toContain('phone_number');
+    expect($body)->not->toContain('+15550001234');
+    expect($body)->not->toContain('leader@example.com');
+    expect($body)->not->toContain('address_line_1');
+    expect($body)->not->toContain('123 Secret Street');
+
+    // Leaders array must exist and the leader must be present.
+    $leaders = $response->json('leaders');
+    expect($leaders)->toHaveCount(1);
+    expect($leaders[0])->not->toHaveKey('phone_number');
+    expect($leaders[0])->not->toHaveKey('email');
+    expect($leaders[0])->not->toHaveKey('address_line_1');
+    expect($leaders[0])->not->toHaveKey('address_line_2');
+    expect($leaders[0])->not->toHaveKey('postal_code');
+    expect($leaders[0])->not->toHaveKey('country');
+    expect($leaders[0])->not->toHaveKey('user_id');
+
+    // Safe public fields must be present.
+    expect($leaders[0])->toHaveKey('first_name');
+    expect($leaders[0])->toHaveKey('last_name');
+    expect($leaders[0])->toHaveKey('city');
+    expect($leaders[0])->toHaveKey('state_or_region');
+});
+
+test('public workshop response never exposes registration or participant data', function () {
+    $org = Organization::factory()->create();
+    $user = User::factory()->create([
+        'email' => 'participant@example.com',
+        'phone_number' => '+15559876543',
+    ]);
+    $workshop = Workshop::factory()
+        ->forOrganization($org->id)
+        ->published()
+        ->create([
+            'public_page_enabled' => true,
+            'public_slug' => 'participant-privacy-check',
+        ]);
+
+    Registration::factory()->create([
+        'workshop_id' => $workshop->id,
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this->getJson('/api/v1/public/workshops/participant-privacy-check')
+        ->assertStatus(200);
+
+    $body = json_encode($response->json());
+
+    expect($body)->not->toContain('participant@example.com');
+    expect($body)->not->toContain('+15559876543');
+    expect($response->json())->not->toHaveKey('registrations');
+    expect($response->json())->not->toHaveKey('participants');
+});
+
+test('public workshop default_location exposes only city and state_or_region', function () {
+    $org = Organization::factory()->create();
+    $workshop = Workshop::factory()
+        ->forOrganization($org->id)
+        ->published()
+        ->create([
+            'public_page_enabled' => true,
+            'public_slug' => 'location-privacy-check',
+        ]);
+
+    $response = $this->getJson('/api/v1/public/workshops/location-privacy-check')
+        ->assertStatus(200);
+
+    $location = $response->json('default_location');
+
+    if ($location !== null) {
+        expect($location)->not->toHaveKey('address_line_1');
+        expect($location)->not->toHaveKey('address_line_2');
+        expect($location)->not->toHaveKey('postal_code');
+        expect($location)->not->toHaveKey('latitude');
+        expect($location)->not->toHaveKey('longitude');
+        expect($location)->toHaveKey('city');
+        expect($location)->toHaveKey('state_or_region');
+    }
+});
+
+// ─── Social sharing field tests ──────────────────────────────────────────────
+
+test('social_share_title falls back to title when not set', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'social-title-fallback',
+        'title' => 'Mountain Light 2026',
+        'social_share_title' => null,
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/social-title-fallback')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_title', 'Mountain Light 2026');
+});
+
+test('social_share_title uses dedicated field when set', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'social-title-set',
+        'title' => 'Mountain Light 2026',
+        'social_share_title' => 'Join Us in the Mountains',
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/social-title-set')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_title', 'Join Us in the Mountains');
+});
+
+test('social_share_description falls back through public_summary then description', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'social-desc-fallback',
+        'description' => 'The full workshop description.',
+        'public_summary' => null,
+        'social_share_description' => null,
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/social-desc-fallback')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_description', 'The full workshop description.');
+});
+
+test('social_share_description prefers public_summary over description when social_share_description is null', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'social-desc-summary',
+        'description' => 'The full workshop description.',
+        'public_summary' => 'Short summary for sharing.',
+        'social_share_description' => null,
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/social-desc-summary')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_description', 'Short summary for sharing.');
+});
+
+test('canonical_url is built from app url and public_slug when no override is set', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'canonical-test',
+        'canonical_url_override' => null,
+    ]);
+
+    $response = $this->getJson('/api/v1/public/workshops/canonical-test')
+        ->assertStatus(200);
+
+    $canonicalUrl = $response->json('canonical_url');
+    expect($canonicalUrl)->toContain('/w/canonical-test');
+    expect($canonicalUrl)->toStartWith('http');
+});
+
+test('canonical_url uses override when set', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'canonical-override',
+        'canonical_url_override' => 'https://example.com/my-workshop',
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/canonical-override')
+        ->assertStatus(200)
+        ->assertJsonPath('canonical_url', 'https://example.com/my-workshop');
+});
+
+test('public workshop response includes required social and indexing fields', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'social-fields-present',
+        'public_summary' => 'A brief workshop summary.',
+        'public_page_is_indexable' => true,
+    ]);
+
+    $response = $this->getJson('/api/v1/public/workshops/social-fields-present')
+        ->assertStatus(200);
+
+    $body = $response->json();
+
+    expect($body)->toHaveKey('social_share_title');
+    expect($body)->toHaveKey('social_share_description');
+    expect($body)->toHaveKey('social_share_image_url');
+    expect($body)->toHaveKey('canonical_url');
+    expect($body)->toHaveKey('public_summary');
+    expect($body)->toHaveKey('public_page_is_indexable');
+    expect($body['status'])->toBe('published');
+    expect($body['public_page_is_indexable'])->toBeTrue();
+});
+
+test('social_share_image_url is null when no header image or social image is set', function () {
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'no-social-image',
+        'header_image_url' => null,
+        'social_share_image_file_id' => null,
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/no-social-image')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_image_url', null);
+});
+
+test('social_share_image_url uses header_image_url when set', function () {
+    $imageUrl = 'https://assets.wayfield.app/workshop/1/test-header.jpg';
+    $workshop = Workshop::factory()->published()->create([
+        'public_page_enabled' => true,
+        'public_slug' => 'with-header-image',
+        'header_image_url' => $imageUrl,
+        'social_share_image_file_id' => null,
+    ]);
+
+    $this->getJson('/api/v1/public/workshops/with-header-image')
+        ->assertStatus(200)
+        ->assertJsonPath('social_share_image_url', $imageUrl);
 });

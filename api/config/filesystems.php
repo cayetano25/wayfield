@@ -4,6 +4,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | CDN Domain
+    |--------------------------------------------------------------------------
+    |
+    | The base domain used to build absolute public URLs for social sharing
+    | and OG image tags. Must be an absolute HTTPS URL with no trailing slash.
+    | Falls back to AWS_CLOUDFRONT_URL if CDN_DOMAIN is not set.
+    |
+    */
+
+    'cdn_domain' => env('CDN_DOMAIN', env('AWS_CLOUDFRONT_URL')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Filesystem Disk
     |--------------------------------------------------------------------------
     |
