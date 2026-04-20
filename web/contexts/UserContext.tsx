@@ -59,7 +59,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         ]);
         setUser(me);
         setOrganizations(orgs);
-        setCurrentOrg(orgs[0] ?? null);
+        // Honour a slug hint left by /my-organizations/[slug] before redirecting here
+        const pendingSlug = sessionStorage.getItem('pendingOrgSlug');
+        if (pendingSlug) {
+          sessionStorage.removeItem('pendingOrgSlug');
+          const hinted = orgs.find((o) => o.slug === pendingSlug);
+          setCurrentOrg(hinted ?? orgs[0] ?? null);
+        } else {
+          setCurrentOrg(orgs[0] ?? null);
+        }
       } catch {
         // 401 is handled in client.ts (redirects to /login)
       } finally {

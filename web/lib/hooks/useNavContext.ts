@@ -3,7 +3,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { NavContextData, NAV_CONTEXT_DEFAULT } from '@/lib/types/nav'
+import { NavContextData, NAV_CONTEXT_DEFAULT, OrgMembership } from '@/lib/types/nav'
 import { getToken } from '@/lib/auth/session'
 
 // -- Module-level cache ----------------------------------------------------
@@ -77,6 +77,19 @@ async function fetchNavContext(): Promise<NavContextData> {
     const data = await res.json()
     const contexts = data.contexts ?? {}
 
+    const rawRoles: Array<Record<string, unknown>> =
+      Array.isArray(contexts.organization_roles) ? contexts.organization_roles : []
+
+    const memberships: OrgMembership[] = rawRoles
+      .filter((r) => r.is_active !== false)
+      .map((r) => ({
+        organization_id:   r.organization_id   as number,
+        organization_name: (r.organization_name as string) ?? '',
+        organization_slug: (r.organization_slug as string) ?? '',
+        role:              r.role as OrgMembership['role'],
+        is_active:         true,
+      }))
+
     return {
       isAuthenticated:    true,
       isLoading:          false,
@@ -89,8 +102,8 @@ async function fetchNavContext(): Promise<NavContextData> {
       },
       showMyWorkshops:    true,
       showMySessions:     contexts.is_leader === true,
-      showMyOrganization: Array.isArray(contexts.organization_roles)
-                            && contexts.organization_roles.length > 0,
+      showMyOrganization: memberships.length > 0,
+      memberships,
     }
   } catch {
     return buildUnauthenticated()
@@ -105,5 +118,6 @@ function buildUnauthenticated(): NavContextData {
     showMyWorkshops:    false,
     showMySessions:     false,
     showMyOrganization: false,
+    memberships:        [],
   }
 }

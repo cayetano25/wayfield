@@ -55,3 +55,20 @@ export async function getInvitationToken(invitationId: number): Promise<string> 
   const data = await res.json()
   return data.raw_token as string
 }
+
+export async function getOrgInvitationToken(invitationId: number): Promise<string> {
+  const res = await fetch(
+    `${API_BASE}/api/testing/org-invitation-token/${invitationId}`,
+  )
+  const data = await res.json()
+  return data.raw_token as string
+}
+
+export async function apiPatch(path: string, body: object, token: string) {
+  const res = await apiFetch('PATCH', path, body, token)
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`API PATCH ${path} failed ${res.status}: ${text}`)
+  }
+  return res.json()
+}

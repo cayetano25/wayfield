@@ -2,8 +2,21 @@
 
 import { useState } from 'react'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
-import { acceptLeaderInvitation, declineLeaderInvitation } from '@/lib/api/notifications'
-import type { AppNotification } from '@/lib/types/notifications'
+import {
+  acceptLeaderInvitation,
+  declineLeaderInvitation,
+  acceptOrgInvitation,
+  declineOrgInvitation,
+} from '@/lib/api/notifications'
+import { clearNavCache } from '@/lib/hooks/useNavContext'
+import type { AppNotification, OrgInvitationActionData, LeaderInvitationActionData } from '@/lib/types/notifications'
+
+const ROLE_LABELS: Record<string, string> = {
+  owner:         'Owner',
+  admin:         'Administrator',
+  staff:         'Staff',
+  billing_admin: 'Billing Administrator',
+}
 
 interface NotificationItemProps {
   notification: AppNotification
@@ -26,11 +39,17 @@ export function NotificationItem({
     }
   }
 
+  const isOrgInvite = n.action_data?.type === 'org_invitation'
+  const orgData     = isOrgInvite ? (n.action_data as OrgInvitationActionData) : null
+
   async function handleAccept() {
     if (!n.action_data) return
     setActionState('accepting')
-    const ok = await acceptLeaderInvitation(n.action_data.accept_token)
+    const ok = isOrgInvite
+      ? await acceptOrgInvitation((n.action_data as OrgInvitationActionData).invitation_token)
+      : await acceptLeaderInvitation((n.action_data as LeaderInvitationActionData).accept_token)
     if (ok) {
+      if (isOrgInvite) clearNavCache()
       setActionState('accepted')
       setTimeout(() => onRemove(n.recipient_id), 1800)
     } else {
@@ -42,7 +61,9 @@ export function NotificationItem({
   async function handleDecline() {
     if (!n.action_data) return
     setActionState('declining')
-    const ok = await declineLeaderInvitation(n.action_data.decline_token)
+    const ok = isOrgInvite
+      ? await declineOrgInvitation((n.action_data as OrgInvitationActionData).invitation_token)
+      : await declineLeaderInvitation((n.action_data as LeaderInvitationActionData).decline_token)
     if (ok) {
       setActionState('declined')
       setTimeout(() => onRemove(n.recipient_id), 1800)
@@ -118,6 +139,28 @@ export function NotificationItem({
         }}>
           {n.message}
         </p>
+
+        {/* ── ORG INVITATION CONTEXT LINES ──────────────────────────── */}
+        {n.is_invitation && isOrgInvite && orgData && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontSize:   11,
+              color:      '#6B7280',
+            }}>
+              From <strong style={{ color: '#374151' }}>{orgData.organization_name}</strong>
+            </span>
+            <span style={{
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontSize:   11,
+              color:      '#6B7280',
+            }}>
+              Invited as: <strong style={{ color: '#374151' }}>
+                {ROLE_LABELS[orgData.role] ?? orgData.role}
+              </strong>
+            </span>
+          </div>
+        )}
 
         {/* ── INVITATION ACTION BUTTONS ──────────────────────────────── */}
         {n.is_invitation && n.action_data && (
@@ -199,7 +242,9 @@ export function NotificationItem({
                 <CheckCircle size={14} />
                 <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif',
                                fontSize: 12, fontWeight: 600 }}>
-                  Invitation accepted! Check My Sessions.
+                  {isOrgInvite
+                    ? `Joined ${orgData?.organization_name ?? 'the organization'}!`
+                    : 'Invitation accepted! Check My Sessions.'}
                 </span>
               </div>
             )}

@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationUserController;
 use App\Http\Controllers\Api\V1\OrgInvitationController;
+use App\Http\Controllers\Api\V1\OrgMemberController;
 use App\Http\Controllers\Api\V1\ParticipantController;
 use App\Http\Controllers\Api\V1\ParticipantDashboardController;
 use App\Http\Controllers\Api\V1\PlansController;
@@ -194,16 +195,24 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}', [OrganizationController::class, 'show']);
         Route::patch('organizations/{organization}', [OrganizationController::class, 'update']);
 
-        // Organization members
+        // Organization members (legacy /users routes — kept for backward compat)
         Route::get('organizations/{organization}/users', [OrganizationUserController::class, 'index']);
         Route::post('organizations/{organization}/users', [OrganizationUserController::class, 'store']);
         Route::patch('organizations/{organization}/users/{organizationUser}', [OrganizationUserController::class, 'update']);
+
+        // ─── Org members (canonical /members routes) ──────────────────────────
+        Route::prefix('organizations/{organization}/members')->group(function () {
+            Route::get('', [OrgMemberController::class, 'index']);
+            Route::patch('{organizationUser}', [OrgMemberController::class, 'changeRole']);
+            Route::delete('{organizationUser}', [OrgMemberController::class, 'remove']);
+        });
 
         // ─── Org member invitations ───────────────────────────────────────────
         Route::prefix('organizations/{organization}/invitations')->group(function () {
             Route::get('', [OrgInvitationController::class, 'index']);
             Route::post('', [OrgInvitationController::class, 'store']);
             Route::delete('{invitation}', [OrgInvitationController::class, 'destroy']);
+            Route::post('{invitation}/resend', [OrgInvitationController::class, 'resend']);
         });
 
         // Locations
@@ -462,6 +471,16 @@ if (app()->environment(['testing', 'local'])) {
 
     Route::get('/testing/invitation-token/{invitationId}', function ($id) {
         $inv = \App\Models\LeaderInvitation::find($id);
+        if (!$inv) {
+            abort(404);
+        }
+        $rawToken = \Illuminate\Support\Str::random(64);
+        $inv->update(['invitation_token_hash' => hash('sha256', $rawToken)]);
+        return response()->json(['raw_token' => $rawToken]);
+    });
+
+    Route::get('/testing/org-invitation-token/{invitationId}', function ($id) {
+        $inv = \App\Models\OrganizationInvitation::find($id);
         if (!$inv) {
             abort(404);
         }

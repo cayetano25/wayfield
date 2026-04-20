@@ -77,9 +77,9 @@ export function AppTopNav() {
               <NavLink href="/leader/dashboard" label="My Sessions" />
             )}
 
-            {/* My Organization — any org role */}
+            {/* My Organizations — any org role */}
             {nav.showMyOrganization && (
-              <NavLink href="/admin/dashboard" label="My Organization" />
+              <NavLink href="/my-organizations" label="My Organizations" />
             )}
           </nav>
 

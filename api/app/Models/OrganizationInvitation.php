@@ -16,6 +16,7 @@ class OrganizationInvitation extends Model
 
     protected $fillable = [
         'organization_id',
+        'user_id',
         'invited_email',
         'invited_first_name',
         'invited_last_name',
@@ -34,13 +35,7 @@ class OrganizationInvitation extends Model
         'updated_at' => 'datetime',
     ];
 
-    /** Valid stored role values that can be granted via invitation. */
-    public const VALID_ROLES = ['owner', 'admin', 'staff', 'billing_admin'];
-
-    /**
-     * Roles that can be granted via invitation (owner is excluded —
-     * ownership is transferred, not invited).
-     */
+    /** Roles that can be granted via invitation (owner is transferred, not invited). */
     public const INVITABLE_ROLES = ['admin', 'staff', 'billing_admin'];
 
     public function organization(): BelongsTo
@@ -48,9 +43,25 @@ class OrganizationInvitation extends Model
         return $this->belongsTo(Organization::class);
     }
 
+    /** The invitee's user account — null until accepted or matched at invitation time. */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending')->where('expires_at', '>', now());
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['pending', 'accepted']);
     }
 
     public function isExpired(): bool
@@ -58,10 +69,6 @@ class OrganizationInvitation extends Model
         return $this->expires_at->isPast();
     }
 
-    /**
-     * Pending = status is 'pending' AND not time-expired.
-     * Used to gate accept/decline actions.
-     */
     public function isPending(): bool
     {
         return $this->status === 'pending' && ! $this->isExpired();

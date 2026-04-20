@@ -58,6 +58,7 @@ export interface OrgInvitationData {
   invitation_id: number
   status: 'pending' | 'accepted' | 'declined' | 'expired' | 'removed'
   is_expired: boolean
+  expires_at: string | null
   invited_email: string
   invited_first_name: string | null
   invited_last_name: string | null

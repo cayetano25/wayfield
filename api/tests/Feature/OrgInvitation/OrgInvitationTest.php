@@ -74,7 +74,8 @@ test('admin can send invitation for staff role', function () {
         ->assertStatus(201);
 });
 
-test('admin can send invitation for billing_admin role', function () {
+test('admin cannot send invitation for billing_admin role', function () {
+    // Per ROLE_MODEL.md §2.3: admin may only invite staff.
     Mail::fake();
     [$org, $admin] = makeOrgForInviteTest('admin');
 
@@ -83,7 +84,8 @@ test('admin can send invitation for billing_admin role', function () {
             'invited_email' => 'billing@example.com',
             'role' => 'billing_admin',
         ])
-        ->assertStatus(201);
+        ->assertStatus(403)
+        ->assertJsonPath('error', 'insufficient_role');
 });
 
 test('admin cannot send invitation for owner role', function () {
@@ -389,4 +391,216 @@ test('index is denied for staff', function () {
     $this->actingAs($staff, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/invitations")
         ->assertStatus(403);
+});
+
+// ─── Additional role coverage ──────────────────────────────────────────────────
+
+test('owner can invite admin', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'newadmin@example.com',
+            'role' => 'admin',
+        ])
+        ->assertStatus(201);
+});
+
+test('owner can invite billing_admin', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'billing@example.com',
+            'role' => 'billing_admin',
+        ])
+        ->assertStatus(201);
+});
+
+test('billing_admin cannot send any invitation', function () {
+    Mail::fake();
+    [$org, $billingAdmin] = makeOrgForInviteTest('billing_admin');
+
+    $this->actingAs($billingAdmin, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'someone@example.com',
+            'role' => 'staff',
+        ])
+        ->assertStatus(403);
+});
+
+test('user_id is set on invitation when invitee already has an account', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+    $existingUser = User::factory()->create(['email' => 'known@example.com']);
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'known@example.com',
+            'role' => 'staff',
+        ])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('organization_invitations', [
+        'invited_email' => 'known@example.com',
+        'user_id' => $existingUser->id,
+    ]);
+});
+
+test('user_id is null on invitation when invitee has no account', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'unknown@example.com',
+            'role' => 'staff',
+        ])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('organization_invitations', [
+        'invited_email' => 'unknown@example.com',
+        'user_id' => null,
+    ]);
+});
+
+test('accept stamps user_id on the invitation record', function () {
+    [$invitation, $rawToken] = makeInvitationWithToken([
+        'invited_email' => 'jane@example.com',
+        'role' => 'staff',
+    ]);
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($user, 'sanctum')
+        ->postJson("/api/v1/org-invitations/{$rawToken}/accept")
+        ->assertStatus(200);
+
+    $invitation->refresh();
+    expect($invitation->user_id)->toBe($user->id);
+});
+
+test('rescind stamps responded_at on the invitation record', function () {
+    [$org, $owner] = makeOrgForInviteTest('owner');
+    [$invitation] = makeInvitationWithToken(['organization_id' => $org->id]);
+
+    $this->actingAs($owner, 'sanctum')
+        ->deleteJson("/api/v1/organizations/{$org->id}/invitations/{$invitation->id}")
+        ->assertStatus(200);
+
+    $invitation->refresh();
+    expect($invitation->responded_at)->not->toBeNull();
+});
+
+test('admin cannot rescind an admin-role invitation', function () {
+    [$org, $admin] = makeOrgForInviteTest('admin');
+    [$invitation] = makeInvitationWithToken([
+        'organization_id' => $org->id,
+        'role' => 'admin',
+    ]);
+
+    $this->actingAs($admin, 'sanctum')
+        ->deleteJson("/api/v1/organizations/{$org->id}/invitations/{$invitation->id}")
+        ->assertStatus(403)
+        ->assertJsonPath('error', 'insufficient_role');
+});
+
+test('store writes audit log', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations", [
+            'invited_email' => 'audited@example.com',
+            'role' => 'staff',
+        ])
+        ->assertStatus(201);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'organization_id' => $org->id,
+        'actor_user_id' => $owner->id,
+        'entity_type' => 'organization_invitation',
+        'action' => 'org_invitation.sent',
+    ]);
+});
+
+test('decline writes audit log', function () {
+    $org = Organization::factory()->create();
+    [$invitation, $rawToken] = makeInvitationWithToken([
+        'organization_id' => $org->id,
+        'invited_email' => 'declining@example.com',
+    ]);
+
+    $this->postJson("/api/v1/org-invitations/{$rawToken}/decline")
+        ->assertStatus(200);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'organization_id' => $org->id,
+        'entity_type' => 'organization_invitation',
+        'action' => 'org_invitation.declined',
+    ]);
+});
+
+test('rescind writes audit log', function () {
+    [$org, $owner] = makeOrgForInviteTest('owner');
+    [$invitation] = makeInvitationWithToken(['organization_id' => $org->id]);
+
+    $this->actingAs($owner, 'sanctum')
+        ->deleteJson("/api/v1/organizations/{$org->id}/invitations/{$invitation->id}")
+        ->assertStatus(200);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'organization_id' => $org->id,
+        'actor_user_id' => $owner->id,
+        'entity_type' => 'organization_invitation',
+        'action' => 'org_invitation.cancelled',
+    ]);
+});
+
+test('accept returns 422 when user is already an active member', function () {
+    $org = Organization::factory()->create();
+
+    // User is already an active member of the org.
+    $user = User::factory()->create(['email' => 'existing@example.com']);
+    OrganizationUser::factory()->create([
+        'organization_id' => $org->id,
+        'user_id' => $user->id,
+        'role' => 'staff',
+        'is_active' => true,
+    ]);
+
+    // A pending invitation exists for their email.
+    [$invitation, $rawToken] = makeInvitationWithToken([
+        'organization_id' => $org->id,
+        'invited_email' => 'existing@example.com',
+        'role' => 'admin',
+    ]);
+
+    $this->actingAs($user, 'sanctum')
+        ->postJson("/api/v1/org-invitations/{$rawToken}/accept")
+        ->assertStatus(422)
+        ->assertJsonPath('error', 'already_a_member');
+});
+
+test('resend writes audit log', function () {
+    Mail::fake();
+    [$org, $owner] = makeOrgForInviteTest('owner');
+    $rawToken = Str::random(64);
+    $invitation = OrganizationInvitation::factory()->forOrganization($org->id)->create([
+        'status' => 'pending',
+        'invitation_token_hash' => hash('sha256', $rawToken),
+        'expires_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs($owner, 'sanctum')
+        ->postJson("/api/v1/organizations/{$org->id}/invitations/{$invitation->id}/resend")
+        ->assertStatus(200);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'organization_id' => $org->id,
+        'actor_user_id' => $owner->id,
+        'entity_type' => 'organization_invitation',
+        'action' => 'org_invitation.resent',
+    ]);
 });

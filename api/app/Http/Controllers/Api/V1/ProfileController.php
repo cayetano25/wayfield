@@ -24,7 +24,7 @@ class ProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->loadMissing('profile.address');
+        $user->loadMissing('profile.address', 'leader');
 
         // Merge the UserResource fields with the role context summary.
         // Per ROLE_MODEL.md Section 0: one account, all roles, context-determined.
@@ -39,6 +39,19 @@ class ProfileController extends Controller
                     'address' => $user->profile->address
                         ? $this->addressService->toApiResponse($user->profile->address)
                         : null,
+                ] : null,
+                'leader_profile' => $user->leader ? [
+                    'id'                => $user->leader->id,
+                    'bio'               => $user->leader->bio,
+                    'website_url'       => $user->leader->website_url,
+                    'phone_number'      => $user->leader->phone_number,
+                    'address_line_1'    => $user->leader->address_line_1,
+                    'address_line_2'    => $user->leader->address_line_2,
+                    'city'              => $user->leader->city,
+                    'state_or_region'   => $user->leader->state_or_region,
+                    'postal_code'       => $user->leader->postal_code,
+                    'country'           => $user->leader->country,
+                    'profile_image_url' => $user->leader->profile_image_url,
                 ] : null,
                 'contexts' => $this->buildContextSummary($user),
             ],
@@ -63,9 +76,11 @@ class ProfileController extends Controller
                 $org = Organization::find($row['organization_id']);
 
                 return [
-                    'organization_id' => $row['organization_id'],
+                    'organization_id'   => $row['organization_id'],
                     'organization_name' => $org?->name,
-                    'role' => $row['role'],
+                    'organization_slug' => $org?->slug,
+                    'role'              => $row['role'],
+                    'is_active'         => true,
                 ];
             })
             ->values()
@@ -78,11 +93,41 @@ class ProfileController extends Controller
         ];
     }
 
-    public function update(UpdateProfileRequest $request): UserResource
+    public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $request->user()->update($request->validated());
+        $user = $request->user();
+        $data = $request->validated();
 
-        return new UserResource($request->user()->fresh());
+        // Update users-table fields.
+        $userFields = array_intersect_key($data, array_flip(['first_name', 'last_name', 'profile_image_url']));
+        if (! empty($userFields)) {
+            $user->update($userFields);
+        }
+
+        // Update user_profiles (phone_number, address).
+        if (array_key_exists('phone_number', $data) || array_key_exists('address', $data)) {
+            $user->loadMissing('profile');
+            $profile = $user->profile ?? $user->profile()->create([]);
+
+            if (array_key_exists('phone_number', $data)) {
+                $profile->phone_number = $data['phone_number'];
+            }
+
+            if (! empty($data['address'])) {
+                $profile->loadMissing('address');
+                if ($profile->address_id && $profile->address) {
+                    $this->addressService->updateFromRequest($profile->address, $data['address']);
+                } else {
+                    $address = $this->addressService->createFromRequest($data['address']);
+                    $profile->address_id = $address->id;
+                }
+            }
+
+            $profile->save();
+            $user->load('profile.address');
+        }
+
+        return $this->show($request);
     }
 
     public function changePassword(Request $request): JsonResponse

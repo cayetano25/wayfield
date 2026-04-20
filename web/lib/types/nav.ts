@@ -8,6 +8,14 @@ export interface NavUser {
   profile_image_url: string | null
 }
 
+export interface OrgMembership {
+  organization_id:   number
+  organization_name: string
+  organization_slug: string
+  role:              'owner' | 'admin' | 'staff' | 'billing_admin'
+  is_active:         boolean
+}
+
 export interface NavContextData {
   isAuthenticated:    boolean
   isLoading:          boolean
@@ -15,6 +23,7 @@ export interface NavContextData {
   showMyWorkshops:    boolean
   showMySessions:     boolean
   showMyOrganization: boolean
+  memberships:        OrgMembership[]
 }
 
 export const NAV_CONTEXT_DEFAULT: NavContextData = {
@@ -24,4 +33,5 @@ export const NAV_CONTEXT_DEFAULT: NavContextData = {
   showMyWorkshops:    false,
   showMySessions:     false,
   showMyOrganization: false,
+  memberships:        [],
 }

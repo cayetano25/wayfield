@@ -45,3 +45,21 @@ export async function declineLeaderInvitation(token: string): Promise<boolean> {
     return false
   }
 }
+
+export async function acceptOrgInvitation(token: string): Promise<boolean> {
+  try {
+    await apiPost<void>(`/org-invitations/${token}/accept`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function declineOrgInvitation(token: string): Promise<boolean> {
+  try {
+    await apiPost<void>(`/org-invitations/${token}/decline`)
+    return true
+  } catch {
+    return false
+  }
+}

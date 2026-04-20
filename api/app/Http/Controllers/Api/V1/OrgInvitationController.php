@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Notifications\Actions\CreateOrgInvitationNotificationAction;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use App\Mail\InviteOrgMemberMail;
@@ -71,8 +72,11 @@ class OrgInvitationController extends Controller
      *   - No duplicate pending invitations to the same email.
      *   - No invitation to an existing active member.
      */
-    public function store(Request $request, Organization $organization): JsonResponse
-    {
+    public function store(
+        Request $request,
+        Organization $organization,
+        CreateOrgInvitationNotificationAction $notifyAction,
+    ): JsonResponse {
         $this->authorize('manageMembers', $organization);
 
         $validated = $request->validate([
@@ -84,13 +88,13 @@ class OrgInvitationController extends Controller
 
         $inviterRole = $organization->memberRole($request->user());
 
-        // Allowed: owner, admin
-        // Denied: staff, billing_admin
-        // Additionally: only owner can invite another admin (per ROLE_MODEL.md).
-        if ($validated['role'] === 'admin' && $inviterRole !== 'owner') {
+        // Allowed: owner → admin, staff, billing_admin
+        //          admin → staff only (ROLE_MODEL.md §2.3)
+        // Denied:  staff, billing_admin → blocked at manageMembers policy
+        if ($inviterRole === 'admin' && $validated['role'] !== 'staff') {
             return response()->json([
                 'error' => 'insufficient_role',
-                'message' => 'Only an owner can invite someone as an administrator.',
+                'message' => 'Administrators may only invite staff members.',
             ], 403);
         }
 
@@ -125,8 +129,13 @@ class OrgInvitationController extends Controller
 
         $rawToken = Str::random(64);
 
+        // Resolve an existing account for this email so the invitation
+        // can be linked immediately (user_id stays null for unknown emails).
+        $invitee = \App\Models\User::where('email', $email)->first();
+
         $invitation = OrganizationInvitation::create([
             'organization_id' => $organization->id,
+            'user_id' => $invitee?->id,
             'invited_email' => $email,
             'invited_first_name' => $validated['invited_first_name'] ?? null,
             'invited_last_name' => $validated['invited_last_name'] ?? null,
@@ -140,6 +149,10 @@ class OrgInvitationController extends Controller
         Mail::to($email)->queue(
             new InviteOrgMemberMail($invitation, $rawToken)
         );
+
+        // In-app notification for invitees who already have a Wayfield account.
+        // Skipped when user_id is null (email-only path for new users).
+        $notifyAction->execute($invitation->load('organization'), $rawToken);
 
         AuditLogService::record([
             'organization_id' => $organization->id,
@@ -188,8 +201,18 @@ class OrgInvitationController extends Controller
             ], 422);
         }
 
+        // Allowed: owner, admin — but admin cannot rescind admin-role invitations.
+        $rescinder = $organization->memberRole($request->user());
+        if ($rescinder === 'admin' && $invitation->role === 'admin') {
+            return response()->json([
+                'error' => 'insufficient_role',
+                'message' => 'Only an owner can cancel an administrator invitation.',
+            ], 403);
+        }
+
         $invitation->update([
             'status' => 'removed',
+            'responded_at' => now(),
         ]);
 
         AuditLogService::record([
@@ -202,6 +225,59 @@ class OrgInvitationController extends Controller
         ]);
 
         return response()->json(['message' => 'Invitation cancelled.']);
+    }
+
+    /**
+     * POST /api/v1/organizations/{organization}/invitations/{invitation}/resend
+     *
+     * Resend a pending (or expired) invitation with a freshly-generated token.
+     * Allowed: owner, admin
+     */
+    public function resend(
+        Request $request,
+        Organization $organization,
+        OrganizationInvitation $invitation,
+    ): JsonResponse {
+        $this->authorize('manageMembers', $organization);
+
+        abort_if($invitation->organization_id !== $organization->id, 404);
+
+        if (in_array($invitation->status, ['accepted', 'declined', 'removed'], true)) {
+            return response()->json([
+                'message' => 'Only pending or expired invitations can be resent.',
+                'status' => $invitation->status,
+            ], 422);
+        }
+
+        $rawToken = Str::random(64);
+
+        $invitation->update([
+            'invitation_token_hash' => hash('sha256', $rawToken),
+            'expires_at' => now()->addDays(7),
+            'status' => 'pending',
+        ]);
+
+        Mail::to($invitation->invited_email)->queue(
+            new InviteOrgMemberMail($invitation->fresh()->load('organization', 'createdBy'), $rawToken)
+        );
+
+        AuditLogService::record([
+            'organization_id' => $organization->id,
+            'actor_user_id' => $request->user()->id,
+            'entity_type' => 'organization_invitation',
+            'entity_id' => $invitation->id,
+            'action' => 'org_invitation.resent',
+            'metadata' => [
+                'invited_email' => $invitation->invited_email,
+                'role' => $invitation->role,
+            ],
+        ]);
+
+        return response()->json([
+            'message' => 'Invitation resent.',
+            'invitation_id' => $invitation->id,
+            'expires_at' => $invitation->fresh()->expires_at->toIso8601String(),
+        ]);
     }
 
     // ─── Resolution endpoints (public-but-tokenized) ───────────────────────────
@@ -227,6 +303,7 @@ class OrgInvitationController extends Controller
             'invitation_id' => $invitation->id,
             'status' => $invitation->status,
             'is_expired' => $invitation->isExpired(),
+            'expires_at' => $invitation->expires_at?->toIso8601String(),
             'invited_email' => $invitation->invited_email,
             'invited_first_name' => $invitation->invited_first_name,
             'invited_last_name' => $invitation->invited_last_name,
@@ -277,6 +354,19 @@ class OrgInvitationController extends Controller
         $invitation->load('organization');
         $org = $invitation->organization;
 
+        // Guard: user is already an active member of this org.
+        $alreadyMember = OrganizationUser::where('organization_id', $invitation->organization_id)
+            ->where('user_id', $request->user()->id)
+            ->where('is_active', true)
+            ->exists();
+
+        if ($alreadyMember) {
+            return response()->json([
+                'error'   => 'already_a_member',
+                'message' => 'You are already a member of this organization.',
+            ], 422);
+        }
+
         // Create org membership (idempotent via firstOrCreate).
         OrganizationUser::firstOrCreate(
             [
@@ -292,6 +382,7 @@ class OrgInvitationController extends Controller
         $invitation->update([
             'status' => 'accepted',
             'responded_at' => now(),
+            'user_id' => $request->user()->id,
         ]);
 
         AuditLogService::record([
@@ -380,9 +471,6 @@ class OrgInvitationController extends Controller
      */
     private function resolveByToken(string $rawToken): ?OrganizationInvitation
     {
-        $hash = hash('sha256', $rawToken);
-
-        return OrganizationInvitation::all()
-            ->first(fn (OrganizationInvitation $inv) => hash_equals($inv->invitation_token_hash, $hash));
+        return OrganizationInvitation::where('invitation_token_hash', hash('sha256', $rawToken))->first();
     }
 }

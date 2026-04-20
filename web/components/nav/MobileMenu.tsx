@@ -126,6 +126,6 @@ function buildLinks(nav: NavContextData): Array<{ href: string; label: string }>
   ]
   if (nav.showMyWorkshops)    links.push({ href: '/my-workshops',    label: 'My Workshops' })
   if (nav.showMySessions)     links.push({ href: '/leader/dashboard', label: 'My Sessions' })
-  if (nav.showMyOrganization) links.push({ href: '/admin/dashboard',  label: 'My Organization' })
+  if (nav.showMyOrganization) links.push({ href: '/my-organizations', label: 'My Organizations' })
   return links
 }

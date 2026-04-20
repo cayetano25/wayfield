@@ -2,31 +2,31 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Check, X, Mail, UserPlus, Clock, CheckCircle } from 'lucide-react';
+import { Mail, UserPlus, Clock, CheckCircle } from 'lucide-react';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from '@/lib/api/client';
 import { checkEmailExists } from '@/lib/api/invitations';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 
-// --- Types --------------------------------------------------------------------
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface OrgMemberUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_image_url: string | null;
+}
 
 interface OrgMember {
   id: number;
-  user: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  user: OrgMemberUser;
   role: 'owner' | 'admin' | 'staff' | 'billing_admin';
   is_active: boolean;
-  created_at: string;
+  joined_at: string;
 }
 
 interface PendingInvitation {
@@ -35,66 +35,110 @@ interface PendingInvitation {
   invited_first_name: string | null;
   invited_last_name: string | null;
   role: 'admin' | 'staff' | 'billing_admin';
-  role_display: string;
-  created_at: string;
+  status: string;
   expires_at: string;
+  created_at: string;
 }
 
-type RoleOption = 'owner' | 'admin' | 'staff' | 'billing_admin';
-type InviteRole = 'admin' | 'staff' | 'billing_admin';
+interface MembersResponse {
+  members: OrgMember[];
+  pending_invitations: PendingInvitation[];
+}
 
-const ROLE_OPTIONS: { value: RoleOption; label: string }[] = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'staff', label: 'Staff' },
-  { value: 'billing_admin', label: 'Billing Admin' },
-];
+type InviteRole = 'admin' | 'staff' | 'billing_admin';
+type ChangeableRole = 'admin' | 'staff' | 'billing_admin';
 
 const INVITE_ROLE_OPTIONS: { value: InviteRole; label: string; description: string }[] = [
-  { value: 'staff',         label: 'Staff',          description: 'Day-to-day workshop management' },
-  { value: 'admin',         label: 'Administrator',  description: 'Full operational access' },
-  { value: 'billing_admin', label: 'Billing Only',   description: 'Billing and invoices only' },
+  { value: 'admin',         label: 'Admin',          description: 'Full workshop management and member access' },
+  { value: 'staff',         label: 'Staff',          description: 'Workshop and session access, roster and attendance' },
+  { value: 'billing_admin', label: 'Billing Admin',  description: 'Billing and subscription management only' },
 ];
 
-// --- Helpers ------------------------------------------------------------------
+const CHANGE_ROLE_OPTIONS: { value: ChangeableRole; label: string; description: string }[] = [
+  { value: 'admin',         label: 'Admin',          description: 'Full workshop management and member access' },
+  { value: 'staff',         label: 'Staff',          description: 'Workshop and session access, roster and attendance' },
+  { value: 'billing_admin', label: 'Billing Admin',  description: 'Billing and subscription management only' },
+];
 
-function MemberAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
-  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+  if (years > 0) return `${years} year${years > 1 ? 's' : ''} ago`;
+  if (months > 0) return `${months} month${months > 1 ? 's' : ''} ago`;
+  if (days > 1) return `${days} days ago`;
+  if (days === 1) return '1 day ago';
+  return 'Today';
+}
+
+function daysUntilExpiry(iso: string): number {
+  const diff = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+// ─── Role badge ───────────────────────────────────────────────────────────────
+
+const ROLE_BADGE_CLASSES: Record<string, string> = {
+  owner:         'bg-dark text-white',
+  admin:         'bg-teal-100 text-teal-700',
+  staff:         'bg-sky-100 text-sky-600',
+  billing_admin: 'bg-orange-100 text-orange-700',
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner', admin: 'Admin', staff: 'Staff', billing_admin: 'Billing Admin',
+};
+
+function RoleBadge({ role }: { role: string }) {
   return (
-    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE_CLASSES[role] ?? 'bg-surface text-medium-gray'}`}>
+      {ROLE_LABELS[role] ?? role}
+    </span>
+  );
+}
+
+function PendingBadge() {
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+      Pending
+    </span>
+  );
+}
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
+function MemberAvatar({ user }: { user: OrgMemberUser }) {
+  const initials = `${user.first_name[0] ?? ''}${user.last_name[0] ?? ''}`.toUpperCase();
+  if (user.profile_image_url) {
+    return (
+      <img
+        src={user.profile_image_url}
+        alt={`${user.first_name} ${user.last_name}`}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0 select-none">
       {initials}
     </div>
   );
 }
 
-function InviteAvatar({ name, email }: { name: string | null; email: string }) {
-  const char = name ? name[0].toUpperCase() : email[0].toUpperCase();
+function InvitationAvatar() {
   return (
-    <div className="w-7 h-7 rounded-full bg-surface flex items-center justify-center text-medium-gray text-xs font-semibold shrink-0">
-      {char}
+    <div className="w-8 h-8 rounded-full bg-surface border border-border-gray flex items-center justify-center shrink-0">
+      <Mail className="w-3.5 h-3.5 text-medium-gray" />
     </div>
   );
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
+// ─── Invite Member Modal ──────────────────────────────────────────────────────
 
-function daysAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'Today';
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
-}
-
-// --- Invite Member Slide-Over -------------------------------------------------
-
-interface InviteSlideOverProps {
+interface InviteMemberModalProps {
   open: boolean;
   onClose: () => void;
   orgId: number;
@@ -102,82 +146,63 @@ interface InviteSlideOverProps {
   onSuccess: (email: string) => void;
 }
 
-function InviteSlideOver({ open, onClose, orgId, isOwner, onSuccess }: InviteSlideOverProps) {
+function InviteMemberModal({ open, onClose, orgId, isOwner, onSuccess }: InviteMemberModalProps) {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<InviteRole>('staff');
-  const [emailHint, setEmailHint] = useState<{ type: 'exists' | 'new' } | null>(null);
+  const [emailHint, setEmailHint] = useState<'exists' | 'new' | null>(null);
   const [emailChecking, setEmailChecking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; general?: string }>({});
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  // Reset state when opened
   useEffect(() => {
     if (open) {
-      setEmail('');
-      setFirstName('');
-      setLastName('');
-      setRole('staff');
-      setEmailHint(null);
-      setErrors({});
+      setEmail(''); setFirstName(''); setLastName('');
+      setRole('staff'); setEmailHint(null); setErrors({});
     }
   }, [open]);
 
   async function handleEmailBlur() {
     const trimmed = email.trim();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setEmailHint(null);
-      return;
-    }
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailHint(null); return; }
     setEmailChecking(true);
     try {
       const exists = await checkEmailExists(trimmed);
-      setEmailHint({ type: exists ? 'exists' : 'new' });
-    } catch {
-      setEmailHint(null);
-    } finally {
-      setEmailChecking(false);
-    }
+      setEmailHint(exists ? 'exists' : 'new');
+    } catch { setEmailHint(null); }
+    finally { setEmailChecking(false); }
   }
 
   async function handleSubmit() {
     setErrors({});
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setErrors({ email: 'Email is required.' });
-      return;
-    }
+    if (!trimmedEmail) { setErrors({ email: 'Email is required.' }); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setErrors({ email: 'Please enter a valid email address.' });
-      return;
+      setErrors({ email: 'Please enter a valid email address.' }); return;
     }
     setIsSaving(true);
     try {
       await apiPost(`/organizations/${orgId}/invitations`, {
-        email: trimmedEmail,
+        invited_email: trimmedEmail,
         role,
-        first_name: firstName.trim() || null,
-        last_name: lastName.trim() || null,
+        invited_first_name: firstName.trim() || null,
+        invited_last_name: lastName.trim() || null,
       });
       onSuccess(trimmedEmail);
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.errors) {
-        setErrors({
-          email: err.errors.email?.[0],
-          general: err.errors.general?.[0],
-        });
+      if (err instanceof ApiError) {
+        const serverMsg = err.errors?.invited_email?.[0] ?? err.errors?.email?.[0];
+        if (err.status === 422 && (err.message.includes('pending') || err.message.includes('already'))) {
+          setErrors({ general: err.message });
+        } else if (serverMsg) {
+          setErrors({ email: serverMsg });
+        } else {
+          setErrors({ general: err.message });
+        }
       } else {
-        setErrors({ general: err instanceof ApiError ? err.message : 'Failed to send invitation.' });
+        setErrors({ general: 'Failed to send invitation.' });
       }
     } finally {
       setIsSaving(false);
@@ -186,150 +211,16 @@ function InviteSlideOver({ open, onClose, orgId, isOwner, onSuccess }: InviteSli
 
   const availableRoles = isOwner
     ? INVITE_ROLE_OPTIONS
-    : INVITE_ROLE_OPTIONS.filter((r) => r.value !== 'admin');
-
-  if (!open) return null;
+    : INVITE_ROLE_OPTIONS.filter((r) => r.value === 'staff');
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-dark/30 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div
-        className="fixed right-0 top-0 h-full z-50 w-full max-w-[400px] bg-white shadow-[−8px_0_40px_rgba(46,46,46,0.12)] flex flex-col"
-        style={{ animation: 'slideInRight 220ms ease-out' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border-gray shrink-0">
-          <h2 className="font-heading text-[18px] font-bold text-dark">Invite a Team Member</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-light-gray hover:text-dark hover:bg-surface transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-          {errors.general && (
-            <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">
-              {errors.general}
-            </div>
-          )}
-
-          {/* Email */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailHint(null); setErrors((p) => ({ ...p, email: undefined })); }}
-              onBlur={handleEmailBlur}
-              placeholder="colleague@example.com"
-              autoComplete="off"
-              className={`
-                w-full h-10 px-3 text-sm text-dark bg-white border rounded-lg outline-none transition-colors
-                placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary
-                ${errors.email ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-border-gray'}
-              `}
-            />
-            {errors.email && (
-              <p className="text-xs text-danger">{errors.email}</p>
-            )}
-            {!errors.email && emailChecking && (
-              <p className="text-xs text-medium-gray">Checking...</p>
-            )}
-            {!errors.email && !emailChecking && emailHint?.type === 'exists' && (
-              <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                Has a Wayfield account — they&apos;ll receive an email invitation
-              </p>
-            )}
-            {!errors.email && !emailChecking && emailHint?.type === 'new' && (
-              <p className="flex items-center gap-1.5 text-xs text-medium-gray">
-                <Mail className="w-3.5 h-3.5 shrink-0" />
-                No Wayfield account yet — they&apos;ll be prompted to create one
-              </p>
-            )}
-          </div>
-
-          {/* Name row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
-                First Name
-              </label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Optional"
-                className="w-full h-10 px-3 text-sm text-dark bg-white border border-border-gray rounded-lg outline-none transition-colors placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
-                Last Name
-              </label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Optional"
-                className="w-full h-10 px-3 text-sm text-dark bg-white border border-border-gray rounded-lg outline-none transition-colors placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-            </div>
-          </div>
-
-          {/* Role segmented chooser */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
-              Role
-            </label>
-            <div className="flex flex-col gap-2">
-              {availableRoles.map((opt) => {
-                const isSelected = role === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setRole(opt.value)}
-                    className={`
-                      w-full text-left px-4 py-3 rounded-lg border transition-all
-                      ${isSelected
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                        : 'border-border-gray bg-white hover:border-medium-gray hover:bg-surface'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : 'text-dark'}`}>
-                        {opt.label}
-                      </span>
-                      {isSelected && (
-                        <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
-                          <Check className="w-2.5 h-2.5 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-medium-gray mt-0.5">{opt.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-border-gray shrink-0 flex justify-end gap-3">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Invite Team Member"
+      size="md"
+      footer={
+        <>
           <Button variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
@@ -337,57 +228,363 @@ function InviteSlideOver({ open, onClose, orgId, isOwner, onSuccess }: InviteSli
             <UserPlus className="w-4 h-4" />
             Send Invitation
           </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {errors.general && (
+          <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">
+            {errors.general}
+          </div>
+        )}
+
+        {/* Email */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
+            Email Address <span className="text-danger">*</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setEmailHint(null); setErrors((p) => ({ ...p, email: undefined })); }}
+            onBlur={handleEmailBlur}
+            placeholder="colleague@example.com"
+            autoComplete="off"
+            className={`
+              w-full h-10 px-3 text-sm text-dark bg-white border rounded-lg outline-none transition-colors
+              placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary
+              ${errors.email ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-border-gray'}
+            `}
+          />
+          {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
+          {!errors.email && emailChecking && <p className="text-xs text-medium-gray">Checking…</p>}
+          {!errors.email && !emailChecking && emailHint === 'exists' && (
+            <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+              <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+              Has a Wayfield account — they&apos;ll receive an email invitation
+            </p>
+          )}
+          {!errors.email && !emailChecking && emailHint === 'new' && (
+            <p className="flex items-center gap-1.5 text-xs text-medium-gray">
+              <Mail className="w-3.5 h-3.5 shrink-0" />
+              No Wayfield account yet — they&apos;ll be prompted to create one
+            </p>
+          )}
+        </div>
+
+        {/* Name row */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Optional"
+              className="w-full h-10 px-3 text-sm text-dark bg-white border border-border-gray rounded-lg outline-none transition-colors placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Optional"
+              className="w-full h-10 px-3 text-sm text-dark bg-white border border-border-gray rounded-lg outline-none transition-colors placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-medium-gray -mt-3">
+          Optional — helps personalize the invitation email
+        </p>
+
+        {/* Role selector */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-dark tracking-[0.06em] uppercase">
+            Role <span className="text-danger">*</span>
+          </label>
+          <div className="flex flex-col gap-2">
+            {availableRoles.map((opt) => {
+              const isSelected = role === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRole(opt.value)}
+                  className={`
+                    w-full text-left px-4 py-3 rounded-lg border transition-all
+                    ${isSelected
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border-gray bg-white hover:border-medium-gray hover:bg-surface'
+                    }
+                  `}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : 'text-dark'}`}>
+                      {opt.label}
+                    </span>
+                    {isSelected && (
+                      <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <svg className="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 10 10">
+                          <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-medium-gray mt-0.5">{opt.description}</p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </>
+    </Modal>
   );
 }
 
-// --- Pending Invitations Section ----------------------------------------------
+// ─── Change Role Modal ────────────────────────────────────────────────────────
 
-interface PendingInvitationsSectionProps {
+interface ChangeRoleModalProps {
+  open: boolean;
+  onClose: () => void;
+  member: OrgMember | null;
   orgId: number;
-  refreshKey: number;
-  canManage: boolean;
+  onSuccess: (memberId: number, newRole: ChangeableRole) => void;
 }
 
-function PendingInvitationsSection({ orgId, refreshKey, canManage }: PendingInvitationsSectionProps) {
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-  const [cancelConfirmId, setCancelConfirmId] = useState<number | null>(null);
-  const [cancellingId, setCancellingId] = useState<number | null>(null);
-  const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
-
-  const load = useCallback(() => {
-    apiGet<PendingInvitation[]>(`/organizations/${orgId}/invitations?status=pending`)
-      .then((res) => setInvitations(res ?? []))
-      .catch(() => {
-        // silently skip — non-critical
-      });
-  }, [orgId]);
+function ChangeRoleModal({ open, onClose, member, orgId, onSuccess }: ChangeRoleModalProps) {
+  const [role, setRole] = useState<ChangeableRole>('staff');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+    if (open && member && member.role !== 'owner') {
+      setRole(member.role as ChangeableRole);
+      setError(null);
+    }
+  }, [open, member]);
 
-  async function handleCancel(id: number) {
-    setCancellingId(id);
+  async function handleSave() {
+    if (!member) return;
+    setIsSaving(true); setError(null);
     try {
-      await apiDelete(`/organizations/${orgId}/invitations/${id}`);
-      // Fade-out by marking as removing, then remove after animation
-      setRemovingIds((prev) => new Set(prev).add(id));
-      setTimeout(() => {
-        setInvitations((prev) => prev.filter((inv) => inv.id !== id));
-        setRemovingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-      }, 300);
-      toast.success('Invitation cancelled');
+      await apiPatch(`/organizations/${orgId}/members/${member.id}`, { role });
+      onSuccess(member.id, role);
+      onClose();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to cancel invitation');
+      setError(err instanceof ApiError ? err.message : 'Failed to update role.');
     } finally {
-      setCancellingId(null);
-      setCancelConfirmId(null);
+      setIsSaving(false);
     }
   }
 
+  const fullName = member ? `${member.user.first_name} ${member.user.last_name}` : '';
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Change Role for ${fullName}`}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleSave} loading={isSaving}>Save Changes</Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error && (
+          <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">{error}</div>
+        )}
+        {member && (
+          <p className="text-sm text-medium-gray">
+            Currently: <span className="font-medium text-dark">{ROLE_LABELS[member.role] ?? member.role}</span>
+          </p>
+        )}
+        <div className="flex flex-col gap-2">
+          {CHANGE_ROLE_OPTIONS.map((opt) => {
+            const isSelected = role === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRole(opt.value)}
+                className={`
+                  w-full text-left px-4 py-3 rounded-lg border transition-all
+                  ${isSelected
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    : 'border-border-gray bg-white hover:border-medium-gray hover:bg-surface'
+                  }
+                `}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : 'text-dark'}`}>
+                    {opt.label}
+                  </span>
+                  {isSelected && (
+                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 10 10">
+                        <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-medium-gray mt-0.5">{opt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Remove Member Dialog ─────────────────────────────────────────────────────
+
+interface RemoveMemberDialogProps {
+  open: boolean;
+  onClose: () => void;
+  member: OrgMember | null;
+  orgName: string;
+  orgId: number;
+  onSuccess: (memberId: number) => void;
+}
+
+function RemoveMemberDialog({ open, onClose, member, orgName, orgId, onSuccess }: RemoveMemberDialogProps) {
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { if (open) setError(null); }, [open]);
+
+  async function handleConfirm() {
+    if (!member) return;
+    setIsRemoving(true); setError(null);
+    try {
+      await apiDelete(`/organizations/${orgId}/members/${member.id}`);
+      onSuccess(member.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to remove member.');
+      setIsRemoving(false);
+    }
+  }
+
+  const fullName = member ? `${member.user.first_name} ${member.user.last_name}` : '';
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Remove ${fullName} from ${orgName}?`}
+      size="sm"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={isRemoving}
+            className="text-primary border-primary hover:bg-primary/5"
+          >
+            Keep Member
+          </Button>
+          <Button variant="danger" onClick={handleConfirm} loading={isRemoving}>
+            Remove Member
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {error && (
+          <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">{error}</div>
+        )}
+        <p className="text-sm text-medium-gray">
+          They will immediately lose access to all workshops and admin tools.
+          Their Wayfield account is not affected.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Rescind Dialog ───────────────────────────────────────────────────────────
+
+interface RescindDialogProps {
+  open: boolean;
+  onClose: () => void;
+  invitation: PendingInvitation | null;
+  orgId: number;
+  onSuccess: (invitationId: number) => void;
+}
+
+function RescindDialog({ open, onClose, invitation, orgId, onSuccess }: RescindDialogProps) {
+  const [isRescinding, setIsRescinding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { if (open) setError(null); }, [open]);
+
+  async function handleConfirm() {
+    if (!invitation) return;
+    setIsRescinding(true); setError(null);
+    try {
+      await apiDelete(`/organizations/${orgId}/invitations/${invitation.id}`);
+      onSuccess(invitation.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to rescind invitation.');
+      setIsRescinding(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Rescind invitation to ${invitation?.invited_email ?? ''}?`}
+      size="sm"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={isRescinding}
+            className="text-primary border-primary hover:bg-primary/5"
+          >
+            Keep Invitation
+          </Button>
+          <Button variant="danger" onClick={handleConfirm} loading={isRescinding}>
+            Rescind
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {error && (
+          <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">{error}</div>
+        )}
+        <p className="text-sm text-medium-gray">
+          They will no longer be able to accept this invitation.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Pending Invitations Section ──────────────────────────────────────────────
+
+interface PendingInvitationsSectionProps {
+  invitations: PendingInvitation[];
+  removingIds: Set<number>;
+  resendingIds: Set<number>;
+  canManage: boolean;
+  onResend: (inv: PendingInvitation) => void;
+  onRescind: (inv: PendingInvitation) => void;
+}
+
+function PendingInvitationsSection({
+  invitations, removingIds, resendingIds, canManage, onResend, onRescind,
+}: PendingInvitationsSectionProps) {
   if (invitations.length === 0) return null;
 
   return (
@@ -403,6 +600,8 @@ function PendingInvitationsSection({ orgId, refreshKey, canManage }: PendingInvi
                 ? `${inv.invited_first_name ?? ''} ${inv.invited_last_name ?? ''}`.trim()
                 : null;
             const isRemoving = removingIds.has(inv.id);
+            const isResending = resendingIds.has(inv.id);
+            const daysLeft = daysUntilExpiry(inv.expires_at);
 
             return (
               <div
@@ -410,59 +609,46 @@ function PendingInvitationsSection({ orgId, refreshKey, canManage }: PendingInvi
                 className="px-5 py-3.5 flex items-center gap-3 transition-opacity duration-300"
                 style={{ opacity: isRemoving ? 0 : 1 }}
               >
-                <InviteAvatar name={displayName} email={inv.invited_email} />
+                <InvitationAvatar />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-dark truncate">
-                      {displayName ?? inv.invited_email}
+                      {inv.invited_email}
                     </span>
-                    {displayName && (
-                      <span className="text-xs text-medium-gray truncate hidden sm:block">
-                        {inv.invited_email}
-                      </span>
-                    )}
-                    <Badge variant={`role-${inv.role}` as `role-${typeof inv.role}`}>
-                      {inv.role_display}
-                    </Badge>
+                    <RoleBadge role={inv.role} />
+                    <PendingBadge />
                   </div>
+                  {displayName && (
+                    <p className="text-xs text-medium-gray mt-0.5">{displayName}</p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Clock className="w-3 h-3 text-light-gray shrink-0" />
-                    <span className="text-xs text-light-gray">Sent {daysAgo(inv.created_at)}</span>
+                    <span className="text-xs text-light-gray">
+                      Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
 
                 {canManage && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    {cancelConfirmId === inv.id ? (
-                      <>
-                        <span className="text-xs text-medium-gray hidden sm:block">Are you sure?</span>
-                        <button
-                          type="button"
-                          onClick={() => handleCancel(inv.id)}
-                          disabled={cancellingId === inv.id}
-                          className="text-xs font-semibold text-danger hover:text-[#d4432f] disabled:opacity-50 transition-colors"
-                        >
-                          {cancellingId === inv.id ? 'Cancelling...' : 'Yes, cancel'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCancelConfirmId(null)}
-                          disabled={cancellingId === inv.id}
-                          className="text-xs text-medium-gray hover:text-dark disabled:opacity-50 transition-colors"
-                        >
-                          Keep
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setCancelConfirmId(inv.id)}
-                        className="text-xs font-medium text-danger hover:text-[#d4432f] transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onResend(inv)}
+                      disabled={isResending || isRemoving}
+                      className="text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                    >
+                      {isResending ? 'Resending…' : 'Resend'}
+                    </button>
+                    <span className="text-border-gray text-xs">·</span>
+                    <button
+                      type="button"
+                      onClick={() => onRescind(inv)}
+                      disabled={isRemoving}
+                      className="text-xs font-medium text-danger hover:text-danger/80 disabled:opacity-50 transition-colors"
+                    >
+                      Rescind
+                    </button>
                   </div>
                 )}
               </div>
@@ -474,7 +660,112 @@ function PendingInvitationsSection({ orgId, refreshKey, canManage }: PendingInvi
   );
 }
 
-// --- Main page ----------------------------------------------------------------
+// ─── Member Table Row ─────────────────────────────────────────────────────────
+
+type RowAction = 'change_role_and_remove' | 'remove_only' | 'none';
+
+function resolveRowAction(
+  viewerRole: string,
+  viewerUserId: number,
+  member: OrgMember,
+): RowAction {
+  if (viewerRole === 'staff' || viewerRole === 'billing_admin') return 'none';
+  if (viewerRole === 'owner' && member.user.id === viewerUserId) return 'none';
+  if (viewerRole === 'owner' && member.role === 'owner') return 'none';
+  if (viewerRole === 'owner') return 'change_role_and_remove';
+  // admin
+  if (member.role === 'staff' && member.user.id !== viewerUserId) return 'remove_only';
+  return 'none';
+}
+
+interface MemberRowProps {
+  member: OrgMember;
+  viewerRole: string;
+  viewerUserId: number;
+  isRemoved: boolean;
+  onChangeRole: () => void;
+  onRemove: () => void;
+}
+
+function MemberRow({ member, viewerRole, viewerUserId, isRemoved, onChangeRole, onRemove }: MemberRowProps) {
+  const action = resolveRowAction(viewerRole, viewerUserId, member);
+  const fullName = `${member.user.first_name} ${member.user.last_name}`;
+
+  return (
+    <tr className="hover:bg-gray-50 transition-colors duration-150">
+      {/* Avatar + name */}
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <MemberAvatar user={member.user} />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-dark truncate">{fullName}</p>
+            <p className="text-xs text-medium-gray truncate">{member.user.email}</p>
+          </div>
+        </div>
+      </td>
+
+      {/* Role */}
+      <td className="px-6 py-4 hidden md:table-cell">
+        <RoleBadge role={member.role} />
+      </td>
+
+      {/* Status */}
+      <td className="px-6 py-4 hidden lg:table-cell">
+        {isRemoved ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface text-light-gray">
+            Removed
+          </span>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${member.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+            <span className={`text-sm ${member.is_active ? 'text-emerald-700' : 'text-medium-gray'}`}>
+              {member.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+        )}
+      </td>
+
+      {/* Joined */}
+      <td className="px-6 py-4 hidden lg:table-cell">
+        <span className="text-sm text-medium-gray">{timeAgo(member.joined_at)}</span>
+      </td>
+
+      {/* Actions */}
+      <td className="px-6 py-4 text-right whitespace-nowrap">
+        {!isRemoved && action === 'change_role_and_remove' && (
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onChangeRole}
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Change Role
+            </button>
+            <span className="text-border-gray text-xs">·</span>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="text-xs font-medium text-danger hover:text-danger/80 transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+        {!isRemoved && action === 'remove_only' && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs font-medium text-danger hover:text-danger/80 transition-colors"
+          >
+            Remove
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function OrganizationMembersPage() {
   useSetPage('Members', [
@@ -482,159 +773,122 @@ export default function OrganizationMembersPage() {
     { label: 'Members' },
   ]);
 
-  const { currentOrg } = useUser();
-  const role = currentOrg?.role ?? '';
-  const isOwner = role === 'owner';
-  const canManage = role === 'owner' || role === 'admin';
+  const { user, currentOrg } = useUser();
+  const viewerRole = currentOrg?.role ?? '';
+  const viewerUserId = user?.id ?? 0;
+  const isOwner = viewerRole === 'owner';
+  const canManage = viewerRole === 'owner' || viewerRole === 'admin';
 
   const [members, setMembers] = useState<OrgMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Invite slide-over
+  // Optimistic removal tracking
+  const [removedMemberIds, setRemovedMemberIds] = useState<Set<number>>(new Set());
+  const [removingInvitationIds, setRemovingInvitationIds] = useState<Set<number>>(new Set());
+  const [resendingInvitationIds, setResendingInvitationIds] = useState<Set<number>>(new Set());
+
+  // Modal state
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [pendingRefreshKey, setPendingRefreshKey] = useState(0);
+  const [changeRoleMember, setChangeRoleMember] = useState<OrgMember | null>(null);
+  const [removeMember, setRemoveMember] = useState<OrgMember | null>(null);
+  const [rescindInvitation, setRescindInvitation] = useState<PendingInvitation | null>(null);
 
-  // Add member modal state (existing)
-  const [addOpen, setAddOpen] = useState(false);
-  const [addEmail, setAddEmail] = useState('');
-  const [addRole, setAddRole] = useState<RoleOption>('staff');
-  const [addErrors, setAddErrors] = useState<{ email?: string; role?: string; general?: string }>({});
-  const [addSaving, setAddSaving] = useState(false);
-
-  // Edit row state
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editRole, setEditRole] = useState<RoleOption>('staff');
-  const [editActive, setEditActive] = useState(true);
-  const [editSaving, setEditSaving] = useState(false);
-
-  function loadMembers() {
+  const load = useCallback(async () => {
     if (!currentOrg) return;
-    setLoading(true);
-    apiGet<OrgMember[]>(`/organizations/${currentOrg.id}/users`)
-      .then((res) => setMembers(res ?? []))
-      .catch(() => toast.error('Failed to load members'))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    loadMembers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const res = await apiGet<MembersResponse>(`/organizations/${currentOrg.id}/members`);
+      setMembers(res.members ?? []);
+      setPendingInvitations(res.pending_invitations ?? []);
+    } catch {
+      toast.error('Failed to load members');
+    } finally {
+      setLoading(false);
+    }
   }, [currentOrg]);
 
-  function openEdit(member: OrgMember) {
-    setEditingId(member.id);
-    setEditRole(member.role);
-    setEditActive(member.is_active);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-  }
-
-  async function saveEdit(memberId: number) {
-    if (!currentOrg) return;
-    setEditSaving(true);
-    try {
-      await apiPatch(`/organizations/${currentOrg.id}/users/${memberId}`, {
-        role: editRole,
-        is_active: editActive,
-      });
-      toast.success('Member updated');
-      setEditingId(null);
-      loadMembers();
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Failed to update member';
-      toast.error(msg);
-    } finally {
-      setEditSaving(false);
-    }
-  }
-
-  function openAdd() {
-    setAddEmail('');
-    setAddRole('staff');
-    setAddErrors({});
-    setAddOpen(true);
-  }
-
-  async function submitAdd() {
-    if (!currentOrg) return;
-    setAddErrors({});
-    if (!addEmail.trim()) {
-      setAddErrors({ email: 'Email is required' });
-      return;
-    }
-    setAddSaving(true);
-    try {
-      await apiPost(`/organizations/${currentOrg.id}/users`, {
-        email: addEmail.trim(),
-        role: addRole,
-      });
-      toast.success('Member added');
-      setAddOpen(false);
-      loadMembers();
-    } catch (err) {
-      if (err instanceof ApiError && err.errors) {
-        setAddErrors({
-          email: err.errors.email?.[0],
-          role: err.errors.role?.[0],
-          general: err.errors.general?.[0],
-        });
-      } else {
-        setAddErrors({ general: err instanceof ApiError ? err.message : 'Failed to add member' });
-      }
-    } finally {
-      setAddSaving(false);
-    }
-  }
-
-  function canEditMember(member: OrgMember): boolean {
-    if (!canManage) return false;
-    if (member.role === 'owner' && !isOwner) return false;
-    return true;
-  }
-
-  function availableRolesForEdit(member: OrgMember): typeof ROLE_OPTIONS {
-    if (isOwner) return ROLE_OPTIONS;
-    return ROLE_OPTIONS.filter((r) => r.value !== 'owner');
-  }
+  useEffect(() => { load(); }, [load]);
 
   function handleInviteSuccess(email: string) {
     toast.success(`Invitation sent to ${email}`);
-    setPendingRefreshKey((k) => k + 1);
+    load();
+  }
+
+  function handleChangeRoleSuccess(memberId: number, newRole: ChangeableRole) {
+    setMembers((prev) =>
+      prev.map((m) => m.id === memberId ? { ...m, role: newRole } : m)
+    );
+    const member = members.find((m) => m.id === memberId);
+    if (member) {
+      toast.success(`${member.user.first_name} ${member.user.last_name}'s role has been updated to ${ROLE_LABELS[newRole]}.`);
+    }
+  }
+
+  function handleRemoveMemberSuccess(memberId: number) {
+    const member = members.find((m) => m.id === memberId);
+    setRemovedMemberIds((prev) => new Set(prev).add(memberId));
+    if (member && currentOrg) {
+      toast.success(`${member.user.first_name} ${member.user.last_name} has been removed from ${currentOrg.name}.`);
+    }
+    // Remove the row after a short delay so the Removed badge is briefly visible
+    setTimeout(() => {
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      setRemovedMemberIds((prev) => { const next = new Set(prev); next.delete(memberId); return next; });
+    }, 1500);
+  }
+
+  async function handleResend(inv: PendingInvitation) {
+    if (!currentOrg) return;
+    setResendingInvitationIds((prev) => new Set(prev).add(inv.id));
+    try {
+      await apiPost(`/organizations/${currentOrg.id}/invitations/${inv.id}/resend`);
+      toast.success(`Invitation resent to ${inv.invited_email}`);
+      // Refresh to pick up updated expires_at
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to resend invitation');
+    } finally {
+      setResendingInvitationIds((prev) => { const next = new Set(prev); next.delete(inv.id); return next; });
+    }
+  }
+
+  function handleRescindSuccess(invitationId: number) {
+    setRemovingInvitationIds((prev) => new Set(prev).add(invitationId));
+    toast.success('Invitation rescinded');
+    setTimeout(() => {
+      setPendingInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      setRemovingInvitationIds((prev) => { const next = new Set(prev); next.delete(invitationId); return next; });
+    }, 300);
   }
 
   return (
     <div className="max-w-[1280px] mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <p className="text-sm text-medium-gray">
-            Manage who has access to this organization and their roles.
-          </p>
-        </div>
+        <p className="text-sm text-medium-gray">
+          Manage who has access to this organization and their roles.
+        </p>
         {canManage && (
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={openAdd}>
-              <Plus className="w-4 h-4" />
-              Add member
-            </Button>
-            <Button onClick={() => setInviteOpen(true)}>
-              <UserPlus className="w-4 h-4" />
-              Invite Member
-            </Button>
-          </div>
+          <Button onClick={() => setInviteOpen(true)}>
+            <UserPlus className="w-4 h-4" />
+            Invite Member
+          </Button>
         )}
       </div>
 
-      {/* Pending invitations — only shown when there are open invites */}
+      {/* Pending invitations */}
       {currentOrg && (
         <PendingInvitationsSection
-          orgId={currentOrg.id}
-          refreshKey={pendingRefreshKey}
+          invitations={pendingInvitations}
+          removingIds={removingInvitationIds}
+          resendingIds={resendingInvitationIds}
           canManage={canManage}
+          onResend={handleResend}
+          onRescind={(inv) => setRescindInvitation(inv)}
         />
       )}
 
+      {/* Active members table */}
       <Card>
         {loading ? (
           <div className="px-6 py-8 space-y-4">
@@ -648,194 +902,86 @@ export default function OrganizationMembersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px]">
-            <thead>
-              <tr className="border-b border-border-gray">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray">
-                  Member
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden md:table-cell">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">
-                  Joined
-                </th>
-                {canManage && (
+            <table className="w-full min-w-[560px]">
+              <thead>
+                <tr className="border-b border-border-gray">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray">
+                    Member
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden md:table-cell">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-light-gray hidden lg:table-cell">
+                    Joined
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-widest text-light-gray">
                     Actions
                   </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-gray">
-              {members.map((member) => {
-                const isEditing = editingId === member.id;
-                return (
-                  <tr key={member.id} className="hover:bg-surface/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <MemberAvatar
-                          firstName={member.user.first_name}
-                          lastName={member.user.last_name}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-dark truncate">
-                            {member.user.first_name} {member.user.last_name}
-                          </p>
-                          <p className="text-xs text-medium-gray truncate">{member.user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      {isEditing ? (
-                        <Select
-                          value={editRole}
-                          onChange={(e) => setEditRole(e.target.value as RoleOption)}
-                          className="w-36"
-                        >
-                          {availableRolesForEdit(member).map((r) => (
-                            <option key={r.value} value={r.value}>{r.label}</option>
-                          ))}
-                        </Select>
-                      ) : (
-                        <Badge variant={`role-${member.role}` as `role-${typeof member.role}`} />
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      {isEditing ? (
-                        <button
-                          type="button"
-                          onClick={() => setEditActive((v) => !v)}
-                          className={`
-                            inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer
-                            transition-colors
-                            ${editActive
-                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                              : 'bg-surface text-medium-gray hover:bg-border-gray'
-                            }
-                          `}
-                        >
-                          {editActive ? 'Active' : 'Inactive'}
-                        </button>
-                      ) : (
-                        <Badge
-                          variant={member.is_active ? 'status-active' : 'status-archived'}
-                        >
-                          {member.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      <span className="text-sm text-medium-gray">{formatDate(member.created_at)}</span>
-                    </td>
-
-                    {canManage && (
-                      <td className="px-6 py-4 text-right">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              loading={editSaving}
-                              onClick={() => saveEdit(member.id)}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              Save
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={cancelEdit}
-                              disabled={editSaving}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        ) : canEditMember(member) ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEdit(member)}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            Edit
-                          </Button>
-                        ) : null}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-gray">
+                {members.map((member) => (
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    viewerRole={viewerRole}
+                    viewerUserId={viewerUserId}
+                    isRemoved={removedMemberIds.has(member.id)}
+                    onChangeRole={() => setChangeRoleMember(member)}
+                    onRemove={() => setRemoveMember(member)}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </Card>
 
-      {/* Add Member Modal (existing) */}
-      <Modal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        title="Add member"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setAddOpen(false)} disabled={addSaving}>
-              Cancel
-            </Button>
-            <Button onClick={submitAdd} loading={addSaving}>
-              Add member
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {addErrors.general && (
-            <div className="px-4 py-3 rounded-lg bg-danger/8 border border-danger/20 text-sm text-danger">
-              {addErrors.general}
-            </div>
-          )}
-          <Input
-            label="Email address"
-            type="email"
-            value={addEmail}
-            onChange={(e) => {
-              setAddEmail(e.target.value);
-              setAddErrors((prev) => ({ ...prev, email: undefined }));
-            }}
-            error={addErrors.email}
-            placeholder="member@example.com"
-            autoFocus
-          />
-          <Select
-            label="Role"
-            value={addRole}
-            onChange={(e) => {
-              setAddRole(e.target.value as RoleOption);
-              setAddErrors((prev) => ({ ...prev, role: undefined }));
-            }}
-            error={addErrors.role}
-          >
-            {(isOwner ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => r.value !== 'owner')).map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
-        </div>
-      </Modal>
-
-      {/* Invite Member Slide-Over */}
+      {/* Invite Member Modal */}
       {currentOrg && (
-        <InviteSlideOver
+        <InviteMemberModal
           open={inviteOpen}
           onClose={() => setInviteOpen(false)}
           orgId={currentOrg.id}
           isOwner={isOwner}
           onSuccess={handleInviteSuccess}
+        />
+      )}
+
+      {/* Change Role Modal */}
+      {currentOrg && (
+        <ChangeRoleModal
+          open={!!changeRoleMember}
+          onClose={() => setChangeRoleMember(null)}
+          member={changeRoleMember}
+          orgId={currentOrg.id}
+          onSuccess={handleChangeRoleSuccess}
+        />
+      )}
+
+      {/* Remove Member Dialog */}
+      {currentOrg && (
+        <RemoveMemberDialog
+          open={!!removeMember}
+          onClose={() => setRemoveMember(null)}
+          member={removeMember}
+          orgName={currentOrg.name}
+          orgId={currentOrg.id}
+          onSuccess={handleRemoveMemberSuccess}
+        />
+      )}
+
+      {/* Rescind Invitation Dialog */}
+      {currentOrg && (
+        <RescindDialog
+          open={!!rescindInvitation}
+          onClose={() => setRescindInvitation(null)}
+          invitation={rescindInvitation}
+          orgId={currentOrg.id}
+          onSuccess={handleRescindSuccess}
         />
       )}
     </div>

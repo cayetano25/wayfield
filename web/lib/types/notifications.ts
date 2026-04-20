@@ -1,4 +1,5 @@
-export interface NotificationActionData {
+export interface LeaderInvitationActionData {
+  type?:             'leader_invitation'
   invitation_id:     number
   accept_token:      string
   decline_token:     string
@@ -8,6 +9,15 @@ export interface NotificationActionData {
   accept_url:        string
   decline_url:       string
 }
+
+export interface OrgInvitationActionData {
+  type:              'org_invitation'
+  invitation_token:  string
+  organization_name: string
+  role:              string
+}
+
+export type NotificationActionData = LeaderInvitationActionData | OrgInvitationActionData
 
 export interface AppNotification {
   recipient_id:          number
