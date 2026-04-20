@@ -1,3 +1,17 @@
+export interface LeaderProfile {
+  id: number;
+  bio: string | null;
+  website_url: string | null;
+  phone_number: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state_or_region: string | null;
+  postal_code: string | null;
+  country: string | null;
+  profile_image_url: string | null;
+}
+
 export interface AdminUser {
   id: number;
   first_name: string;
@@ -5,9 +19,11 @@ export interface AdminUser {
   email: string;
   email_verified: boolean;
   is_active: boolean;
+  phone_number: string | null;
   profile_image_url: string | null;
   onboarding_intent: 'organizer' | 'participant' | null;
   onboarding_completed_at: string | null;
+  leader_profile: LeaderProfile | null;
   organizations: Array<{
     id: number;
     name: string;

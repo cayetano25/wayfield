@@ -41,6 +41,7 @@ class UserNotificationController extends Controller
                 'created_at'          => $r->created_at->toIso8601String(),
                 'is_invitation'       => $n->isInvitation(),
                 'is_system'           => $n->isSystem(),
+                'invitation_action'   => $this->resolveInvitationAction($n),
                 'sender'              => $this->resolveSender($n),
                 'session_context'     => $session ? [
                     'session_id'       => $session->id,
@@ -68,6 +69,41 @@ class UserNotificationController extends Controller
                 'has_leader_unread' => $meta['has_leader_unread'],
             ],
         ]);
+    }
+
+    /**
+     * Returns structured Accept/Decline action data when the notification is an
+     * org invitation. Returns null for all other notification types.
+     *
+     * The token is the raw invitation token stored in action_data at creation time.
+     * The web layer renders Accept/Decline buttons only when this key is non-null.
+     */
+    private function resolveInvitationAction(\App\Models\Notification $n): ?array
+    {
+        if (! $n->isInvitation()) {
+            return null;
+        }
+
+        $data = $n->action_data;
+
+        if (! is_array($data) || ($data['type'] ?? '') !== 'org_invitation') {
+            return null;
+        }
+
+        $token = $data['invitation_token'] ?? null;
+
+        if (! $token) {
+            return null;
+        }
+
+        return [
+            'type'              => 'org_invitation',
+            'token'             => $token,
+            'organization_name' => $data['organization_name'] ?? null,
+            'role'              => $data['role'] ?? null,
+            'accept_url'        => "/invitations/org/{$token}/accept",
+            'decline_url'       => "/invitations/org/{$token}/decline",
+        ];
     }
 
     /**

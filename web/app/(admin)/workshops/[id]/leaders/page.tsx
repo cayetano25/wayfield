@@ -3,21 +3,18 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal,
+  Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal, User as UserIcon,
 } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
-import { apiGet, apiPost, apiDelete, apiPatch, ApiError } from '@/lib/api/client';
-import { ImageUploader } from '@/components/ui/ImageUploader';
+import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { AddressForm } from '@/components/ui/AddressForm';
-import type { AddressFormData } from '@/lib/types/address';
 
 /* --- Types ----------------------------------------------------------- */
 
@@ -55,7 +52,6 @@ interface Leader {
   phone_number: string | null;
   city: string | null;
   state_or_region: string | null;
-  address?: AddressFormData | null;
   invited_email?: string | null; // present for pending invitations without a linked leader
   invitation_status: InvitationStatus;
   invitation_id: number | null;
@@ -357,32 +353,9 @@ function LeaderSlideOver({
 }) {
   const [assigning, setAssigning] = useState(false);
   const [resending, setResending] = useState(false);
-  const [leaderAddress, setLeaderAddress] = useState<AddressFormData | null>(
-    leader?.address ?? null,
-  );
-  const [savingAddress, setSavingAddress] = useState(false);
   // Local session-removal confirmation within the slide-over
   const [removeSessionTarget, setRemoveSessionTarget] = useState<AssignedSession | null>(null);
   const [removingSession, setRemovingSession] = useState(false);
-
-  // Sync address when leader changes
-  useEffect(() => {
-    setLeaderAddress(leader?.address ?? null);
-  }, [leader?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleSaveAddress() {
-    if (!leader) return;
-    setSavingAddress(true);
-    try {
-      await apiPatch(`/leaders/${leader.id}`, { address: leaderAddress });
-      toast.success('Address saved');
-      onUpdated();
-    } catch {
-      toast.error('Failed to save address');
-    } finally {
-      setSavingAddress(false);
-    }
-  }
 
   async function handleAssign(sessionId: number) {
     if (!leader) return;
@@ -480,25 +453,7 @@ function LeaderSlideOver({
             {/* Profile header */}
             <div className="px-6 py-5 border-b border-border-gray">
               <div className="flex items-start gap-4">
-                {!isPendingOnly && (
-                  <div className="shrink-0">
-                    <ImageUploader
-                      currentUrl={leader.profile_image_url}
-                      entityType="leader"
-                      entityId={leader.id}
-                      fieldName="profile_image_url"
-                      shape="circle"
-                      width={80}
-                      height={80}
-                      onUploadComplete={() => onUpdated()}
-                      onRemove={async () => {
-                        await apiPatch(`/leaders/${leader.id}`, { profile_image_url: null });
-                        onUpdated();
-                      }}
-                    />
-                  </div>
-                )}
-                {isPendingOnly && <LeaderAvatar leader={leader} size="lg" />}
+                <LeaderAvatar leader={leader} size="lg" />
                 <div className="flex-1 min-w-0 pt-1">
                   <h3 className="font-heading font-semibold text-dark text-base leading-snug">
                     {fullName || leader.invited_email || 'Invited Leader'}
@@ -584,25 +539,14 @@ function LeaderSlideOver({
               </div>
             )}
 
-            {/* Address (private) — only for accepted leaders with a real record */}
+            {/* Read-only notice — leader profile details are leader-owned */}
             {!isPendingOnly && (
               <div className="px-6 py-5 border-b border-border-gray">
-                <p className="text-xs font-medium text-medium-gray uppercase tracking-wide mb-3">Address</p>
-                <AddressForm
-                  value={leaderAddress}
-                  onChange={setLeaderAddress}
-                  defaultCountryCode={leaderAddress?.country_code ?? 'US'}
-                  privacyNote="Leader address is private and never shown to participants."
-                />
-                <div className="mt-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={savingAddress}
-                    onClick={handleSaveAddress}
-                  >
-                    Save Address
-                  </Button>
+                <div className="flex items-start gap-2.5 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <UserIcon className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                  <p className="text-sm text-gray-500">
+                    Leader profile details are managed by the leader from their own account settings.
+                  </p>
                 </div>
               </div>
             )}

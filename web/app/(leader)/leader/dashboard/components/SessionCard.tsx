@@ -371,12 +371,13 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
   const loc = session.location ?? null;
   const workshopDefaultLocationId = session.workshop_default_location_id ?? null;
 
+  const hasName = !!(loc && loc.name && loc.name.trim());
   const hasAddressText = !!(loc && (
     (loc.address_line_1 && loc.address_line_1.trim()) ||
     (loc.city && loc.city.trim())
   ));
   const hasCoords = !!(loc && loc.latitude != null && loc.longitude != null);
-  const locationPresent = loc != null && (hasAddressText || hasCoords);
+  const locationPresent = loc != null && (hasName || hasAddressText || hasCoords);
   const isSameAsVenue = locationPresent && workshopDefaultLocationId != null && loc!.id === workshopDefaultLocationId;
 
   let mapUrl: string | null = null;

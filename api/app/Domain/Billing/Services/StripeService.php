@@ -205,7 +205,7 @@ class StripeService
                 'status'                   => $wayieldStatus,
                 'current_period_start'     => $periodStart,
                 'current_period_end'       => $periodEnd,
-                'starts_at'                => $periodStart,
+                'starts_at'                => $periodStart ?? now(),
                 'ends_at'                  => $periodEnd,
                 'cancel_at_period_end'     => (bool) $stripeSub->cancel_at_period_end,
                 'canceled_at'              => $canceledAt,

@@ -5,7 +5,7 @@ test.use({ storageState: 'e2e/.auth/owner.json' })
 test.describe('Organizer Dashboard', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/admin/dashboard')
+    await page.goto('/dashboard')
   })
 
   test('dashboard loads without errors or blank page', async ({ page }) => {
@@ -57,7 +57,7 @@ test.describe('Organizer Dashboard', () => {
     await page.click('[data-testid="user-menu-trigger"]')
     await page.click('[role="menuitem"]:has-text("Sign Out")')
     await expect(page).toHaveURL(/\/login/)
-    await page.goto('/admin/dashboard')
+    await page.goto('/dashboard')
     await expect(page).toHaveURL(/\/login/)
   })
 

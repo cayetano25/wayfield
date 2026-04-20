@@ -105,7 +105,7 @@ class BillingController extends Controller
             ->latest('current_period_end')
             ->first();
 
-        if (!$subscription?->stripe_subscription_id) {
+        if (!$subscription) {
             return response()->json(['error' => 'No active subscription to cancel.'], 422);
         }
 

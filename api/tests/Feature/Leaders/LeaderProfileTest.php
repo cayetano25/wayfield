@@ -45,8 +45,8 @@ test('leader can update their own profile', function () {
             'website_url' => 'https://example.com',
         ])
         ->assertStatus(200)
-        ->assertJsonPath('bio', 'Updated bio.')
-        ->assertJsonPath('city', 'Portland');
+        ->assertJsonPath('leader_profile.bio', 'Updated bio.')
+        ->assertJsonPath('leader_profile.city', 'Portland');
 
     $this->assertDatabaseHas('leaders', [
         'id' => $leader->id,
@@ -192,11 +192,98 @@ test('organizer with their own leader profile can only update their own, not ano
     $this->actingAs($admin, 'sanctum')
         ->patchJson('/api/v1/leader/profile', ['bio' => 'Updated.'])
         ->assertStatus(200)
-        ->assertJsonPath('id', $adminLeader->id); // only their own leader returned
+        ->assertJsonPath('leader_profile.id', $adminLeader->id); // only their own leader returned
 
     // Other leader's bio must be completely unchanged
     $otherLeader->refresh();
     expect($otherLeader->bio)->toBe('Other bio.');
+});
+
+// ─── Organizer cannot update leader profile fields ────────────────────────────
+
+test('organizer with no linked leader record cannot submit bio to profile endpoint', function () {
+    // The self-profile endpoint resolves by user_id. An organizer who has never
+    // accepted a leader invitation has no linked leader record — they get 404.
+    // This is the primary protection: the endpoint is structurally inaccessible.
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
+    OrganizationUser::factory()->create([
+        'organization_id' => $org->id,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
+    ]);
+
+    $targetLeader = Leader::factory()->create(['bio' => 'Original bio.']);
+    OrganizationLeader::factory()->create([
+        'organization_id' => $org->id,
+        'leader_id' => $targetLeader->id,
+    ]);
+
+    $this->actingAs($admin, 'sanctum')
+        ->patchJson('/api/v1/leader/profile', ['bio' => 'Injected bio.', 'phone_number' => '555-0000'])
+        ->assertStatus(404);
+
+    $targetLeader->refresh();
+    expect($targetLeader->bio)->toBe('Original bio.');
+});
+
+test('organizer with a linked leader record can only update their own, not another leader bio', function () {
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
+    OrganizationUser::factory()->create([
+        'organization_id' => $org->id,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
+    ]);
+
+    $adminLeader = Leader::factory()->withUser($admin->id)->create(['bio' => 'Admin bio.']);
+    $otherLeader = Leader::factory()->create(['bio' => 'Other bio.', 'phone_number' => '555-1111']);
+
+    // Submitting bio/phone goes to the admin's own leader record, not the other leader
+    $this->actingAs($admin, 'sanctum')
+        ->patchJson('/api/v1/leader/profile', ['bio' => 'Updated admin bio.', 'phone_number' => '555-9999'])
+        ->assertStatus(200)
+        ->assertJsonPath('leader_profile.id', $adminLeader->id);
+
+    $otherLeader->refresh();
+    expect($otherLeader->bio)->toBe('Other bio.');
+    expect($otherLeader->phone_number)->toBe('555-1111');
+});
+
+test('session assignment PATCH does not accept leader profile fields', function () {
+    // PATCH /api/v1/sessions/{session}/leaders/{leader} only accepts assignment_status.
+    // Sending profile fields in the body must not alter the leader record.
+    $org = Organization::factory()->create();
+    $admin = User::factory()->create();
+    OrganizationUser::factory()->create([
+        'organization_id' => $org->id,
+        'user_id' => $admin->id,
+        'role' => 'admin',
+        'is_active' => true,
+    ]);
+
+    $workshop = Workshop::factory()->forOrganization($org->id)->create();
+    $session = Session::factory()->forWorkshop($workshop->id)->create();
+    $leader = Leader::factory()->create(['bio' => 'Original bio.', 'phone_number' => '555-2222']);
+    SessionLeader::factory()->create([
+        'session_id' => $session->id,
+        'leader_id' => $leader->id,
+        'assignment_status' => 'pending',
+    ]);
+
+    $this->actingAs($admin, 'sanctum')
+        ->patchJson("/api/v1/sessions/{$session->id}/leaders/{$leader->id}", [
+            'assignment_status' => 'accepted',
+            'bio' => 'Injected bio.',
+            'phone_number' => '555-0000',
+        ])
+        ->assertStatus(200);
+
+    $leader->refresh();
+    expect($leader->bio)->toBe('Original bio.');
+    expect($leader->phone_number)->toBe('555-2222');
 });
 
 // ─── Organizer leaders list ───────────────────────────────────────────────────

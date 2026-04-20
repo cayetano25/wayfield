@@ -1,13 +1,31 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Bell, Building2, Check, CheckCheck } from 'lucide-react';
+import { AlertCircle, Bell, Building2, Check, CheckCheck, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { apiGet, apiPatch } from '@/lib/api/client';
+import { acceptOrgInvitation, declineOrgInvitation } from '@/lib/api/notifications';
 import { Button } from '@/components/ui/Button';
-import type { ParticipantNotification, NotificationSender } from '@/lib/types/notifications';
+import type { ParticipantNotification, NotificationSender, OrgInvitationAction } from '@/lib/types/notifications';
+
+interface RawApiNotification {
+  recipient_id:      number;
+  notification_id:   number;
+  title:             string;
+  message:           string;
+  notification_type: 'informational' | 'urgent' | 'reminder';
+  sender_scope?:     'organizer' | 'leader';
+  sender:            NotificationSender;
+  session_context:   ParticipantNotification['session_context'];
+  workshop_context:  ParticipantNotification['workshop_context'];
+  is_read:           boolean;
+  read_at:           string | null;
+  created_at:        string;
+  is_invitation:     boolean;
+  invitation_action: OrgInvitationAction | null;
+}
 
 interface ApiResponse {
-  data: ParticipantNotification[];
+  data: RawApiNotification[];
   meta: { total: number; current_page: number; last_page: number };
 }
 
@@ -42,6 +60,13 @@ function formatFullDateTime(isoString: string | null | undefined): string {
     hour: 'numeric', minute: '2-digit',
   }).format(d);
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  owner:         'Owner',
+  admin:         'Administrator',
+  staff:         'Staff Member',
+  billing_admin: 'Billing Administrator',
+};
 
 /* --- Type badge config ------------------------------------------------- */
 
@@ -101,19 +126,49 @@ function NotificationCard({
   notification: ParticipantNotification;
   onMarkRead: (id: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [hovered,  setHovered]  = useState(false);
+  const [expanded,     setExpanded]     = useState(false);
+  const [hovered,      setHovered]      = useState(false);
+  const [actionState,  setActionState]  = useState<
+    'idle' | 'accepting' | 'declining' | 'accepted' | 'declined' | 'error'
+  >('idle');
 
-  const isLeader  = n.sender_scope === 'leader';
-  const isUnread  = !n.read_at;
-  const isUrgent  = n.notification_type === 'urgent';
-  const accent    = isLeader ? '#E67E22' : '#0FA3B1';
-  const dot       = isLeader ? '#E67E22' : '#0FA3B1';
-  const badge     = TYPE_BADGE[n.notification_type] ?? TYPE_BADGE.informational;
+  const isLeader     = n.sender_scope === 'leader';
+  const isUnread     = !n.read_at;
+  const isUrgent     = n.notification_type === 'urgent';
+  const isInvitation = n.is_invitation && !!n.invitation_action;
+  const accent       = isLeader ? '#E67E22' : '#0FA3B1';
+  const dot          = isLeader ? '#E67E22' : '#0FA3B1';
+  const badge        = TYPE_BADGE[n.notification_type] ?? TYPE_BADGE.informational;
 
   function handleClick() {
     setExpanded(prev => !prev);
-    if (isUnread) onMarkRead(n.id);
+    if (isUnread && !isInvitation) onMarkRead(n.id);
+  }
+
+  async function handleAccept() {
+    if (!n.invitation_action) return;
+    setActionState('accepting');
+    const ok = await acceptOrgInvitation(n.invitation_action.token);
+    if (ok) {
+      setActionState('accepted');
+      onMarkRead(n.id);
+    } else {
+      setActionState('error');
+      setTimeout(() => setActionState('idle'), 3000);
+    }
+  }
+
+  async function handleDecline() {
+    if (!n.invitation_action) return;
+    setActionState('declining');
+    const ok = await declineOrgInvitation(n.invitation_action.token);
+    if (ok) {
+      setActionState('declined');
+      onMarkRead(n.id);
+    } else {
+      setActionState('error');
+      setTimeout(() => setActionState('idle'), 3000);
+    }
   }
 
   const senderLine = n.sender.type === 'leader'
@@ -396,6 +451,92 @@ function NotificationCard({
           }}>
             {n.message}
           </p>
+
+          {/* ── INVITATION ACTIONS ──────────────────────────────────────── */}
+          {isInvitation && n.invitation_action && (
+            <div style={{ marginTop: 16 }}>
+              {n.invitation_action.organization_name && (
+                <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 12, color: '#6B7280' }}>
+                    Organisation: <strong style={{ color: '#2E2E2E' }}>{n.invitation_action.organization_name}</strong>
+                  </span>
+                  {n.invitation_action.role && (
+                    <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 12, color: '#6B7280' }}>
+                      Role: <strong style={{ color: '#2E2E2E' }}>{ROLE_LABELS[n.invitation_action.role] ?? n.invitation_action.role}</strong>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {actionState === 'idle' && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAccept(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 16px', borderRadius: 6, border: 'none',
+                      backgroundColor: '#0FA3B1', color: '#ffffff',
+                      fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', transition: 'background-color 150ms',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0891B2'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0FA3B1'; }}
+                  >
+                    <CheckCircle size={14} />
+                    Accept
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDecline(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 16px', borderRadius: 6, border: '1px solid #E5E7EB',
+                      backgroundColor: '#ffffff', color: '#374151',
+                      fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13, fontWeight: 500,
+                      cursor: 'pointer', transition: 'background-color 150ms',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#ffffff'; }}
+                  >
+                    <XCircle size={14} />
+                    Decline
+                  </button>
+                </div>
+              )}
+
+              {(actionState === 'accepting' || actionState === 'declining') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280' }}>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13 }}>
+                    {actionState === 'accepting' ? 'Accepting…' : 'Declining…'}
+                  </span>
+                </div>
+              )}
+
+              {actionState === 'accepted' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10B981' }}>
+                  <CheckCircle size={14} />
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13, fontWeight: 600 }}>
+                    Joined {n.invitation_action.organization_name ?? 'the organisation'}!
+                  </span>
+                </div>
+              )}
+
+              {actionState === 'declined' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#9CA3AF' }}>
+                  <XCircle size={14} />
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13 }}>
+                    Invitation declined.
+                  </span>
+                </div>
+              )}
+
+              {actionState === 'error' && (
+                <p style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13, color: '#EF4444', margin: 0 }}>
+                  Something went wrong. Try using the email link instead.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -476,7 +617,25 @@ export default function NotificationsPage() {
     setLoading(true);
     setError(false);
     apiGet<ApiResponse>('/me/notifications')
-      .then((res) => setNotifications(res.data ?? []))
+      .then((res) => {
+        const mapped: ParticipantNotification[] = (res.data ?? []).map((r) => ({
+          id:                r.recipient_id,
+          notification_id:   r.notification_id,
+          title:             r.title,
+          message:           r.message,
+          notification_type: r.notification_type,
+          sender_scope:      r.sender_scope ?? 'organizer',
+          sender:            r.sender,
+          session_context:   r.session_context,
+          workshop_context:  r.workshop_context,
+          in_app_status:     r.is_read ? 'read' : 'pending',
+          read_at:           r.read_at,
+          sent_at:           r.created_at,
+          is_invitation:     r.is_invitation ?? false,
+          invitation_action: r.invitation_action ?? null,
+        }));
+        setNotifications(mapped);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
@@ -488,12 +647,13 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   function handleMarkRead(id: number) {
+    if (!id) return;
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === id ? { ...n, read_at: new Date().toISOString(), in_app_status: 'read' as const } : n,
       ),
     );
-    apiPatch(`/me/notifications/${id}/read`, {}).catch(() => fetchNotifications());
+    apiPatch(`/me/notifications/${id}/read`, {}).catch(() => {/* silent — state already updated optimistically */});
   }
 
   async function handleMarkAllRead() {

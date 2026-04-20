@@ -42,7 +42,7 @@ function WhatsAppIcon() {
 export interface ShareWorkshopButtonProps {
   workshopTitle: string;
   /** Absolute URL (preferred) or a /w/{slug} relative path. Resolved to absolute on client. */
-  publicUrl: string;
+  publicUrl: string | undefined | null;
   variant?: 'organizer' | 'participant';
   /** Show "Share" text label. Defaults true for organizer, false for participant. */
   showLabel?: boolean;
@@ -67,18 +67,20 @@ export function ShareWorkshopButton({
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const safeUrl = publicUrl ?? '';
+
   // Resolve relative /w/{slug} paths to absolute after hydration.
   const [absUrl, setAbsUrl] = useState<string>(
-    publicUrl.startsWith('http') ? publicUrl : '',
+    safeUrl.startsWith('http') ? safeUrl : '',
   );
   useEffect(() => {
-    if (!publicUrl.startsWith('http')) {
-      const path = publicUrl.startsWith('/') ? publicUrl : `/${publicUrl}`;
+    if (!safeUrl.startsWith('http')) {
+      const path = safeUrl.startsWith('/') ? safeUrl : `/${safeUrl}`;
       setAbsUrl(`${window.location.origin}${path}`);
     }
-  }, [publicUrl]);
+  }, [safeUrl]);
 
-  const url = absUrl || publicUrl;
+  const url = absUrl || safeUrl;
 
   // Close dropdown on outside click.
   useEffect(() => {
@@ -198,19 +200,21 @@ export function ShareWorkshopButton({
 
           {/* Social share items */}
           {shareItems.map(({ label, href, icon, color }) => (
-            <a
+            <button
               key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-dark hover:bg-surface transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(href, '_blank', 'noopener,noreferrer');
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-dark hover:bg-surface transition-colors text-left"
             >
               <span style={{ color }} className="shrink-0 flex items-center">
                 {icon}
               </span>
               {label}
-            </a>
+            </button>
           ))}
         </div>
       )}

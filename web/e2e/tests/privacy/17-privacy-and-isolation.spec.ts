@@ -59,14 +59,14 @@ test.describe('Privacy and Tenant Isolation', () => {
 
   test('participant cannot access admin dashboard page', async ({ page }) => {
     await page.context().storageState({ path: 'e2e/.auth/participant.json' })
-    await page.goto('/admin/dashboard')
-    await expect(page).not.toHaveURL('/admin/dashboard')
+    await page.goto('/dashboard')
+    await expect(page).not.toHaveURL('/dashboard')
   })
 
   test('leader cannot access admin dashboard page', async ({ page }) => {
     await page.context().storageState({ path: 'e2e/.auth/leader.json' })
-    await page.goto('/admin/dashboard')
-    await expect(page).not.toHaveURL('/admin/dashboard')
+    await page.goto('/dashboard')
+    await expect(page).not.toHaveURL('/dashboard')
   })
 
   test('only confirmed leaders appear on the public workshop page', async () => {

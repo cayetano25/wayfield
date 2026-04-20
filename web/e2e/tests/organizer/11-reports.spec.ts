@@ -37,15 +37,15 @@ test.describe('Reports Page', () => {
   })
 
   test('sidebar reports link navigates here', async ({ page }) => {
-    await page.goto('/admin/dashboard')
+    await page.goto('/dashboard')
     await page.locator('[data-testid="sidebar"]').getByRole('link', { name: /reports/i }).click()
-    await expect(page).toHaveURL(/\/admin\/reports/)
+    await expect(page).toHaveURL(/\/reports/)
   })
 
   test('View Reports button on dashboard navigates here', async ({ page }) => {
-    await page.goto('/admin/dashboard')
+    await page.goto('/dashboard')
     await page.click('button:has-text("View Reports")')
-    await expect(page).toHaveURL(/\/admin\/reports/)
+    await expect(page).toHaveURL(/\/reports/)
   })
 
 })

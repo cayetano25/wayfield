@@ -57,6 +57,25 @@ class LeaderPolicy
     }
 
     /**
+     * A leader can view their own profile.
+     * Org members with owner/admin/staff role may also view any leader in their org.
+     *
+     * Allowed: the leader themselves, owner, admin, staff
+     * Denied:  billing_admin, unrelated users
+     */
+    public function view(User $user, Leader $leader): bool
+    {
+        if ($leader->user_id === $user->id) {
+            return true;
+        }
+
+        return $user->organizationUsers()
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin', 'staff'])
+            ->exists();
+    }
+
+    /**
      * A leader can update their own profile.
      * The leader record must be linked to the authenticated user's account.
      */

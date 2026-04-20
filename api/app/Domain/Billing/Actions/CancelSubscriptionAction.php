@@ -13,11 +13,9 @@ class CancelSubscriptionAction
 
     public function execute(Subscription $subscription, int $actorUserId): void
     {
-        if (!$subscription->stripe_subscription_id) {
-            throw new RuntimeException('Subscription has no Stripe subscription ID.');
+        if ($subscription->stripe_subscription_id) {
+            $this->stripe->cancelSubscription($subscription->stripe_subscription_id);
         }
-
-        $this->stripe->cancelSubscription($subscription->stripe_subscription_id);
 
         $subscription->update([
             'cancel_at_period_end' => true,

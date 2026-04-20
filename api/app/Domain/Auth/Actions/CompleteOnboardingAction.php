@@ -106,7 +106,7 @@ final class CompleteOnboardingAction
         ]);
 
         return [
-            'redirect' => '/admin/dashboard',
+            'redirect' => '/dashboard',
             'message' => 'Your organization has been created!',
             'organization_id' => $org->id,
         ];

@@ -159,7 +159,7 @@ function AlreadyAcceptedState({
         You already have <strong>{roleDisplay}</strong> access to <strong>{orgName}</strong>.
       </p>
       <Link
-        href="/admin/dashboard"
+        href="/dashboard"
         style={{
           display: 'inline-block',
           background: '#0FA3B1',
@@ -607,7 +607,7 @@ function InvitationCard({
       setSuccessData({
         orgName: result.organization?.name ?? inv.organization.name,
         roleDisplay: result.role_display ?? inv.role_display,
-        redirectTo: result.redirect ?? '/admin/dashboard',
+        redirectTo: result.redirect ?? '/dashboard',
       })
     } catch (err) {
       if (err instanceof ApiError) {

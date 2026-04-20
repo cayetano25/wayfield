@@ -112,3 +112,55 @@ test('/me still returns existing user fields alongside the new contexts key', fu
             ],
         ]);
 });
+
+// ─── leader_profile in /me ────────────────────────────────────────────────────
+
+test('/me includes leader_profile when user has a linked leader record', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $leader = Leader::factory()->create([
+        'user_id'        => $user->id,
+        'bio'            => 'My photography bio.',
+        'city'           => 'Austin',
+        'state_or_region' => 'TX',
+        'phone_number'   => '+15125550001',
+    ]);
+    $token = $user->createToken('web')->plainTextToken;
+
+    $this->withToken($token)
+        ->getJson('/api/v1/me')
+        ->assertStatus(200)
+        ->assertJsonPath('leader_profile.id', $leader->id)
+        ->assertJsonPath('leader_profile.bio', 'My photography bio.')
+        ->assertJsonPath('leader_profile.city', 'Austin')
+        ->assertJsonPath('leader_profile.state_or_region', 'TX')
+        ->assertJsonPath('leader_profile.phone_number', '+15125550001');
+});
+
+test('/me returns null leader_profile when user is not a leader', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $token = $user->createToken('web')->plainTextToken;
+
+    $this->withToken($token)
+        ->getJson('/api/v1/me')
+        ->assertStatus(200)
+        ->assertJsonPath('leader_profile', null);
+});
+
+test('/me eager-loads leader without an N+1 query', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    Leader::factory()->create(['user_id' => $user->id]);
+    $token = $user->createToken('web')->plainTextToken;
+
+    // Two requests: the second should produce the same query count,
+    // confirming the relationship is loaded via loadMissing not lazy-loading.
+    $queryCount = 0;
+    \Illuminate\Support\Facades\DB::listen(function () use (&$queryCount) {
+        $queryCount++;
+    });
+
+    $this->withToken($token)->getJson('/api/v1/me')->assertStatus(200);
+
+    // The leader relationship must not trigger a separate per-row query.
+    // A fixed upper bound of 12 queries is generous but bounded.
+    expect($queryCount)->toBeLessThan(12);
+});

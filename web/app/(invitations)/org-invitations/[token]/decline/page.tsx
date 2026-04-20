@@ -60,7 +60,7 @@ function AlreadyAcceptedState({ orgName, roleDisplay }: { orgName: string; roleD
       <p style={{ fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '14px', color: '#6B7280', lineHeight: 1.6, marginBottom: '24px' }}>
         You&apos;re already a <strong>{roleDisplay}</strong> at {orgName}.
       </p>
-      <Link href="/admin/dashboard" style={{ display: 'inline-block', background: '#0FA3B1', color: 'white', padding: '10px 20px', borderRadius: '8px', fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>
+      <Link href="/dashboard" style={{ display: 'inline-block', background: '#0FA3B1', color: 'white', padding: '10px 20px', borderRadius: '8px', fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>
         Go to your dashboard →
       </Link>
     </div>

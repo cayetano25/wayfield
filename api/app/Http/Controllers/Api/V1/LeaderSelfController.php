@@ -38,6 +38,7 @@ class LeaderSelfController extends Controller
      * PATCH /api/v1/leader/profile
      * Update the authenticated user's leader profile.
      * Profile ownership belongs to the leader — not the organizer.
+     * Returns the same leader_profile shape as GET /api/v1/me for seamless client-side state updates.
      */
     public function updateProfile(
         UpdateLeaderProfileRequest $request,
@@ -53,7 +54,21 @@ class LeaderSelfController extends Controller
 
         $leader = $action->execute($leader, $request->user(), $request->validated());
 
-        return response()->json(new LeaderSelfProfileResource($leader));
+        return response()->json([
+            'leader_profile' => [
+                'id'                => $leader->id,
+                'bio'               => $leader->bio,
+                'website_url'       => $leader->website_url,
+                'phone_number'      => $leader->phone_number,
+                'address_line_1'    => $leader->address_line_1,
+                'address_line_2'    => $leader->address_line_2,
+                'city'              => $leader->city,
+                'state_or_region'   => $leader->state_or_region,
+                'postal_code'       => $leader->postal_code,
+                'country'           => $leader->country,
+                'profile_image_url' => $leader->profile_image_url,
+            ],
+        ]);
     }
 
     /**

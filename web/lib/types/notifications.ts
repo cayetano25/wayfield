@@ -76,6 +76,15 @@ export type WorkshopContext = {
   workshop_title: string
 }
 
+export interface OrgInvitationAction {
+  type:              'org_invitation'
+  token:             string
+  organization_name: string | null
+  role:              string | null
+  accept_url:        string
+  decline_url:       string
+}
+
 export interface ParticipantNotification {
   id:                number
   notification_id:   number
@@ -85,8 +94,10 @@ export interface ParticipantNotification {
   sender_scope:      'organizer' | 'leader'
   sender:            NotificationSender
   session_context:   SessionContext
-  workshop_context:  WorkshopContext
+  workshop_context:  WorkshopContext | null
   in_app_status:     'pending' | 'delivered' | 'read'
   read_at:           string | null
   sent_at:           string
+  is_invitation:     boolean
+  invitation_action: OrgInvitationAction | null
 }

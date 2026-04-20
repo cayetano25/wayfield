@@ -408,7 +408,7 @@ class OrgInvitationController extends Controller
             ],
             'role' => $invitation->role,
             'role_display' => $roleDisplay,
-            'redirect' => '/admin/dashboard',
+            'redirect' => '/dashboard',
         ]);
     }
 

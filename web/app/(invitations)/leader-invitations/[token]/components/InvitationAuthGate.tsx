@@ -592,7 +592,7 @@ function EmailMismatch({
               Sign Out
             </button>
             <a
-              href="/admin/dashboard"
+              href="/dashboard"
               style={{ fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '13px', color: '#92400E', textDecoration: 'none' }}
             >
               Go to Dashboard →

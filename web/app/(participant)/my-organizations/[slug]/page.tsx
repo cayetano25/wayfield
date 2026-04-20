@@ -18,7 +18,7 @@ export default function OrgSlugRedirectPage({
     } catch {
       // sessionStorage not available (SSR guard — should never happen in client component)
     }
-    router.replace('/admin/dashboard')
+    router.replace('/dashboard')
   }, [slug, router])
 
   return (

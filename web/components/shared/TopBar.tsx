@@ -23,6 +23,17 @@ interface InAppNotification {
   created_at: string;
 }
 
+interface RawNotificationItem {
+  recipient_id: number;
+  notification_id: number;
+  title: string;
+  message: string;
+  notification_type: 'informational' | 'urgent' | 'reminder';
+  read_at: string | null;
+  created_at: string;
+  workshop_context: { workshop_id: number; workshop_title: string } | null;
+}
+
 /* --- Helpers -------------------------------------------------------------- */
 
 const typeColors: Record<InAppNotification['notification_type'], string> = {
@@ -233,9 +244,19 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
 
   // Fetch on mount
   useEffect(() => {
-    apiGet<{ data?: InAppNotification[] } | InAppNotification[]>('/me/notifications')
+    apiGet<{ data?: RawNotificationItem[] } | RawNotificationItem[]>('/me/notifications')
       .then((res) => {
-        const list = Array.isArray(res) ? res : ((res as { data?: InAppNotification[] }).data ?? []);
+        const raw = Array.isArray(res) ? res : ((res as { data?: RawNotificationItem[] }).data ?? []);
+        const list: InAppNotification[] = raw.map((r) => ({
+          id: r.recipient_id,
+          notification_id: r.notification_id,
+          title: r.title,
+          message: r.message,
+          notification_type: r.notification_type,
+          workshop_id: r.workshop_context?.workshop_id ?? null,
+          read_at: r.read_at,
+          created_at: r.created_at,
+        }));
         setNotifications(list.slice(0, 5));
       })
       .catch(() => {/* silent — non-critical */});
