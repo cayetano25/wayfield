@@ -58,6 +58,51 @@ function DeliveryBadge({ type }: { type: PublicSession['delivery_type'] }) {
   );
 }
 
+function SessionCard({
+  session,
+  timezone,
+  showAddonBadge = false,
+}: {
+  session: PublicSession;
+  timezone: string;
+  showAddonBadge?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <DeliveryBadge type={session.delivery_type} />
+          {showAddonBadge && (
+            <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-600">
+              Add-On
+            </span>
+          )}
+          {session.track_name && (
+            <span className="text-xs text-medium-gray font-medium">{session.track_name}</span>
+          )}
+        </div>
+        <p className="font-semibold text-dark">{session.title}</p>
+        <p className="text-sm text-medium-gray mt-0.5">
+          {formatSessionTime(session.start_at, session.end_at, timezone)}
+        </p>
+        {(session.location_city || session.location_state) && (
+          <p className="text-xs text-medium-gray mt-0.5 flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">location_on</span>
+            {[session.location_city, session.location_state].filter(Boolean).join(', ')}
+          </p>
+        )}
+      </div>
+      {/* Never show meeting_url — show informational text instead */}
+      {isVirtual(session) && (
+        <p className="text-xs text-primary font-semibold shrink-0 flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">videocam</span>
+          Join link provided after registration
+        </p>
+      )}
+    </div>
+  );
+}
+
 function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
   // Sanitize before rendering — double-check no private fields slip through
   const leader = sanitizeLeader(raw);
@@ -320,6 +365,9 @@ export default async function PublicWorkshopPage(
 
   if (!workshop) notFound();
 
+  const standardSessions = workshop.sessions.filter(s => !s.is_addon);
+  const addonSessions = workshop.sessions.filter(s => s.is_addon);
+
   const locationLine = [
     workshop.default_location?.city,
     workshop.default_location?.state_or_region,
@@ -407,41 +455,28 @@ export default async function PublicWorkshopPage(
       {workshop.sessions.length > 0 && (
         <section className="bg-surface py-16">
           <div className="max-w-4xl mx-auto px-6">
-            <h2 className="font-heading text-2xl font-bold text-dark mb-8">Schedule</h2>
-            <div className="space-y-3">
-              {workshop.sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="bg-white rounded-xl border border-border-gray p-5 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <DeliveryBadge type={session.delivery_type} />
-                      {session.track_name && (
-                        <span className="text-xs text-medium-gray font-medium">{session.track_name}</span>
-                      )}
-                    </div>
-                    <p className="font-semibold text-dark">{session.title}</p>
-                    <p className="text-sm text-medium-gray mt-0.5">
-                      {formatSessionTime(session.start_at, session.end_at, workshop.timezone)}
-                    </p>
-                    {(session.location_city || session.location_state) && (
-                      <p className="text-xs text-medium-gray mt-0.5 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">location_on</span>
-                        {[session.location_city, session.location_state].filter(Boolean).join(', ')}
-                      </p>
-                    )}
-                  </div>
-                  {/* Never show meeting_url — show informational text instead */}
-                  {isVirtual(session) && (
-                    <p className="text-xs text-primary font-semibold shrink-0 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">videocam</span>
-                      Join link provided after registration
-                    </p>
-                  )}
+            {standardSessions.length > 0 && (
+              <>
+                <h2 className="font-heading text-2xl font-bold text-dark mb-8">Schedule</h2>
+                <div className="space-y-3">
+                  {standardSessions.map((session) => (
+                    <SessionCard key={session.id} session={session} timezone={workshop.timezone} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
+            {addonSessions.length > 0 && (
+              <section>
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h2 className="font-heading text-2xl font-bold text-dark mb-8">Add-On Sessions</h2>
+                </div>
+                <div className="space-y-3">
+                  {addonSessions.map((session) => (
+                    <SessionCard key={session.id} session={session} timezone={workshop.timezone} showAddonBadge />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         </section>
       )}

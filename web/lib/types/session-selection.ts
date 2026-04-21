@@ -68,6 +68,8 @@ export interface MyScheduleSession {
   day_short: string;
   location_display: string | null;
   leaders: SessionLeaderSummary[];
+  /** Populated once the participant serializer exposes a safe is_addon flag (future API patch). */
+  is_addon?: boolean;
 }
 
 export interface ConflictError {

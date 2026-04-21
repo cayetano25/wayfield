@@ -10,6 +10,7 @@ export interface PublicSession {
   location_city?: string;
   location_state?: string;
   track_name?: string;
+  is_addon?: boolean;
   // meeting_url, meeting_id, meeting_passcode are intentionally absent
 }
 

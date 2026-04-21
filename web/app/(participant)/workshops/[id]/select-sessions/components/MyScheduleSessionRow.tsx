@@ -38,12 +38,29 @@ export function MyScheduleSessionRow({ session, onDeselect }: Props) {
         >
           {session.day_short} · {session.start_display}
         </span>
-        <span
-          className="font-sans font-semibold truncate"
-          style={{ fontSize: 13, color: '#2E2E2E' }}
-        >
-          {session.title}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            className="font-sans font-semibold truncate"
+            style={{ fontSize: 13, color: '#2E2E2E' }}
+          >
+            {session.title}
+          </span>
+          {session.is_addon && (
+            <span
+              className="font-sans font-medium shrink-0"
+              style={{
+                fontSize: 10,
+                color: '#C2410C',
+                backgroundColor: '#FFF7ED',
+                border: '1px solid #FED7AA',
+                borderRadius: 9999,
+                padding: '1px 6px',
+              }}
+            >
+              Add-On
+            </span>
+          )}
+        </div>
         {session.location_display && (
           <span
             className="font-sans truncate"

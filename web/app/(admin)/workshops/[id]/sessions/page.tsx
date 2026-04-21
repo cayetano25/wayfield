@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   Plus, Pencil, Trash2, GripVertical, X, Info,
-  Monitor, MapPin, Layers, Infinity,
+  Monitor, MapPin, Layers, Infinity, AlertTriangle,
 } from 'lucide-react';
 import { SessionLocationPicker, isSessionLocationValid } from '@/components/sessions/SessionLocationPicker';
 import { buildLocationPayload } from '@/lib/api/sessions';
@@ -24,10 +24,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Toggle } from '@/components/ui/Toggle';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 
 /* --- Types ----------------------------------------------------------- */
+
+type SessionType = 'standard' | 'addon' | 'private' | 'vip' | 'makeup_session';
+type PublicationStatus = 'draft' | 'published' | 'archived' | 'cancelled';
+type ParticipantVisibility = 'visible' | 'hidden' | 'invite_only';
+type EnrollmentMode = 'self_select' | 'organizer_assign_only' | 'invite_accept' | 'purchase_required';
 
 interface WorkshopLogistics {
   hotel_name: string | null;
@@ -51,14 +55,25 @@ interface Session {
   id: number;
   track_id: number | null;
   title: string;
+  description: string | null;
   start_at: string;
   end_at: string;
   delivery_type: 'in_person' | 'virtual' | 'hybrid';
   capacity: number | null;
   confirmed_count: number;
   is_published: boolean;
+  publication_status: PublicationStatus;
+  session_type: SessionType;
+  participant_visibility: ParticipantVisibility;
+  enrollment_mode: EnrollmentMode;
   header_image_url: string | null;
   location: SessionLocationResponse | null;
+  notes: string | null;
+  meeting_platform: string | null;
+  meeting_url: string | null;
+  meeting_instructions: string | null;
+  meeting_id: string | null;
+  meeting_passcode: string | null;
 }
 
 interface Location {
@@ -83,7 +98,10 @@ interface SessionForm {
   meeting_id: string;
   meeting_passcode: string;
   notes: string;
-  is_published: boolean;
+  publication_status: PublicationStatus;
+  session_type: SessionType;
+  participant_visibility: ParticipantVisibility;
+  enrollment_mode: EnrollmentMode;
 }
 
 const EMPTY_FORM: SessionForm = {
@@ -101,7 +119,26 @@ const EMPTY_FORM: SessionForm = {
   meeting_id: '',
   meeting_passcode: '',
   notes: '',
-  is_published: false,
+  publication_status: 'draft',
+  session_type: 'standard',
+  participant_visibility: 'visible',
+  enrollment_mode: 'self_select',
+};
+
+/* --- Publication status config --------------------------------------- */
+
+const PUB_STATUS_DOT: Record<PublicationStatus, string> = {
+  draft:     'bg-border-gray',
+  published: 'bg-emerald-500',
+  archived:  'bg-slate-400',
+  cancelled: 'bg-danger',
+};
+
+const PUB_STATUS_LABEL: Record<PublicationStatus, string> = {
+  draft:     'Draft',
+  published: 'Published',
+  archived:  'Archived',
+  cancelled: 'Cancelled',
 };
 
 /* --- Helpers ---------------------------------------------------------- */
@@ -128,6 +165,10 @@ function formatSessionTime(utcStr: string, tz: string): string {
   } catch {
     return '';
   }
+}
+
+function resolvePublicationStatus(session: Session): PublicationStatus {
+  return session.publication_status ?? (session.is_published ? 'published' : 'draft');
 }
 
 /* --- Delivery type card selector -------------------------------------- */
@@ -168,6 +209,82 @@ function DeliveryTypeSelector({
   );
 }
 
+/* --- Publication status card selector --------------------------------- */
+
+const PUB_STATUS_OPTIONS: {
+  value: PublicationStatus;
+  label: string;
+  dot: string;
+  desc: string;
+}[] = [
+  { value: 'draft',     label: 'Draft',     dot: 'bg-border-gray',  desc: 'Not visible to participants' },
+  { value: 'published', label: 'Published', dot: 'bg-emerald-500',  desc: 'Visible to eligible participants' },
+  { value: 'archived',  label: 'Archived',  dot: 'bg-slate-400',    desc: 'Read-only, closed' },
+  { value: 'cancelled', label: 'Cancelled', dot: 'bg-danger',       desc: 'Cancelled' },
+];
+
+function PublicationStatusSelector({
+  value,
+  onChange,
+}: {
+  value: PublicationStatus;
+  onChange: (v: PublicationStatus) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {PUB_STATUS_OPTIONS.map(({ value: v, label, dot, desc }) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={`
+            flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left
+            transition-colors
+            ${value === v
+              ? 'border-primary bg-primary/5'
+              : 'border-border-gray hover:border-primary/40'}
+          `}
+        >
+          <div className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+          <div className="min-w-0">
+            <div className={`text-xs font-medium ${value === v ? 'text-primary' : 'text-dark'}`}>
+              {label}
+            </div>
+            <div className="text-[10px] text-medium-gray leading-tight mt-0.5">{desc}</div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* --- Filter chip ------------------------------------------------------ */
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors
+        ${active
+          ? 'bg-primary text-white border-primary'
+          : 'bg-white text-medium-gray border-border-gray hover:border-primary/50 hover:text-dark'}
+      `}
+    >
+      {label}
+    </button>
+  );
+}
+
 /* --- Slide-over panel ------------------------------------------------- */
 
 function SessionSlideOver({
@@ -199,22 +316,24 @@ function SessionSlideOver({
     if (editingSession) {
       setForm({
         title: editingSession.title,
-        description: '',
+        description: editingSession.description ?? '',
         track_id: editingSession.track_id ? String(editingSession.track_id) : '',
         start_at_local: utcToLocalInput(editingSession.start_at, workshop.timezone),
         end_at_local: utcToLocalInput(editingSession.end_at, workshop.timezone),
         location_id: '',
         capacity: editingSession.capacity != null ? String(editingSession.capacity) : '',
         delivery_type: editingSession.delivery_type,
-        meeting_platform: '',
-        meeting_url: '',
-        meeting_instructions: '',
-        meeting_id: '',
-        meeting_passcode: '',
-        notes: '',
-        is_published: editingSession.is_published,
+        meeting_platform: editingSession.meeting_platform ?? '',
+        meeting_url: editingSession.meeting_url ?? '',
+        meeting_instructions: editingSession.meeting_instructions ?? '',
+        meeting_id: editingSession.meeting_id ?? '',
+        meeting_passcode: editingSession.meeting_passcode ?? '',
+        notes: editingSession.notes ?? '',
+        publication_status: resolvePublicationStatus(editingSession),
+        session_type: editingSession.session_type ?? 'standard',
+        participant_visibility: editingSession.participant_visibility ?? 'visible',
+        enrollment_mode: editingSession.enrollment_mode ?? 'self_select',
       });
-      // Pre-populate location from existing session
       const loc = editingSession.location;
       setLocationData(loc ? {
         location_type:  loc.type ?? null,
@@ -236,6 +355,48 @@ function SessionSlideOver({
     setForm((prev) => ({ ...prev, [k]: v }));
     if (errors[k]) setErrors((prev) => { const n = { ...prev }; delete n[k]; return n; });
   }
+
+  function handleSessionTypeChange(v: SessionType) {
+    if (v === 'addon') {
+      setForm((prev) => ({
+        ...prev,
+        session_type: v,
+        participant_visibility: 'hidden',
+        enrollment_mode: 'organizer_assign_only',
+      }));
+    } else {
+      setF('session_type', v);
+    }
+    setErrors((prev) => {
+      const n = { ...prev };
+      delete n.session_type;
+      delete n.participant_visibility;
+      delete n.enrollment_mode;
+      return n;
+    });
+  }
+
+  // Inline warnings computed from form state
+  const formWarnings = useMemo(() => {
+    const warnings: { code: string; message: string }[] = [];
+    if (form.participant_visibility === 'visible' && form.enrollment_mode === 'organizer_assign_only') {
+      warnings.push({
+        code: 'WARN_VISIBILITY_ENROLLMENT_MISMATCH',
+        message: "Note: This session is hidden from selection but participants can still self-select. Consider setting Enrollment Mode to 'Organizer assignment only'.",
+      });
+    }
+    if (
+      form.session_type === 'addon' &&
+      form.participant_visibility === 'visible' &&
+      form.enrollment_mode === 'self_select'
+    ) {
+      warnings.push({
+        code: 'WARN_ADDON_FULLY_PUBLIC',
+        message: 'Note: This add-on session is visible and self-selectable. Add-on sessions are typically hidden with organizer-only enrollment.',
+      });
+    }
+    return warnings;
+  }, [form.session_type, form.participant_visibility, form.enrollment_mode]);
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -278,7 +439,11 @@ function SessionSlideOver({
       meeting_id: form.meeting_id.trim() || null,
       meeting_passcode: form.meeting_passcode.trim() || null,
       notes: form.notes.trim() || null,
-      is_published: form.is_published,
+      publication_status: form.publication_status,
+      is_published: form.publication_status === 'published',
+      session_type: form.session_type,
+      participant_visibility: form.participant_visibility,
+      enrollment_mode: form.enrollment_mode,
       ...buildLocationPayload(locationData),
     };
 
@@ -357,7 +522,6 @@ function SessionSlideOver({
             error={errors.title}
           />
 
-          {/* Session image — only available when editing an existing session */}
           {editingSession && (
             <ImageUploader
               currentUrl={editingSession.header_image_url ?? null}
@@ -457,7 +621,6 @@ function SessionSlideOver({
             className={`overflow-hidden transition-all duration-300 ${showVirtual ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}
           >
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
-              {/* Info banner */}
               <div className="flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-primary leading-relaxed">
@@ -514,6 +677,59 @@ function SessionSlideOver({
             </div>
           </div>
 
+          {/* Access & Enrollment */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-medium-gray uppercase tracking-wider">
+                Access &amp; Enrollment
+              </span>
+              <div className="flex-1 h-px bg-border-gray" />
+            </div>
+
+            <Select
+              label="Session Type"
+              value={form.session_type}
+              onChange={(e) => handleSessionTypeChange(e.target.value as SessionType)}
+            >
+              <option value="standard">Standard Session</option>
+              <option value="addon">Add-On Session</option>
+              <option value="private" disabled>Private — Coming Soon</option>
+              <option value="vip" disabled>VIP — Coming Soon</option>
+              <option value="makeup_session" disabled>Makeup Session — Coming Soon</option>
+            </Select>
+
+            <Select
+              label="Participant Visibility"
+              value={form.participant_visibility}
+              onChange={(e) => setF('participant_visibility', e.target.value as ParticipantVisibility)}
+              helper="Hidden sessions do not appear in the participant schedule selection screen. Participants will only see it in My Schedule after being assigned."
+            >
+              <option value="visible">Visible in session selection</option>
+              <option value="hidden">Hidden from session selection</option>
+            </Select>
+
+            <Select
+              label="Enrollment Mode"
+              value={form.enrollment_mode}
+              onChange={(e) => setF('enrollment_mode', e.target.value as EnrollmentMode)}
+              helper="Participants cannot add themselves to organizer-only sessions. Only organizers can assign participants."
+            >
+              <option value="self_select">Participants can select this session</option>
+              <option value="organizer_assign_only">Organizer assignment only</option>
+            </Select>
+
+            {/* Inline warnings */}
+            {formWarnings.map((w) => (
+              <div
+                key={w.code}
+                className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-200 bg-amber-50"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 leading-relaxed">{w.message}</p>
+              </div>
+            ))}
+          </div>
+
           <Textarea
             label="Internal Notes"
             value={form.notes}
@@ -522,16 +738,15 @@ function SessionSlideOver({
             placeholder="Internal notes — not visible to participants"
           />
 
-          {/* Published toggle */}
-          <div className="flex items-center justify-between py-3 border-t border-border-gray">
-            <div>
-              <p className="text-sm font-medium text-dark">Published</p>
-              <p className="text-xs text-medium-gray">Visible to registered participants</p>
+          {/* Publication Status */}
+          <div className="border-t border-border-gray pt-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-dark">Status</span>
+              <PublicationStatusSelector
+                value={form.publication_status}
+                onChange={(v) => setF('publication_status', v)}
+              />
             </div>
-            <Toggle
-              checked={form.is_published}
-              onChange={(v) => setF('is_published', v)}
-            />
           </div>
         </form>
 
@@ -662,22 +877,41 @@ function SessionRow({
 }) {
   const start = formatSessionTime(session.start_at, timezone);
   const end = formatInTimeZone(new Date(session.end_at), timezone, 'h:mm a');
+  const pubStatus = resolvePublicationStatus(session);
+  const sessionType = session.session_type ?? 'standard';
+  const visibility = session.participant_visibility ?? 'visible';
+  const enrollment = session.enrollment_mode ?? 'self_select';
 
   return (
     <tr className="group border-b border-border-gray hover:bg-surface/60 transition-colors">
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start gap-2.5">
           <div
-            className={`w-1.5 h-1.5 rounded-full shrink-0 ${session.is_published ? 'bg-emerald-500' : 'bg-border-gray'}`}
-            title={session.is_published ? 'Published' : 'Draft'}
+            className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${PUB_STATUS_DOT[pubStatus]}`}
+            title={PUB_STATUS_LABEL[pubStatus]}
           />
-          <Link
-            href={`/workshops/${workshopId}/sessions/${session.id}`}
-            className="text-sm font-medium text-dark truncate max-w-[200px] hover:text-primary transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {session.title}
-          </Link>
+          <div className="min-w-0">
+            <Link
+              href={`/workshops/${workshopId}/sessions/${session.id}`}
+              className="text-sm font-medium text-dark truncate max-w-[200px] hover:text-primary transition-colors block"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {session.title}
+            </Link>
+            {(sessionType === 'addon' || visibility === 'hidden' || enrollment === 'organizer_assign_only') && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {sessionType === 'addon' && (
+                  <Badge variant="session-addon" />
+                )}
+                {visibility === 'hidden' && (
+                  <Badge variant="session-hidden" />
+                )}
+                {enrollment === 'organizer_assign_only' && (
+                  <Badge variant="session-assigned_only" />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-medium-gray whitespace-nowrap">
@@ -736,6 +970,9 @@ export default function WorkshopSessionsPage() {
   const [selectedTrack, setSelectedTrack] = useState<number | 'all'>('all');
   const [loading, setLoading] = useState(true);
 
+  // Active filter state — keys use prefix:value format
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
   // Slide-over state
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
@@ -757,7 +994,6 @@ export default function WorkshopSessionsPage() {
       setTracks((tRes ?? []).sort((a, b) => a.order - b.order));
       setSessions(sRes ?? []);
 
-      // Load locations for the org
       try {
         const lRes = await apiGet<Location[]>(`/organizations/${ws.organization_id}/locations`);
         setLocations(lRes ?? []);
@@ -784,6 +1020,21 @@ export default function WorkshopSessionsPage() {
       { label: 'Sessions' },
     ]);
   }, [workshop, id, setPage]);
+
+  /* Filter helpers */
+
+  function toggleFilter(key: string) {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setActiveFilters(new Set());
+  }
 
   /* Track CRUD */
 
@@ -843,11 +1094,37 @@ export default function WorkshopSessionsPage() {
     }
   }
 
-  /* Filtered sessions */
+  /* Filtered sessions — track + active filter chips (AND logic across categories, OR within) */
 
-  const filteredSessions = selectedTrack === 'all'
-    ? sessions
-    : sessions.filter((s) => s.track_id === selectedTrack);
+  const filteredSessions = useMemo(() => {
+    let result = selectedTrack === 'all'
+      ? sessions
+      : sessions.filter((s) => s.track_id === selectedTrack);
+
+    const typeFilters = ['standard', 'addon'].filter((v) => activeFilters.has(`type:${v}`));
+    if (typeFilters.length > 0) {
+      result = result.filter((s) => typeFilters.includes(s.session_type ?? 'standard'));
+    }
+
+    const visFilters = ['visible', 'hidden'].filter((v) => activeFilters.has(`vis:${v}`));
+    if (visFilters.length > 0) {
+      result = result.filter((s) => visFilters.includes(s.participant_visibility ?? 'visible'));
+    }
+
+    const enrFilters = ['self_select', 'organizer_assign_only'].filter((v) => activeFilters.has(`enr:${v}`));
+    if (enrFilters.length > 0) {
+      result = result.filter((s) => enrFilters.includes(s.enrollment_mode ?? 'self_select'));
+    }
+
+    const pubFilters = ['draft', 'published', 'archived', 'cancelled'].filter((v) => activeFilters.has(`pub:${v}`));
+    if (pubFilters.length > 0) {
+      result = result.filter((s) => pubFilters.includes(resolvePublicationStatus(s)));
+    }
+
+    return result;
+  }, [sessions, selectedTrack, activeFilters]);
+
+  const hasActiveFilters = activeFilters.size > 0;
 
   /* -- Render -- */
 
@@ -890,7 +1167,6 @@ export default function WorkshopSessionsPage() {
                   Add Track
                 </button>
 
-                {/* Inline new track input */}
                 {addingTrack && (
                   <div className="mt-2">
                     <input
@@ -911,7 +1187,6 @@ export default function WorkshopSessionsPage() {
 
               {/* Track list */}
               <nav className="flex-1 overflow-y-auto py-2 px-1 space-y-0.5">
-                {/* All Sessions option */}
                 <button
                   type="button"
                   onClick={() => setSelectedTrack('all')}
@@ -964,22 +1239,69 @@ export default function WorkshopSessionsPage() {
                 </Button>
               </div>
 
-              {/* Sessions table */}
+              {/* Filter chips bar */}
+              {sessions.length > 0 && (
+                <div className="px-4 py-2.5 border-b border-border-gray bg-surface/30 flex flex-wrap items-center gap-1.5">
+                  {/* Session Type */}
+                  <FilterChip label="Standard" active={activeFilters.has('type:standard')} onClick={() => toggleFilter('type:standard')} />
+                  <FilterChip label="Add-On" active={activeFilters.has('type:addon')} onClick={() => toggleFilter('type:addon')} />
+                  <div className="w-px h-4 bg-border-gray mx-0.5 self-center" />
+                  {/* Visibility */}
+                  <FilterChip label="Visible" active={activeFilters.has('vis:visible')} onClick={() => toggleFilter('vis:visible')} />
+                  <FilterChip label="Hidden" active={activeFilters.has('vis:hidden')} onClick={() => toggleFilter('vis:hidden')} />
+                  <div className="w-px h-4 bg-border-gray mx-0.5 self-center" />
+                  {/* Enrollment */}
+                  <FilterChip label="Self-Select" active={activeFilters.has('enr:self_select')} onClick={() => toggleFilter('enr:self_select')} />
+                  <FilterChip label="Assigned Only" active={activeFilters.has('enr:organizer_assign_only')} onClick={() => toggleFilter('enr:organizer_assign_only')} />
+                  <div className="w-px h-4 bg-border-gray mx-0.5 self-center" />
+                  {/* Status */}
+                  <FilterChip label="Draft" active={activeFilters.has('pub:draft')} onClick={() => toggleFilter('pub:draft')} />
+                  <FilterChip label="Published" active={activeFilters.has('pub:published')} onClick={() => toggleFilter('pub:published')} />
+                  <FilterChip label="Archived" active={activeFilters.has('pub:archived')} onClick={() => toggleFilter('pub:archived')} />
+                  <FilterChip label="Cancelled" active={activeFilters.has('pub:cancelled')} onClick={() => toggleFilter('pub:cancelled')} />
+                  {/* Clear all */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="ml-1 text-xs text-primary hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Sessions table / empty state */}
               {filteredSessions.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-8">
-                  <div className="w-14 h-14 rounded-full bg-surface border border-border-gray flex items-center justify-center mb-4">
-                    <Plus className="w-6 h-6 text-light-gray" />
-                  </div>
-                  <p className="text-sm font-medium text-dark mb-1">No sessions yet</p>
-                  <p className="text-xs text-medium-gray mb-4 max-w-xs leading-relaxed">
-                    {selectedTrack === 'all'
-                      ? 'Add your first session to get started.'
-                      : 'No sessions in this track yet.'}
-                  </p>
-                  <Button size="sm" onClick={openCreate}>
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Session
-                  </Button>
+                  {hasActiveFilters ? (
+                    <>
+                      <p className="text-sm font-medium text-dark mb-1">No sessions match these filters</p>
+                      <p className="text-xs text-medium-gray mb-4">
+                        Try removing some filters to see more sessions.
+                      </p>
+                      <Button size="sm" variant="ghost" onClick={clearFilters}>
+                        Clear filters
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 rounded-full bg-surface border border-border-gray flex items-center justify-center mb-4">
+                        <Plus className="w-6 h-6 text-light-gray" />
+                      </div>
+                      <p className="text-sm font-medium text-dark mb-1">No sessions yet</p>
+                      <p className="text-xs text-medium-gray mb-4 max-w-xs leading-relaxed">
+                        {selectedTrack === 'all'
+                          ? 'Add your first session to get started.'
+                          : 'No sessions in this track yet.'}
+                      </p>
+                      <Button size="sm" onClick={openCreate}>
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Session
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="flex-1 overflow-x-auto">
