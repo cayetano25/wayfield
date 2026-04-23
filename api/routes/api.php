@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\Api\V1\PublicWorkshopDiscoveryController;
+use App\Http\Controllers\Api\V1\TaxonomyController;
 use App\Http\Controllers\Api\V1\ApiKeyController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -18,6 +20,7 @@ use App\Http\Controllers\Api\V1\LeaderAdminController;
 use App\Http\Controllers\Api\V1\LeaderDashboardController;
 use App\Http\Controllers\Api\V1\LeaderInvitationController;
 use App\Http\Controllers\Api\V1\LeaderSelfController;
+use App\Http\Controllers\Api\V1\LeaderSelfEnrollController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MyScheduleController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -84,8 +87,14 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:10,1');
     });
 
+    // ─── Public taxonomy (no auth required) ──────────────────────────────────
+    Route::get('taxonomy', [TaxonomyController::class, 'index']);
+    Route::get('taxonomy/categories', [TaxonomyController::class, 'categories']);
+    Route::get('taxonomy/categories/{category:slug}/subcategories', [TaxonomyController::class, 'subcategories']);
+
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
+        Route::get('workshops', [PublicWorkshopDiscoveryController::class, 'index']);
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
         Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
@@ -276,6 +285,11 @@ Route::prefix('v1')->group(function () {
         // ─── Leader invitation rescind (organizer) ────────────────────────────
         Route::delete('leader-invitations/{invitation}', [LeaderInvitationController::class, 'destroy']);
 
+        // ─── Leader self-enrollment (owner/admin) — must precede {leader} wildcard ─
+        Route::post('organizations/{organization}/leaders/self-enroll', [LeaderSelfEnrollController::class, 'store']);
+        Route::delete('organizations/{organization}/leaders/self-enroll', [LeaderSelfEnrollController::class, 'destroy']);
+        Route::delete('workshops/{workshop}/leaders/self', [LeaderSelfEnrollController::class, 'destroyFromWorkshop']);
+
         // ─── Leader admin (organizer) ─────────────────────────────────────────
         Route::get('organizations/{organization}/leaders', [LeaderAdminController::class, 'index']);
         Route::get('organizations/{organization}/leaders/{leader}', [LeaderAdminController::class, 'show']);
@@ -296,7 +310,15 @@ Route::prefix('v1')->group(function () {
         Route::delete('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'destroy']);
         Route::patch('sessions/{session}/leaders/{leader}', [SessionLeaderController::class, 'updateStatus']);
 
-        // Session participant management (organizer)
+        // Session participant management — new session-scoped routes (addon sessions feature)
+        Route::get('sessions/{session}/participants', [SessionParticipantController::class, 'index'])
+            ->name('session-participants.index');
+        Route::post('sessions/{session}/participants', [SessionParticipantController::class, 'store'])
+            ->name('session-participants.store');
+        Route::delete('sessions/{session}/participants/{user}', [SessionParticipantController::class, 'destroy'])
+            ->name('session-participants.destroy');
+
+        // Legacy workshop-scoped routes — kept for backward compatibility
         Route::post('workshops/{workshop}/sessions/{session}/participants', [SessionParticipantController::class, 'add'])
             ->name('session-participants.add');
         Route::delete('workshops/{workshop}/sessions/{session}/participants/{user}', [SessionParticipantController::class, 'removeParticipant'])

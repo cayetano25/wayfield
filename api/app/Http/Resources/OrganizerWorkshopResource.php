@@ -53,8 +53,40 @@ class OrganizerWorkshopResource extends JsonResource
                 'state_or_region' => $leader->state_or_region,
             ])
             ),
+            'taxonomy' => $this->buildTaxonomyArray(),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
+        ];
+    }
+
+    private function buildTaxonomyArray(): array
+    {
+        $primary = $this->relationLoaded('primaryTaxonomy') ? $this->primaryTaxonomy : null;
+        $tags    = $this->relationLoaded('tags') ? $this->tags : collect();
+
+        return [
+            'category' => $primary?->relationLoaded('category') && $primary->category ? [
+                'id'   => $primary->category->id,
+                'name' => $primary->category->name,
+                'slug' => $primary->category->slug,
+            ] : null,
+            'subcategory' => $primary?->relationLoaded('subcategory') && $primary->subcategory ? [
+                'id'   => $primary->subcategory->id,
+                'name' => $primary->subcategory->name,
+                'slug' => $primary->subcategory->slug,
+            ] : null,
+            'specialization' => $primary?->relationLoaded('specialization') && $primary->specialization ? [
+                'id'   => $primary->specialization->id,
+                'name' => $primary->specialization->name,
+                'slug' => $primary->specialization->slug,
+            ] : null,
+            'tags' => $tags->map(fn ($tag) => [
+                'id'          => $tag->id,
+                'group_key'   => $tag->relationLoaded('tagGroup') ? $tag->tagGroup?->key : null,
+                'group_label' => $tag->relationLoaded('tagGroup') ? $tag->tagGroup?->label : null,
+                'value'       => $tag->value,
+                'label'       => $tag->label,
+            ])->values()->all(),
         ];
     }
 }

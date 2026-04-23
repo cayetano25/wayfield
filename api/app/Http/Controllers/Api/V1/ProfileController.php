@@ -41,6 +41,8 @@ class ProfileController extends Controller
                         : null,
                 ] : null,
                 'leader_profile' => $user->leader ? [
+                    'exists'            => true,
+                    'leader_id'         => $user->leader->id,
                     'id'                => $user->leader->id,
                     'bio'               => $user->leader->bio,
                     'website_url'       => $user->leader->website_url,
@@ -52,7 +54,7 @@ class ProfileController extends Controller
                     'postal_code'       => $user->leader->postal_code,
                     'country'           => $user->leader->country,
                     'profile_image_url' => $user->leader->profile_image_url,
-                ] : null,
+                ] : ['exists' => false, 'leader_id' => null],
                 'contexts' => $this->buildContextSummary($user),
             ],
         ));

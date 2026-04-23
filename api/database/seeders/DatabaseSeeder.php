@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         // Suppress notifications during seeding.
         Notification::fake();
 
+        $this->call(TaxonomySeeder::class);
         $this->call(PlatformConfigSeeder::class);
 
         $user = User::factory()->create([

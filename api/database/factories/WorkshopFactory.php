@@ -3,6 +3,10 @@
 namespace Database\Factories;
 
 use App\Models\Organization;
+use App\Models\TaxonomyCategory;
+use App\Models\TaxonomySubcategory;
+use App\Models\Workshop;
+use App\Models\WorkshopTaxonomy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -31,7 +35,35 @@ class WorkshopFactory extends Factory
 
     public function draft(): static
     {
-        return $this->state(['status' => 'draft']);
+        return $this->state(['status' => 'draft', 'public_page_enabled' => false]);
+    }
+
+    public function public(): static
+    {
+        return $this->state([
+            'status'              => 'published',
+            'public_page_enabled' => true,
+            'public_slug'         => Str::slug($this->faker->sentence(3)),
+        ]);
+    }
+
+    public function withTaxonomy(TaxonomyCategory $category, ?TaxonomySubcategory $subcategory = null): static
+    {
+        return $this->afterCreating(function (Workshop $workshop) use ($category, $subcategory) {
+            WorkshopTaxonomy::create([
+                'workshop_id'    => $workshop->id,
+                'category_id'    => $category->id,
+                'subcategory_id' => $subcategory?->id,
+                'is_primary'     => true,
+            ]);
+        });
+    }
+
+    public function withTags(array $tagIds): static
+    {
+        return $this->afterCreating(function (Workshop $workshop) use ($tagIds) {
+            $workshop->tags()->sync($tagIds);
+        });
     }
 
     public function published(): static

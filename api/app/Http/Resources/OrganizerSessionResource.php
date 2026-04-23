@@ -33,6 +33,14 @@ class OrganizerSessionResource extends JsonResource
             'notes' => $this->notes,
             'is_published' => $this->is_published,
             'header_image_url' => $this->header_image_url,
+            // Access-control fields
+            'session_type' => $this->session_type,
+            'publication_status' => $this->publication_status,
+            'participant_visibility' => $this->participant_visibility,
+            'enrollment_mode' => $this->enrollment_mode,
+            'requires_separate_entitlement' => $this->requires_separate_entitlement,
+            'selection_opens_at' => $this->selection_opens_at?->toIso8601String(),
+            'selection_closes_at' => $this->selection_closes_at?->toIso8601String(),
             'leaders' => $this->whenLoaded('leaders', function () use ($request): array {
                 // Resolve phone visibility once for the entire collection to avoid N+1.
                 // Allowed: owner, admin, staff. Denied: billing_admin, participants, public.

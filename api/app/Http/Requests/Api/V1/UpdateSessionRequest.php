@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\Session;
+use App\Services\Sessions\SessionConsistencyWarningService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -32,6 +33,15 @@ class UpdateSessionRequest extends FormRequest
             'meeting_passcode' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'is_published' => ['sometimes', 'boolean'],
+            'publication_status' => ['nullable', 'string', 'in:draft,published,archived,cancelled'],
+
+            // Access-control fields (addon sessions feature)
+            'session_type' => ['nullable', 'string', 'in:standard,addon,private,vip,makeup_session'],
+            'participant_visibility' => ['nullable', 'string', 'in:visible,hidden,invite_only'],
+            'enrollment_mode' => ['nullable', 'string', 'in:self_select,organizer_assign_only,invite_accept,purchase_required'],
+            'requires_separate_entitlement' => ['nullable', 'boolean'],
+            'selection_opens_at' => ['nullable', 'date_format:Y-m-d\TH:i:sP'],
+            'selection_closes_at' => ['nullable', 'date_format:Y-m-d\TH:i:sP', 'after:selection_opens_at'],
 
             // Location type fields
             'location_type' => ['nullable', Rule::in(Session::LOCATION_TYPES)],
@@ -64,5 +74,16 @@ class UpdateSessionRequest extends FormRequest
                 );
             }
         });
+    }
+
+    /**
+     * Return non-blocking consistency warnings for this request payload.
+     * Warnings are included in the response body but never block the operation.
+     *
+     * @return array<int, array{code: string, message: string}>
+     */
+    public function consistencyWarnings(): array
+    {
+        return app(SessionConsistencyWarningService::class)->detect($this->validated());
     }
 }

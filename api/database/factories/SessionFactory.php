@@ -32,6 +32,14 @@ class SessionFactory extends Factory
             'meeting_passcode' => null,
             'notes' => null,
             'is_published' => false,
+            // Access-control fields — defaults match the column defaults in the migration.
+            'session_type' => 'standard',
+            'publication_status' => 'draft',
+            'participant_visibility' => 'visible',
+            'enrollment_mode' => 'self_select',
+            'requires_separate_entitlement' => false,
+            'selection_opens_at' => null,
+            'selection_closes_at' => null,
         ];
     }
 
@@ -40,9 +48,15 @@ class SessionFactory extends Factory
         return $this->state(['workshop_id' => $workshopId]);
     }
 
+    /**
+     * Dual-write is_published and publication_status for transition compatibility.
+     */
     public function published(): static
     {
-        return $this->state(['is_published' => true]);
+        return $this->state([
+            'is_published' => true,
+            'publication_status' => 'published',
+        ]);
     }
 
     public function withCapacity(int $capacity): static
@@ -82,5 +96,62 @@ class SessionFactory extends Factory
             'virtual_participation_allowed' => false,
             'meeting_url' => null,
         ]);
+    }
+
+    // ─── Access-control states ────────────────────────────────────────────────
+
+    public function standard(): static
+    {
+        return $this->state([
+            'session_type' => 'standard',
+            'publication_status' => 'published',
+            'is_published' => true,
+            'participant_visibility' => 'visible',
+            'enrollment_mode' => 'self_select',
+        ]);
+    }
+
+    public function addon(): static
+    {
+        return $this->state([
+            'session_type' => 'addon',
+            'publication_status' => 'published',
+            'is_published' => true,
+            'participant_visibility' => 'hidden',
+            'enrollment_mode' => 'organizer_assign_only',
+        ]);
+    }
+
+    public function hidden(): static
+    {
+        return $this->state([
+            'publication_status' => 'published',
+            'is_published' => true,
+            'participant_visibility' => 'hidden',
+            'enrollment_mode' => 'organizer_assign_only',
+        ]);
+    }
+
+    public function organizerOnly(): static
+    {
+        return $this->state([
+            'publication_status' => 'published',
+            'is_published' => true,
+            'participant_visibility' => 'visible',
+            'enrollment_mode' => 'organizer_assign_only',
+        ]);
+    }
+
+    public function draft(): static
+    {
+        return $this->state([
+            'publication_status' => 'draft',
+            'is_published' => false,
+        ]);
+    }
+
+    public function atCapacity(int $capacity = 1): static
+    {
+        return $this->state(['capacity' => $capacity]);
     }
 }

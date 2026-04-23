@@ -9,6 +9,8 @@ class CreateSessionAction
 {
     public function execute(Workshop $workshop, array $data): Session
     {
+        $publicationStatus = $data['publication_status'] ?? 'draft';
+
         return Session::create([
             'workshop_id' => $workshop->id,
             'track_id' => $data['track_id'] ?? null,
@@ -26,7 +28,17 @@ class CreateSessionAction
             'meeting_id' => $data['meeting_id'] ?? null,
             'meeting_passcode' => $data['meeting_passcode'] ?? null,
             'notes' => $data['notes'] ?? null,
-            'is_published' => $data['is_published'] ?? false,
+            // Dual-write during transition: publication_status is canonical;
+            // is_published kept in sync for backwards-compat.
+            'publication_status' => $publicationStatus,
+            'is_published' => $publicationStatus === 'published',
+            // Access-control fields (addon sessions feature)
+            'session_type' => $data['session_type'] ?? 'standard',
+            'participant_visibility' => $data['participant_visibility'] ?? 'visible',
+            'enrollment_mode' => $data['enrollment_mode'] ?? 'self_select',
+            'requires_separate_entitlement' => $data['requires_separate_entitlement'] ?? false,
+            'selection_opens_at' => $data['selection_opens_at'] ?? null,
+            'selection_closes_at' => $data['selection_closes_at'] ?? null,
         ]);
     }
 }

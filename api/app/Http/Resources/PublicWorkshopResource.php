@@ -78,6 +78,41 @@ class PublicWorkshopResource extends JsonResource
                 'confirmedLeaders',
                 fn () => PublicLeaderResource::collection($this->confirmedLeaders)
             ),
+
+            // Taxonomy: category, subcategory, specialization, and cross-cutting tags.
+            // group_key is included so the frontend can group tags by type for display.
+            'taxonomy' => $this->buildTaxonomyArray(),
+        ];
+    }
+
+    private function buildTaxonomyArray(): array
+    {
+        $primary = $this->relationLoaded('primaryTaxonomy') ? $this->primaryTaxonomy : null;
+        $tags    = $this->relationLoaded('tags') ? $this->tags : collect();
+
+        return [
+            'category' => $primary?->relationLoaded('category') && $primary->category ? [
+                'id'   => $primary->category->id,
+                'name' => $primary->category->name,
+                'slug' => $primary->category->slug,
+            ] : null,
+            'subcategory' => $primary?->relationLoaded('subcategory') && $primary->subcategory ? [
+                'id'   => $primary->subcategory->id,
+                'name' => $primary->subcategory->name,
+                'slug' => $primary->subcategory->slug,
+            ] : null,
+            'specialization' => $primary?->relationLoaded('specialization') && $primary->specialization ? [
+                'id'   => $primary->specialization->id,
+                'name' => $primary->specialization->name,
+                'slug' => $primary->specialization->slug,
+            ] : null,
+            'tags' => $tags->map(fn ($tag) => [
+                'id'          => $tag->id,
+                'group_key'   => $tag->relationLoaded('tagGroup') ? $tag->tagGroup?->key : null,
+                'group_label' => $tag->relationLoaded('tagGroup') ? $tag->tagGroup?->label : null,
+                'value'       => $tag->value,
+                'label'       => $tag->label,
+            ])->values()->all(),
         ];
     }
 

@@ -38,6 +38,7 @@ class ParticipantSessionResource extends JsonResource
             'meeting_platform' => $this->requiresMeetingUrl() ? $this->meeting_platform : null,
             'meeting_instructions' => $this->requiresMeetingUrl() ? $this->meeting_instructions : null,
             'is_published' => $this->is_published,
+            'is_addon' => $this->session_type === 'addon',
         ];
     }
 }

@@ -30,7 +30,15 @@ class WorkshopController extends Controller
         $this->authorize('view', $organization);
 
         $query = Workshop::where('organization_id', $organization->id)
-            ->with(['defaultLocation', 'logistics', 'publicPage']);
+            ->with([
+                'defaultLocation',
+                'logistics',
+                'publicPage',
+                'primaryTaxonomy.category',
+                'primaryTaxonomy.subcategory',
+                'primaryTaxonomy.specialization',
+                'tags.tagGroup',
+            ]);
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -46,6 +54,20 @@ class WorkshopController extends Controller
 
         if ($request->filled('start_until')) {
             $query->whereDate('start_date', '<=', $request->input('start_until'));
+        }
+
+        if ($request->filled('category')) {
+            $slug = $request->input('category');
+            $query->whereHas('primaryTaxonomy', fn ($q) =>
+                $q->whereHas('category', fn ($c) => $c->where('slug', $slug))
+            );
+        }
+
+        if ($request->filled('subcategory')) {
+            $slug = $request->input('subcategory');
+            $query->whereHas('primaryTaxonomy', fn ($q) =>
+                $q->whereHas('subcategory', fn ($c) => $c->where('slug', $slug))
+            );
         }
 
         return OrganizerWorkshopResource::collection(
@@ -70,7 +92,15 @@ class WorkshopController extends Controller
         }
 
         return response()->json(
-            new OrganizerWorkshopResource($workshop->load(['defaultLocation', 'logistics', 'publicPage'])),
+            new OrganizerWorkshopResource($workshop->load([
+                'defaultLocation',
+                'logistics',
+                'publicPage',
+                'primaryTaxonomy.category',
+                'primaryTaxonomy.subcategory',
+                'primaryTaxonomy.specialization',
+                'tags.tagGroup',
+            ])),
             201
         );
     }
@@ -81,7 +111,16 @@ class WorkshopController extends Controller
 
         return new OrganizerWorkshopResource(
             $workshop->loadCount(['sessions', 'registrations'])
-                ->load(['defaultLocation', 'logistics', 'publicPage', 'confirmedLeaders'])
+                ->load([
+                    'defaultLocation',
+                    'logistics',
+                    'publicPage',
+                    'confirmedLeaders',
+                    'primaryTaxonomy.category',
+                    'primaryTaxonomy.subcategory',
+                    'primaryTaxonomy.specialization',
+                    'tags.tagGroup',
+                ])
         );
     }
 
@@ -99,7 +138,15 @@ class WorkshopController extends Controller
         }
 
         return new OrganizerWorkshopResource(
-            $workshop->load(['defaultLocation', 'logistics', 'publicPage'])
+            $workshop->load([
+                'defaultLocation',
+                'logistics',
+                'publicPage',
+                'primaryTaxonomy.category',
+                'primaryTaxonomy.subcategory',
+                'primaryTaxonomy.specialization',
+                'tags.tagGroup',
+            ])
         );
     }
 

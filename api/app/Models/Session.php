@@ -46,6 +46,14 @@ class Session extends Model
         'header_image_url',
         'location_type',
         'location_notes',
+        // Access-control fields (addon sessions feature)
+        'session_type',
+        'publication_status',
+        'participant_visibility',
+        'enrollment_mode',
+        'requires_separate_entitlement',
+        'selection_opens_at',
+        'selection_closes_at',
     ];
 
     protected $casts = [
@@ -55,6 +63,13 @@ class Session extends Model
         'is_published' => 'boolean',
         'virtual_participation_allowed' => 'boolean',
         'location_type' => 'string',
+        'session_type' => 'string',
+        'publication_status' => 'string',
+        'participant_visibility' => 'string',
+        'enrollment_mode' => 'string',
+        'requires_separate_entitlement' => 'boolean',
+        'selection_opens_at' => 'datetime',
+        'selection_closes_at' => 'datetime',
     ];
 
     public function workshop(): BelongsTo
@@ -148,5 +163,35 @@ class Session extends Model
         return $this->selections()
             ->where('selection_status', 'selected')
             ->count();
+    }
+
+    /**
+     * Sessions that are published (publication_status = 'published').
+     * Replaces the legacy is_published = true filter; the DB trigger keeps both in sync.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('publication_status', 'published');
+    }
+
+    /**
+     * Alias for scopePublished() — preserved for call-sites that use
+     * ->isPublished() during the transition to publication_status.
+     */
+    public function scopeIsPublished($query)
+    {
+        return $this->scopePublished($query);
+    }
+
+    /**
+     * Sessions that a participant can discover and self-select into.
+     * Requires: published + visible to participants + self-select enrollment.
+     */
+    public function scopeVisibleToParticipants($query)
+    {
+        return $query
+            ->where('publication_status', 'published')
+            ->where('participant_visibility', 'visible')
+            ->where('enrollment_mode', 'self_select');
     }
 }

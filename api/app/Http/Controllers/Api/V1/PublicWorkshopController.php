@@ -18,9 +18,15 @@ class PublicWorkshopController extends Controller
                 'defaultLocation',
                 'logistics',
                 'publicPage',
-                'sessions' => fn ($q) => $q->where('is_published', true)->orderBy('start_at'),
+                'sessions' => fn ($q) => $q->where('publication_status', 'published')
+                    ->where('participant_visibility', 'visible')
+                    ->orderBy('start_at')->with(['track', 'location']),
                 // Only load confirmed leaders for public display
                 'confirmedLeaders',
+                'primaryTaxonomy.category',
+                'primaryTaxonomy.subcategory',
+                'primaryTaxonomy.specialization',
+                'tags.tagGroup',
             ])
             ->first();
 

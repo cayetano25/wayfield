@@ -33,6 +33,20 @@ class LeaderFactory extends Factory
         return $this->state(['user_id' => $userId]);
     }
 
+    /**
+     * Link the leader to an existing user account, syncing name and email from
+     * that account so the leader profile mirrors the user's identity fields.
+     */
+    public function linkedToUser(User $user): static
+    {
+        return $this->state([
+            'user_id'    => $user->id,
+            'first_name' => $user->first_name,
+            'last_name'  => $user->last_name,
+            'email'      => $user->email,
+        ]);
+    }
+
     public function linkedToNewUser(): static
     {
         return $this->state(fn () => [

@@ -172,8 +172,8 @@ final class SessionLocationService
 
         if ($type === Session::LOCATION_TYPE_COORDINATES) {
             $loc = $session->location;
-            $lat = $loc?->latitude !== null ? (float) $loc->latitude : null;
-            $lng = $loc?->longitude !== null ? (float) $loc->longitude : null;
+            $lat = $loc?->latitude !== null ? round((float) $loc->latitude, 7) : null;
+            $lng = $loc?->longitude !== null ? round((float) $loc->longitude, 7) : null;
 
             return [
                 'type' => 'coordinates',

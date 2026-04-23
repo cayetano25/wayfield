@@ -122,4 +122,20 @@ class Workshop extends Model
     {
         return $this->workshop_type === 'event_based';
     }
+
+    public function taxonomies(): HasMany
+    {
+        return $this->hasMany(WorkshopTaxonomy::class);
+    }
+
+    public function primaryTaxonomy(): HasOne
+    {
+        return $this->hasOne(WorkshopTaxonomy::class)->where('is_primary', true);
+    }
+
+    public function tags(): BelongsToMany
+    {
+        // Explicit FK names — 'tag_id' not Laravel's guessed 'taxonomy_tag_id'
+        return $this->belongsToMany(TaxonomyTag::class, 'workshop_tags', 'workshop_id', 'tag_id');
+    }
 }

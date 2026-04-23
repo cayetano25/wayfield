@@ -2,6 +2,7 @@
 
 namespace App\Domain\Workshops\Actions;
 
+use App\Domain\Taxonomy\Actions\AssignWorkshopTaxonomyAction;
 use App\Models\Workshop;
 
 class UpdateWorkshopAction
@@ -17,6 +18,10 @@ class UpdateWorkshopAction
         'public_slug',
     ];
 
+    public function __construct(
+        private readonly AssignWorkshopTaxonomyAction $taxonomyAction,
+    ) {}
+
     public function execute(Workshop $workshop, array $data): Workshop
     {
         if ($workshop->isArchived()) {
@@ -27,6 +32,10 @@ class UpdateWorkshopAction
 
         if (! empty($updates)) {
             $workshop->update($updates);
+        }
+
+        if (array_key_exists('category_id', $data)) {
+            $this->taxonomyAction->assign($workshop, $data);
         }
 
         return $workshop->fresh();

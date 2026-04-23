@@ -136,14 +136,15 @@ test('/me includes leader_profile when user has a linked leader record', functio
         ->assertJsonPath('leader_profile.phone_number', '+15125550001');
 });
 
-test('/me returns null leader_profile when user is not a leader', function () {
+test('/me returns exists=false and leader_id=null when user is not a leader', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
     $this->withToken($token)
         ->getJson('/api/v1/me')
         ->assertStatus(200)
-        ->assertJsonPath('leader_profile', null);
+        ->assertJsonPath('leader_profile.exists', false)
+        ->assertJsonPath('leader_profile.leader_id', null);
 });
 
 test('/me eager-loads leader without an N+1 query', function () {

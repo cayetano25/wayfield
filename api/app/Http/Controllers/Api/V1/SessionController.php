@@ -14,6 +14,7 @@ use App\Models\Session;
 use App\Models\Workshop;
 use App\Services\Sessions\SessionLocationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SessionController extends Controller
@@ -70,21 +71,30 @@ class SessionController extends Controller
         UpdateSessionRequest $request,
         Session $session,
         UpdateSessionAction $action,
-    ): OrganizerSessionResource {
+    ): OrganizerSessionResource|JsonResponse {
         $this->authorize('update', $session);
 
-        $session = $action->execute($session, $request->validated());
+        $session = $action->execute($session, $request->validated(), $request->user());
         $this->locationService->applyLocation($session, $request->validated());
 
-        return new OrganizerSessionResource($session->fresh(['workshop', 'track', 'location', 'location.address']));
+        $session->loadMissing('workshop');
+        $warnings = $request->consistencyWarnings();
+
+        $resource = new OrganizerSessionResource($session->fresh(['workshop', 'track', 'location', 'location.address']));
+
+        if (empty($warnings)) {
+            return $resource;
+        }
+
+        return response()->json(array_merge($resource->toArray($request), ['warnings' => $warnings]));
     }
 
-    public function publish(Session $session, PublishSessionAction $action): JsonResponse
+    public function publish(Request $request, Session $session, PublishSessionAction $action): JsonResponse
     {
         $this->authorize('publish', $session);
 
         try {
-            $session = $action->execute($session);
+            $session = $action->execute($session, $request->user());
         } catch (SessionPublishException $e) {
             return response()->json([
                 'message' => 'Session cannot be published.',

@@ -92,6 +92,29 @@ class LeaderPolicy
         return $leader->user_id === $user->id;
     }
 
+    /**
+     * Only owner/admin may self-enroll as a leader in their organization.
+     *
+     * Allowed: owner, admin
+     * Denied:  staff, billing_admin, unrelated users
+     */
+    public function selfEnroll(User $user, Organization $organization): bool
+    {
+        return $user->organizationUsers()
+            ->where('organization_id', $organization->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin'])
+            ->exists();
+    }
+
+    /**
+     * A user may remove their own leader profile link.
+     */
+    public function removeSelfAsLeader(User $user, Leader $leader): bool
+    {
+        return $leader->user_id === $user->id;
+    }
+
     private function isMember(User $user, int $organizationId): bool
     {
         return $user->organizationUsers()

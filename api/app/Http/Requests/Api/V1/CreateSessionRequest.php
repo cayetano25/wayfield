@@ -33,6 +33,15 @@ class CreateSessionRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             'is_published' => ['boolean'],
 
+            // Access-control fields (addon sessions feature)
+            'publication_status' => ['nullable', 'string', 'in:draft,published,archived,cancelled'],
+            'session_type' => ['nullable', 'string', 'in:standard,addon,private,vip,makeup_session'],
+            'participant_visibility' => ['nullable', 'string', 'in:visible,hidden,invite_only'],
+            'enrollment_mode' => ['nullable', 'string', 'in:self_select,organizer_assign_only,invite_accept,purchase_required'],
+            'requires_separate_entitlement' => ['nullable', 'boolean'],
+            'selection_opens_at' => ['nullable', 'date_format:Y-m-d\TH:i:sP'],
+            'selection_closes_at' => ['nullable', 'date_format:Y-m-d\TH:i:sP', 'after:selection_opens_at'],
+
             // Location type fields
             'location_type' => ['nullable', Rule::in(Session::LOCATION_TYPES)],
             'location_notes' => ['nullable', 'string', 'max:500'],

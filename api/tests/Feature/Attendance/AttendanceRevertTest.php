@@ -118,21 +118,34 @@ test('revert is rejected with 422 when attendance status is not_checked_in', fun
         ->assertStatus(422);
 });
 
-test('revert is rejected with 422 when attendance status is no_show', function () {
+test('assigned leader can revert a no_show attendance record', function () {
     [$org, $workshop, $session] = makeRevertFixture();
     [$leaderUser] = makeRevertLeader($session);
 
     $participant = User::factory()->create();
     Registration::factory()->forWorkshop($workshop->id)->forUser($participant->id)->create();
-    AttendanceRecord::factory()->create([
+    $record = AttendanceRecord::factory()->create([
         'session_id' => $session->id,
         'user_id' => $participant->id,
         'status' => 'no_show',
+        'check_in_method' => 'leader',
+        'checked_in_by_user_id' => $leaderUser->id,
     ]);
 
     $this->actingAs($leaderUser, 'sanctum')
         ->patchJson("/api/v1/sessions/{$session->id}/attendance/{$participant->id}/revert")
-        ->assertStatus(422);
+        ->assertOk()
+        ->assertJsonPath('status', 'not_checked_in')
+        ->assertJsonPath('check_in_method', null)
+        ->assertJsonPath('checked_in_at', null);
+
+    $this->assertDatabaseHas('attendance_records', [
+        'id' => $record->id,
+        'status' => 'not_checked_in',
+        'check_in_method' => null,
+        'checked_in_at' => null,
+        'checked_in_by_user_id' => null,
+    ]);
 });
 
 test('revert is rejected with 422 when no attendance record exists', function () {

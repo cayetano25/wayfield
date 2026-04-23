@@ -14,6 +14,14 @@ class SessionSelection extends Model
         'registration_id',
         'session_id',
         'selection_status',
+        'assignment_source',
+        'assigned_by_user_id',
+        'assigned_at',
+        'assignment_notes',
+    ];
+
+    protected $casts = [
+        'assigned_at' => 'datetime',
     ];
 
     public function registration(): BelongsTo
@@ -24,5 +32,10 @@ class SessionSelection extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(Session::class);
+    }
+
+    public function assignedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
     }
 }

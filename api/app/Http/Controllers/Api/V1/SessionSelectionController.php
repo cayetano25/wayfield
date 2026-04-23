@@ -6,6 +6,7 @@ use App\Domain\Sessions\Actions\DeselectSessionAction;
 use App\Domain\Sessions\Actions\SelectSessionAction;
 use App\Domain\Sessions\Exceptions\SessionCapacityExceededException;
 use App\Domain\Sessions\Exceptions\SessionConflictException;
+use App\Domain\Sessions\Exceptions\SessionSelectionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SelectSessionRequest;
 use App\Models\Registration;
@@ -42,9 +43,11 @@ class SessionSelectionController extends Controller
         // Eager-load workshop logistics once for hotel-type location lookups.
         $workshop->loadMissing('logistics');
 
-        // Single query: all published sessions with leaders + enrolled count.
+        // Single query: sessions visible to participants (published + visible + self_select)
+        // with leaders + enrolled count. Uses scopeVisibleToParticipants() which enforces
+        // publication_status, participant_visibility, and enrollment_mode atomically.
         $sessions = Session::where('workshop_id', $workshop->id)
-            ->where('is_published', true)
+            ->visibleToParticipants()
             ->with(['location', 'location.address', 'leaders'])
             ->withCount(['selections as enrolled_count' => fn ($q) => $q->where('selection_status', 'selected')])
             ->orderBy('start_at')
@@ -211,6 +214,12 @@ class SessionSelectionController extends Controller
 
         try {
             $action->execute($registration, $session);
+        } catch (SessionSelectionException $e) {
+            // New gate errors: not published, not visible, not self-selectable, window closed.
+            return response()->json([
+                'error' => $e->getErrorCode(),
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (SessionConflictException $e) {
             $conflictWith = null;
             if ($e->getConflictingSessionId()) {

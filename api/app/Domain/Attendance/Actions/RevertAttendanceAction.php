@@ -16,8 +16,8 @@ class RevertAttendanceAction
             ->where('user_id', $participant->id)
             ->first();
 
-        if (! $record || $record->status !== 'checked_in') {
-            throw new AttendanceEligibilityException('Attendance status is not checked_in and cannot be reverted.');
+        if (! $record || ! in_array($record->status, ['checked_in', 'no_show'], true)) {
+            throw new AttendanceEligibilityException('Attendance status cannot be reverted.');
         }
 
         $record->update([

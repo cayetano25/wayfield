@@ -37,6 +37,8 @@ class LeaderSessionResource extends JsonResource
             ],
             'capacity' => $session->capacity,
             'enrolled_count' => $this->resolveEnrolledCount($session, $workshop),
+            'session_type' => $session->session_type,
+            'publication_status' => $session->publication_status,
             'messaging_window_open' => $this->resolveMessagingWindowOpen($session),
             'messaging_window_start' => $session->start_at?->copy()->subHours(4)->toIso8601String(),
             'messaging_window_end' => $session->end_at?->copy()->addHours(2)->toIso8601String(),

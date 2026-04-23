@@ -34,6 +34,9 @@ class OrganizerLeaderResource extends JsonResource
             'address' => $this->whenLoaded('address', fn () => $this->address ? app(AddressService::class)->toApiResponse($this->address) : null
             ),
             'is_linked_to_user' => $this->isLinkedToUser(),
+            // True when the leader joined via self-enrollment (no invitation) and has a linked account.
+            // invitation_id is only present on the model when loaded through a workshop_leaders pivot.
+            'is_self_enrolled' => $this->user_id !== null && ($this->invitation_id ?? null) === null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

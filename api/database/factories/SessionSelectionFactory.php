@@ -21,4 +21,24 @@ class SessionSelectionFactory extends Factory
     {
         return $this->state(['selection_status' => 'canceled']);
     }
+
+    public function selfSelected(): static
+    {
+        return $this->state([
+            'selection_status' => 'selected',
+            'assignment_source' => 'self_selected',
+            'assigned_by_user_id' => null,
+            'assigned_at' => null,
+        ]);
+    }
+
+    public function organizerAssigned(int $assignedByUserId): static
+    {
+        return $this->state([
+            'selection_status' => 'selected',
+            'assignment_source' => 'organizer_assigned',
+            'assigned_by_user_id' => $assignedByUserId,
+            'assigned_at' => now(),
+        ]);
+    }
 }
