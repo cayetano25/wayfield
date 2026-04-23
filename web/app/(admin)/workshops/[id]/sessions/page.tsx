@@ -14,7 +14,9 @@ import {
   type SessionLocationFormData,
   type SessionLocationResponse,
 } from '@/lib/types/session-location';
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
+import { SessionDateTimeField } from '@/components/sessions/SessionDateTimeField';
+import { UTCToLocal } from '@/lib/datetime/timezoneUtils';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from '@/lib/api/client';
@@ -41,6 +43,8 @@ interface Workshop {
   id: number;
   title: string;
   timezone: string;
+  start_date?: string;
+  end_date?: string;
   organization_id: number;
   logistics: WorkshopLogistics | null;
 }
@@ -87,8 +91,8 @@ interface SessionForm {
   title: string;
   description: string;
   track_id: string;
-  start_at_local: string;
-  end_at_local: string;
+  start_at: string | null;
+  end_at: string | null;
   location_id: string;
   capacity: string;
   delivery_type: 'in_person' | 'virtual' | 'hybrid';
@@ -108,8 +112,8 @@ const EMPTY_FORM: SessionForm = {
   title: '',
   description: '',
   track_id: '',
-  start_at_local: '',
-  end_at_local: '',
+  start_at: null,
+  end_at: null,
   location_id: '',
   capacity: '',
   delivery_type: 'in_person',
@@ -142,22 +146,6 @@ const PUB_STATUS_LABEL: Record<PublicationStatus, string> = {
 };
 
 /* --- Helpers ---------------------------------------------------------- */
-
-function utcToLocalInput(utcStr: string, tz: string): string {
-  try {
-    return formatInTimeZone(new Date(utcStr), tz, "yyyy-MM-dd'T'HH:mm");
-  } catch {
-    return '';
-  }
-}
-
-function localInputToUtc(localStr: string, tz: string): string {
-  try {
-    return fromZonedTime(new Date(localStr), tz).toISOString();
-  } catch {
-    return new Date(localStr).toISOString();
-  }
-}
 
 function formatSessionTime(utcStr: string, tz: string): string {
   try {
@@ -318,8 +306,8 @@ function SessionSlideOver({
         title: editingSession.title,
         description: editingSession.description ?? '',
         track_id: editingSession.track_id ? String(editingSession.track_id) : '',
-        start_at_local: utcToLocalInput(editingSession.start_at, workshop.timezone),
-        end_at_local: utcToLocalInput(editingSession.end_at, workshop.timezone),
+        start_at: editingSession.start_at,
+        end_at: editingSession.end_at,
         location_id: '',
         capacity: editingSession.capacity != null ? String(editingSession.capacity) : '',
         delivery_type: editingSession.delivery_type,
@@ -398,13 +386,24 @@ function SessionSlideOver({
     return warnings;
   }, [form.session_type, form.participant_visibility, form.enrollment_mode]);
 
+  // Derive the start date and time in the workshop's timezone so the end
+  // time picker can restrict slots on the same day.
+  const startLocal = useMemo(() => {
+    if (!form.start_at) return null;
+    try {
+      return UTCToLocal(form.start_at, workshop.timezone);
+    } catch {
+      return null;
+    }
+  }, [form.start_at, workshop.timezone]);
+
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!form.title.trim()) e.title = 'Title is required';
-    if (!form.start_at_local) e.start_at_local = 'Start time is required';
-    if (!form.end_at_local) e.end_at_local = 'End time is required';
-    if (form.start_at_local && form.end_at_local && form.end_at_local <= form.start_at_local) {
-      e.end_at_local = 'End time must be after start time';
+    if (!form.start_at) e.start_at = 'Start date and time are required';
+    if (!form.end_at) e.end_at = 'End date and time are required';
+    if (form.start_at && form.end_at && new Date(form.start_at) >= new Date(form.end_at)) {
+      e.end_at = 'End time must be after start time';
     }
     if ((form.delivery_type === 'virtual' || form.delivery_type === 'hybrid') && !form.meeting_url.trim()) {
       e.meeting_url = 'Meeting URL is required for virtual/hybrid sessions';
@@ -428,8 +427,8 @@ function SessionSlideOver({
       title: form.title.trim(),
       description: form.description.trim() || null,
       track_id: form.track_id ? Number(form.track_id) : null,
-      start_at: localInputToUtc(form.start_at_local, workshop.timezone),
-      end_at: localInputToUtc(form.end_at_local, workshop.timezone),
+      start_at: form.start_at!,
+      end_at: form.end_at!,
       location_id: form.location_id ? Number(form.location_id) : null,
       capacity: form.capacity ? Number(form.capacity) : null,
       delivery_type: form.delivery_type,
@@ -561,22 +560,32 @@ function SessionSlideOver({
             ))}
           </Select>
 
-          {/* Datetime row */}
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label={`Start (${tzLabel})`}
-              type="datetime-local"
-              value={form.start_at_local}
-              onChange={(e) => setF('start_at_local', e.target.value)}
-              error={errors.start_at_local}
+          {/* Session timing */}
+          <div className="space-y-3">
+            <SessionDateTimeField
+              label="Start"
+              value={form.start_at}
+              onChange={(utcISO) => setF('start_at', utcISO)}
+              ianaTimezone={workshop.timezone}
+              minDate={workshop.start_date}
+              maxDate={workshop.end_date}
+              timeError={errors.start_at}
+              required
             />
-            <Input
-              label={`End (${tzLabel})`}
-              type="datetime-local"
-              value={form.end_at_local}
-              onChange={(e) => setF('end_at_local', e.target.value)}
-              error={errors.end_at_local}
+            <SessionDateTimeField
+              label="End"
+              value={form.end_at}
+              onChange={(utcISO) => setF('end_at', utcISO)}
+              ianaTimezone={workshop.timezone}
+              minDate={startLocal?.date ?? workshop.start_date}
+              maxDate={workshop.end_date}
+              minTime={startLocal?.time}
+              timeError={errors.end_at}
+              required
             />
+            <p className="text-xs text-medium-gray">
+              Times are in {tzLabel}
+            </p>
           </div>
 
           <SessionLocationPicker

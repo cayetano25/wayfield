@@ -86,6 +86,19 @@ export interface PublicWorkshop {
   logistics?: PublicLogistics;
 }
 
+export interface DiscoverWorkshopTaxonomy {
+  category: { id: number; name: string; slug: string } | null;
+  subcategory: { id: number; name: string; slug: string } | null;
+  specialization: { id: number; name: string; slug: string } | null;
+}
+
+export interface DiscoverWorkshopTag {
+  id: number;
+  group_key: string;
+  value: string;
+  label: string;
+}
+
 export interface DiscoverWorkshop {
   id: number;
   title: string;
@@ -94,19 +107,16 @@ export interface DiscoverWorkshop {
   start_date: string;
   end_date: string;
   public_slug: string | null;
-  hero_image_url?: string;
-  location?: {
-    city?: string;
-    state_or_region?: string;
-  };
+  hero_image_url?: string | null;
+  default_location?: { city?: string | null; state_or_region?: string | null } | null;
+  taxonomy?: DiscoverWorkshopTaxonomy | null;
+  tags?: DiscoverWorkshopTag[];
+  organization?: { name: string } | null;
   leader_count: number;
-  session_count: number;
-  // Extended fields for discover page UI
-  first_leader?: {
-    first_name: string;
-    last_name: string;
-    profile_image_url?: string | null;
-  };
+  // Legacy fields kept for backwards compat
+  location?: { city?: string; state_or_region?: string };
+  session_count?: number;
+  first_leader?: { first_name: string; last_name: string; profile_image_url?: string | null };
   spots_remaining?: number | null;
   category?: string;
 }
@@ -156,4 +166,35 @@ export async function discoverWorkshops(params: {
   qs.set('per_page', '12');
   const query = qs.toString();
   return publicFetch<DiscoverResponse>(`/discover/workshops${query ? `?${query}` : ''}`);
+}
+
+export interface DiscoverFilters {
+  q?: string;
+  category?: string;
+  subcategory?: string;
+  specialization?: string;
+  tags?: string[];
+  start_after?: string;
+  start_before?: string;
+  per_page?: number;
+  page?: number;
+  sort?: 'newest' | 'start_date' | 'relevance';
+}
+
+export async function discoverWorkshopsV2(
+  filters: DiscoverFilters,
+): Promise<DiscoverResponse | null> {
+  const qs = new URLSearchParams();
+  if (filters.q) qs.set('q', filters.q);
+  if (filters.category) qs.set('category', filters.category);
+  if (filters.subcategory) qs.set('subcategory', filters.subcategory);
+  if (filters.specialization) qs.set('specialization', filters.specialization);
+  filters.tags?.forEach((t) => qs.append('tag[]', t));
+  if (filters.start_after) qs.set('start_after', filters.start_after);
+  if (filters.start_before) qs.set('start_before', filters.start_before);
+  qs.set('per_page', String(filters.per_page ?? 12));
+  qs.set('page', String(filters.page ?? 1));
+  if (filters.sort) qs.set('sort', filters.sort);
+  const query = qs.toString();
+  return publicFetch<DiscoverResponse>(`/public/workshops${query ? `?${query}` : ''}`);
 }

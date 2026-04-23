@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPatch, apiPost, ApiError } from '@/lib/api/client';
-import { type LeaderProfile } from '@/lib/auth/session';
 import { type AddressApiResponse, type AddressFormData } from '@/lib/types/address';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -13,6 +12,8 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 import { AddressForm } from '@/components/ui/AddressForm';
 
 const BIO_MAX = 2000;
+
+/* --- Types ----------------------------------------------------------- */
 
 interface MeDetail {
   id: number;
@@ -25,7 +26,19 @@ interface MeDetail {
     address: AddressApiResponse | null;
     timezone: string | null;
   } | null;
-  leader_profile: LeaderProfile | null;
+  leader_profile: { exists: boolean; leader_id: number | null } | null;
+}
+
+// Full leader profile returned by GET /leader/profile
+interface LeaderProfileDetail {
+  id: number;
+  bio: string | null;
+  display_name: string | null;
+  website_url: string | null;
+  phone_number: string | null;
+  city: string | null;
+  state_or_region: string | null;
+  profile_image_url: string | null;
 }
 
 interface ContactForm {
@@ -33,9 +46,16 @@ interface ContactForm {
   address: AddressFormData | null;
 }
 
-interface LeaderForm {
+interface LeaderProfileForm {
   bio: string;
+  display_name: string;
+  website_url: string;
+  city: string;
+  state_or_region: string;
+  phone_number: string;
 }
+
+/* --- Helpers --------------------------------------------------------- */
 
 function addressFromApiResponse(addr: AddressApiResponse): AddressFormData {
   return {
@@ -48,35 +68,16 @@ function addressFromApiResponse(addr: AddressApiResponse): AddressFormData {
   };
 }
 
-function addressFromLeader(lp: LeaderProfile): AddressFormData | null {
-  if (!lp.city && !lp.address_line_1 && !lp.state_or_region) return null;
-  return {
-    country_code: 'US',
-    address_line_1: lp.address_line_1 ?? '',
-    address_line_2: lp.address_line_2 ?? '',
-    locality: lp.city ?? '',
-    administrative_area: lp.state_or_region ?? '',
-    postal_code: lp.postal_code ?? '',
-  };
-}
+const EMPTY_LEADER_FORM: LeaderProfileForm = {
+  bio: '',
+  display_name: '',
+  website_url: '',
+  city: '',
+  state_or_region: '',
+  phone_number: '',
+};
 
-function emptyContact(): ContactForm {
-  return { phone_number: '', address: null };
-}
-
-function contactFromLeader(lp: LeaderProfile): ContactForm {
-  return {
-    phone_number: lp.phone_number ?? '',
-    address: addressFromLeader(lp),
-  };
-}
-
-function contactFromProfile(profile: MeDetail['profile']): ContactForm {
-  return {
-    phone_number: profile?.phone_number ?? '',
-    address: profile?.address ? addressFromApiResponse(profile.address) : null,
-  };
-}
+/* --- Page ------------------------------------------------------------ */
 
 export default function ProfilePage() {
   const { user, refreshUser } = useUser();
@@ -84,19 +85,23 @@ export default function ProfilePage() {
   const [me, setMe] = useState<MeDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Leader profile image tracked separately so ImageUploader can update it locally
+  const [leaderProfileImageUrl, setLeaderProfileImageUrl] = useState<string | null>(null);
+  const [leaderId, setLeaderId] = useState<number | null>(null);
+
   // Personal info
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoErrors, setInfoErrors] = useState<Record<string, string>>({});
 
-  // Contact info (all users)
-  const [contactForm, setContactForm] = useState<ContactForm>(emptyContact());
+  // Contact info — non-leaders only
+  const [contactForm, setContactForm] = useState<ContactForm>({ phone_number: '', address: null });
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
 
-  // Leader profile — bio only
-  const [leaderForm, setLeaderForm] = useState<LeaderForm>({ bio: '' });
+  // Leader profile form
+  const [leaderForm, setLeaderForm] = useState<LeaderProfileForm>(EMPTY_LEADER_FORM);
   const [savingLeader, setSavingLeader] = useState(false);
-  const [leaderError, setLeaderError] = useState<string | null>(null);
+  const [leaderErrors, setLeaderErrors] = useState<Record<string, string>>({});
 
   // Password
   const [passwordForm, setPasswordForm] = useState({
@@ -107,30 +112,51 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
-  const bioRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
-    apiGet<MeDetail>('/me')
-      .then((data) => {
-        setMe(data);
-        if (data.leader_profile) {
-          setContactForm(contactFromLeader(data.leader_profile));
-          setLeaderForm({ bio: data.leader_profile.bio ?? '' });
+    async function loadAll() {
+      try {
+        const meData = await apiGet<MeDetail>('/me');
+        setMe(meData);
+
+        const isLeader = meData.leader_profile?.exists === true;
+
+        if (isLeader) {
+          const lp = await apiGet<LeaderProfileDetail>('/leader/profile');
+          setLeaderId(lp.id);
+          setLeaderProfileImageUrl(lp.profile_image_url);
+          setLeaderForm({
+            bio: lp.bio ?? '',
+            display_name: lp.display_name ?? '',
+            website_url: lp.website_url ?? '',
+            city: lp.city ?? '',
+            state_or_region: lp.state_or_region ?? '',
+            phone_number: lp.phone_number ?? '',
+          });
         } else {
-          setContactForm(contactFromProfile(data.profile));
+          setContactForm({
+            phone_number: meData.profile?.phone_number ?? '',
+            address: meData.profile?.address
+              ? addressFromApiResponse(meData.profile.address)
+              : null,
+          });
         }
-      })
-      .catch(() => toast.error('Failed to load profile'))
-      .finally(() => setLoading(false));
+      } catch {
+        toast.error('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAll();
   }, []);
 
-  // Auto-resize bio textarea
-  useEffect(() => {
-    const el = bioRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  }, [leaderForm.bio]);
+  function setLeaderField<K extends keyof LeaderProfileForm>(k: K, v: string) {
+    setLeaderForm((prev) => ({ ...prev, [k]: v }));
+    if (leaderErrors[k]) {
+      setLeaderErrors((prev) => { const n = { ...prev }; delete n[k]; return n; });
+    }
+  }
+
+  /* -- Handlers ------------------------------------------------------- */
 
   async function handleSaveInfo(e: React.FormEvent) {
     e.preventDefault();
@@ -170,28 +196,13 @@ export default function ProfilePage() {
     setContactError(null);
     setSavingContact(true);
     try {
-      const isLeader = me.leader_profile !== null;
-      if (isLeader) {
-        const payload: Record<string, unknown> = {
-          phone_number: contactForm.phone_number,
-        };
-        if (contactForm.address?.address_line_1) {
-          payload.address = contactForm.address;
-        } else if (contactForm.address) {
-          payload.city = contactForm.address.locality ?? null;
-          payload.state_or_region = contactForm.address.administrative_area ?? null;
-          payload.postal_code = contactForm.address.postal_code ?? null;
-        }
-        await apiPatch('/leader/profile', payload);
-      } else {
-        const payload: Record<string, unknown> = {
-          phone_number: contactForm.phone_number,
-        };
-        if (contactForm.address?.address_line_1) {
-          payload.address = contactForm.address;
-        }
-        await apiPatch('/me', payload);
+      const payload: Record<string, unknown> = {
+        phone_number: contactForm.phone_number.trim() || null,
+      };
+      if (contactForm.address?.address_line_1) {
+        payload.address = contactForm.address;
       }
+      await apiPatch('/me', payload);
       toast.success('Contact info updated.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Failed to save contact info';
@@ -203,14 +214,28 @@ export default function ProfilePage() {
 
   async function handleSaveLeader(e: React.FormEvent) {
     e.preventDefault();
-    setLeaderError(null);
+    setLeaderErrors({});
     setSavingLeader(true);
     try {
-      await apiPatch('/leader/profile', { bio: leaderForm.bio });
-      toast.success('Leader profile updated.');
+      await apiPatch('/leader/profile', {
+        bio: leaderForm.bio.trim() || null,
+        display_name: leaderForm.display_name.trim() || null,
+        website_url: leaderForm.website_url.trim() || null,
+        city: leaderForm.city.trim() || null,
+        state_or_region: leaderForm.state_or_region.trim() || null,
+        phone_number: leaderForm.phone_number.trim() || null,
+      });
+      toast.success('Leader profile saved.');
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Failed to save leader profile';
-      setLeaderError(msg);
+      if (err instanceof ApiError && err.errors) {
+        const mapped: Record<string, string> = {};
+        for (const [k, v] of Object.entries(err.errors)) {
+          mapped[k] = Array.isArray(v) ? v[0] : v;
+        }
+        setLeaderErrors(mapped);
+      } else {
+        toast.error('Failed to save leader profile');
+      }
     } finally {
       setSavingLeader(false);
     }
@@ -255,6 +280,8 @@ export default function ProfilePage() {
     }
   }
 
+  /* -- Loading state -------------------------------------------------- */
+
   if (loading || !me || !user) {
     return (
       <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 space-y-5">
@@ -265,8 +292,9 @@ export default function ProfilePage() {
     );
   }
 
-  const isLeader = me.leader_profile !== null;
-  const bioRemaining = BIO_MAX - leaderForm.bio.length;
+  const isLeader = me.leader_profile?.exists === true;
+
+  /* -- Render --------------------------------------------------------- */
 
   return (
     <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 space-y-5">
@@ -295,40 +323,16 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      {/* Card 1: Profile Photo */}
-      <Card>
-        <div className="px-6 py-5 border-b border-border-gray">
-          <h2 className="font-heading text-base font-semibold text-dark">Profile Photo</h2>
-          <p className="text-sm text-medium-gray mt-0.5">
-            Shown in the navigation bar and across the platform.
-          </p>
-        </div>
-        <div className="px-6 py-6 flex justify-center">
-          {isLeader ? (
-            <ImageUploader
-              currentUrl={me.leader_profile!.profile_image_url}
-              entityType="leader"
-              entityId={me.leader_profile!.id}
-              fieldName="profile_image_url"
-              shape="circle"
-              width={96}
-              height={96}
-              onUploadComplete={async (url) => {
-                await apiPatch('/leader/profile', { profile_image_url: url });
-                setMe((prev) => prev && prev.leader_profile
-                  ? { ...prev, leader_profile: { ...prev.leader_profile, profile_image_url: url } }
-                  : prev);
-                await refreshUser();
-              }}
-              onRemove={async () => {
-                await apiPatch('/leader/profile', { profile_image_url: null });
-                setMe((prev) => prev && prev.leader_profile
-                  ? { ...prev, leader_profile: { ...prev.leader_profile, profile_image_url: null } }
-                  : prev);
-                await refreshUser();
-              }}
-            />
-          ) : (
+      {/* Card 1: Profile Photo — non-leaders only (leaders get profile photo in Leader Profile card) */}
+      {!isLeader && (
+        <Card>
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Profile Photo</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              Shown in the navigation bar and across the platform.
+            </p>
+          </div>
+          <div className="px-6 py-6 flex justify-center">
             <ImageUploader
               currentUrl={me.profile_image_url}
               entityType="user"
@@ -347,9 +351,9 @@ export default function ProfilePage() {
                 await refreshUser();
               }}
             />
-          )}
-        </div>
-      </Card>
+          </div>
+        </Card>
+      )}
 
       {/* Card 2: Personal Info */}
       <Card>
@@ -388,83 +392,186 @@ export default function ProfilePage() {
         </form>
       </Card>
 
-      {/* Card 3: Contact Info — visible to ALL users */}
-      <Card>
-        <div className="px-6 py-5 border-b border-border-gray">
-          <h2 className="font-heading text-base font-semibold text-dark">Contact Info</h2>
-          <p className="text-sm text-medium-gray mt-0.5">
-            Your contact details are private and only visible to workshop organizers for workshops you join.
-          </p>
-        </div>
-        <form onSubmit={handleSaveContact} className="px-6 py-6 space-y-5">
-          <Input
-            label="Phone Number"
-            type="tel"
-            placeholder="+1 (555) 000-0000"
-            value={contactForm.phone_number}
-            onChange={(e) => setContactForm((p) => ({ ...p, phone_number: e.target.value }))}
-            helper="Used by workshop organizers to reach you."
-          />
-
-          <AddressForm
-            label="Address"
-            value={contactForm.address ?? null}
-            onChange={(addr) => setContactForm((prev) => ({ ...prev, address: addr }))}
-            defaultCountryCode={contactForm.address?.country_code ?? 'US'}
-            privacyNote="Your address is private and only visible to workshop organizers."
-            required={false}
-          />
-
-          {contactError && (
-            <p className="text-sm text-danger">{contactError}</p>
-          )}
-
-          <div className="flex justify-end">
-            <Button type="submit" loading={savingContact}>
-              Save Contact Info
-            </Button>
+      {/* Card 3: Contact Info — non-leaders only (leaders manage contact in Leader Profile) */}
+      {!isLeader && (
+        <Card>
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Contact Info</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              Your contact details are private and only visible to workshop organizers for workshops you join.
+            </p>
           </div>
-        </form>
-      </Card>
+          <form onSubmit={handleSaveContact} className="px-6 py-6 space-y-5">
+            <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="+1 (555) 000-0000"
+              value={contactForm.phone_number}
+              onChange={(e) => setContactForm((p) => ({ ...p, phone_number: e.target.value }))}
+              helper="Used by workshop organizers to reach you."
+            />
 
-      {/* Card 4: Leader Profile — leaders only, bio only */}
+            <AddressForm
+              label="Address"
+              value={contactForm.address ?? null}
+              onChange={(addr) => setContactForm((prev) => ({ ...prev, address: addr }))}
+              defaultCountryCode={contactForm.address?.country_code ?? 'US'}
+              privacyNote="Your address is private and only visible to workshop organizers."
+              required={false}
+            />
+
+            {contactError && (
+              <p className="text-sm text-danger">{contactError}</p>
+            )}
+
+            <div className="flex justify-end">
+              <Button type="submit" loading={savingContact}>
+                Save Contact Info
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* Card 4: Leader Profile — only when user has a leader profile */}
       {isLeader && (
         <Card>
           <div className="px-6 py-5 border-b border-border-gray">
             <h2 className="font-heading text-base font-semibold text-dark">Leader Profile</h2>
             <p className="text-sm text-medium-gray mt-0.5">
-              This information appears on workshop pages and is visible to participants in workshops where you are a session leader.
+              This profile is shown to participants in workshops you lead.
             </p>
           </div>
-          <form onSubmit={handleSaveLeader} className="px-6 py-6 space-y-5">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="leader-bio" className="text-sm font-medium text-dark">Bio</label>
-              <textarea
-                ref={bioRef}
-                id="leader-bio"
-                rows={4}
-                maxLength={BIO_MAX}
-                placeholder="Tell participants about your background, expertise, and what they can expect from your sessions..."
-                value={leaderForm.bio}
-                onChange={(e) => setLeaderForm((p) => ({ ...p, bio: e.target.value }))}
-                className="w-full px-3 py-2 text-sm text-dark bg-white border border-border-gray rounded-lg outline-none resize-none overflow-hidden transition-colors placeholder:text-light-gray focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-              <p className={`text-xs ${bioRemaining < 100 ? 'text-danger' : 'text-medium-gray'}`}>
-                {bioRemaining} characters remaining
-              </p>
-              <p className="text-xs text-medium-gray">Shown on the public workshop page next to your name.</p>
-            </div>
 
-            {leaderError && (
-              <p className="text-sm text-danger">{leaderError}</p>
+          <div className="px-6 py-6 space-y-6">
+            {/* Profile Photo (for leaders, managed here rather than a separate card) */}
+            {leaderId !== null && (
+              <div>
+                <p className="text-sm font-medium text-dark mb-3">Profile Photo</p>
+                <ImageUploader
+                  currentUrl={leaderProfileImageUrl}
+                  entityType="leader"
+                  entityId={leaderId}
+                  fieldName="profile_image_url"
+                  shape="circle"
+                  width={96}
+                  height={96}
+                  onUploadComplete={async (url) => {
+                    await apiPatch('/leader/profile', { profile_image_url: url });
+                    setLeaderProfileImageUrl(url);
+                    await refreshUser();
+                  }}
+                  onRemove={async () => {
+                    await apiPatch('/leader/profile', { profile_image_url: null });
+                    setLeaderProfileImageUrl(null);
+                    await refreshUser();
+                  }}
+                />
+              </div>
             )}
 
-            <div className="flex justify-end">
-              <Button type="submit" loading={savingLeader}>
-                Save Leader Profile
-              </Button>
+            {/* Account note */}
+            <p className="text-xs text-gray-500">
+              Your name and email come from your account settings.
+            </p>
+
+            {/* Leader profile form */}
+            <form onSubmit={handleSaveLeader} className="space-y-5">
+              {/* Bio */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="leader-bio" className="text-sm font-medium text-dark">
+                  Bio
+                </label>
+                <textarea
+                  id="leader-bio"
+                  rows={6}
+                  value={leaderForm.bio}
+                  onChange={(e) => setLeaderField('bio', e.target.value.slice(0, BIO_MAX))}
+                  placeholder="Tell participants about your background and teaching approach."
+                  disabled={savingLeader}
+                  className={`
+                    w-full px-3 py-2 text-sm text-dark bg-white border rounded-lg outline-none
+                    resize-none transition-colors placeholder:text-light-gray
+                    focus:ring-2 focus:ring-primary/20 focus:border-primary
+                    disabled:bg-surface disabled:text-medium-gray disabled:cursor-not-allowed
+                    ${leaderErrors.bio ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-border-gray'}
+                  `}
+                />
+                <div className="flex justify-between items-center">
+                  {leaderErrors.bio
+                    ? <p className="text-xs text-danger">{leaderErrors.bio}</p>
+                    : <span />
+                  }
+                  <p className="text-xs text-gray-400">{leaderForm.bio.length} / {BIO_MAX}</p>
+                </div>
+              </div>
+
+              {/* Display Name */}
+              <Input
+                label="Display Name"
+                value={leaderForm.display_name}
+                onChange={(e) => setLeaderField('display_name', e.target.value)}
+                helper="Shown instead of your full name when set. Leave blank to use your account name."
+                error={leaderErrors.display_name}
+                disabled={savingLeader}
+              />
+
+              {/* Website */}
+              <Input
+                label="Website"
+                type="url"
+                value={leaderForm.website_url}
+                onChange={(e) => setLeaderField('website_url', e.target.value)}
+                placeholder="https://"
+                error={leaderErrors.website_url}
+                disabled={savingLeader}
+              />
+
+              {/* City + State / Region */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <Input
+                  label="City"
+                  value={leaderForm.city}
+                  onChange={(e) => setLeaderField('city', e.target.value)}
+                  error={leaderErrors.city}
+                  disabled={savingLeader}
+                />
+                <Input
+                  label="State / Region"
+                  value={leaderForm.state_or_region}
+                  onChange={(e) => setLeaderField('state_or_region', e.target.value)}
+                  error={leaderErrors.state_or_region}
+                  disabled={savingLeader}
+                />
+              </div>
+
+              {/* Phone Number */}
+              <Input
+                label="Phone Number"
+                type="tel"
+                value={leaderForm.phone_number}
+                onChange={(e) => setLeaderField('phone_number', e.target.value)}
+                helper="Private — only visible to participants in your assigned sessions."
+                error={leaderErrors.phone_number}
+                disabled={savingLeader}
+              />
+
+              <div className="flex justify-end">
+                <Button type="submit" loading={savingLeader}>
+                  Save Leader Profile
+                </Button>
+              </div>
+            </form>
+
+            {/* Public visibility note */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-medium text-gray-900">What participants see</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Participants can see your name, bio, display name, website, city, and
+                state/region. Your phone number and address are kept private.
+              </p>
             </div>
-          </form>
+          </div>
         </Card>
       )}
 

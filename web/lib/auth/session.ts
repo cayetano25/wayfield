@@ -23,7 +23,7 @@ export interface AdminUser {
   profile_image_url: string | null;
   onboarding_intent: 'organizer' | 'participant' | null;
   onboarding_completed_at: string | null;
-  leader_profile: LeaderProfile | null;
+  leader_profile: { exists: boolean; leader_id: number | null } | null;
   organizations: Array<{
     id: number;
     name: string;

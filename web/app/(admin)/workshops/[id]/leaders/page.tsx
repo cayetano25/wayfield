@@ -3,13 +3,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal, User as UserIcon,
+  Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal,
+  User as UserIcon, UserPlus,
 } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
+import type { AdminUser } from '@/lib/auth/session';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -58,6 +60,7 @@ interface Leader {
   invitation_created_at: string | null;
   sessions_count: number;
   assigned_sessions?: AssignedSession[];
+  is_self_enrolled: boolean;
 }
 
 interface Session {
@@ -67,7 +70,7 @@ interface Session {
 }
 
 interface ConfirmActionState {
-  type: 'rescind' | 'remove_leader' | 'remove_session';
+  type: 'rescind' | 'remove_leader' | 'remove_session' | 'remove_self';
   leader: Leader;
   session?: AssignedSession;
 }
@@ -278,6 +281,212 @@ function InviteModal({
   );
 }
 
+/* --- Self-enroll modal ----------------------------------------------- */
+
+interface SelfEnrollForm {
+  bio: string;
+  website_url: string;
+  city: string;
+  state_or_region: string;
+  phone_number: string;
+  display_name: string;
+}
+
+const EMPTY_SELF_ENROLL: SelfEnrollForm = {
+  bio: '',
+  website_url: '',
+  city: '',
+  state_or_region: '',
+  phone_number: '',
+  display_name: '',
+};
+
+const BIO_MAX = 2000;
+
+function SelfEnrollModal({
+  open,
+  orgId,
+  workshopId,
+  user,
+  onClose,
+  onEnrolled,
+}: {
+  open: boolean;
+  orgId: number;
+  workshopId: number;
+  user: AdminUser;
+  onClose: () => void;
+  onEnrolled: () => void;
+}) {
+  const [form, setForm] = useState<SelfEnrollForm>(EMPTY_SELF_ENROLL);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm(EMPTY_SELF_ENROLL);
+      setErrors({});
+    }
+  }, [open]);
+
+  function setF<K extends keyof SelfEnrollForm>(k: K, v: string) {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    if (errors[k]) setErrors((prev) => { const n = { ...prev }; delete n[k]; return n; });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await apiPost(`/organizations/${orgId}/leaders/self-enroll`, {
+        bio: form.bio.trim() || undefined,
+        website_url: form.website_url.trim() || undefined,
+        city: form.city.trim() || undefined,
+        state_or_region: form.state_or_region.trim() || undefined,
+        phone_number: form.phone_number.trim() || undefined,
+        display_name: form.display_name.trim() || undefined,
+        workshop_id: workshopId,
+      });
+      toast.success("You've been added as a leader on this workshop.");
+      onClose();
+      onEnrolled();
+    } catch (err) {
+      if (err instanceof ApiError && err.errors) {
+        const mapped: Record<string, string> = {};
+        for (const [k, v] of Object.entries(err.errors)) {
+          mapped[k] = Array.isArray(v) ? v[0] : v;
+        }
+        setErrors(mapped);
+      } else {
+        toast.error('Failed to add yourself as leader. Please try again.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={saving ? () => {} : onClose}
+      title="Add Yourself as a Leader"
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button form="self-enroll-form" type="submit" loading={saving}>
+            Add Me as Leader
+          </Button>
+        </>
+      }
+    >
+      <form id="self-enroll-form" onSubmit={handleSubmit} className="space-y-5">
+        {/* Read-only identity block */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm font-medium text-gray-900">
+            {user.first_name} {user.last_name}
+          </p>
+          <p className="text-sm text-gray-500">{user.email}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Your name and email come from your account and are shown to participants as-is.
+          </p>
+        </div>
+
+        {/* Bio */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-dark" htmlFor="self-enroll-bio">
+            Bio
+          </label>
+          <textarea
+            id="self-enroll-bio"
+            rows={5}
+            value={form.bio}
+            onChange={(e) => setF('bio', e.target.value.slice(0, BIO_MAX))}
+            placeholder="Tell participants about your background, experience, and what you'll be teaching."
+            disabled={saving}
+            className={`
+              w-full px-3 py-2 text-sm text-dark bg-white border rounded-lg outline-none
+              transition-colors resize-none placeholder:text-light-gray
+              focus:ring-2 focus:ring-primary/20 focus:border-primary
+              disabled:bg-surface disabled:text-medium-gray disabled:cursor-not-allowed
+              ${errors.bio ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-border-gray'}
+            `}
+          />
+          <div className="flex justify-between items-center">
+            {errors.bio
+              ? <p className="text-xs text-danger">{errors.bio}</p>
+              : <span />
+            }
+            <p className="text-xs text-gray-400">{form.bio.length} / {BIO_MAX}</p>
+          </div>
+        </div>
+
+        {/* Website */}
+        <Input
+          label="Website"
+          type="url"
+          value={form.website_url}
+          onChange={(e) => setF('website_url', e.target.value)}
+          placeholder="https://yourwebsite.com"
+          error={errors.website_url}
+          disabled={saving}
+        />
+
+        {/* City + State / Region */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="City"
+            value={form.city}
+            onChange={(e) => setF('city', e.target.value)}
+            placeholder="e.g. Chicago"
+            error={errors.city}
+            disabled={saving}
+          />
+          <Input
+            label="State / Region"
+            value={form.state_or_region}
+            onChange={(e) => setF('state_or_region', e.target.value)}
+            placeholder="e.g. Illinois"
+            error={errors.state_or_region}
+            disabled={saving}
+          />
+        </div>
+
+        {/* Phone */}
+        <Input
+          label="Phone Number"
+          type="tel"
+          value={form.phone_number}
+          onChange={(e) => setF('phone_number', e.target.value)}
+          placeholder="+1 (312) 000-0000"
+          error={errors.phone_number}
+          helper="Only visible to participants in sessions you lead."
+          disabled={saving}
+        />
+
+        {/* Display name */}
+        <Input
+          label="Display Name"
+          value={form.display_name}
+          onChange={(e) => setF('display_name', e.target.value)}
+          placeholder="Leave blank to use your full name"
+          error={errors.display_name}
+          helper="If set, this is shown to participants instead of your first and last name."
+          disabled={saving}
+        />
+
+        {/* Informational note */}
+        <p className="text-xs text-gray-500">
+          You can update your leader profile at any time from the Leader Profile settings.
+          Your leader profile is shared across all workshops you lead.
+        </p>
+      </form>
+    </Modal>
+  );
+}
+
 /* --- Session assignment selector -------------------------------------- */
 
 function SessionAssignSelector({
@@ -455,9 +664,16 @@ function LeaderSlideOver({
               <div className="flex items-start gap-4">
                 <LeaderAvatar leader={leader} size="lg" />
                 <div className="flex-1 min-w-0 pt-1">
-                  <h3 className="font-heading font-semibold text-dark text-base leading-snug">
-                    {fullName || leader.invited_email || 'Invited Leader'}
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-heading font-semibold text-dark text-base leading-snug">
+                      {fullName || leader.invited_email || 'Invited Leader'}
+                    </h3>
+                    {leader.is_self_enrolled && (
+                      <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 border border-teal-200">
+                        You
+                      </span>
+                    )}
+                  </div>
                   {leader.invited_email && !fullName && (
                     <p className="text-sm text-medium-gray mt-0.5">Pending invitation</p>
                   )}
@@ -638,7 +854,7 @@ function LeaderSlideOver({
   );
 }
 
-/* --- Confirm modal (rescind / remove leader / table session chip) ----- */
+/* --- Confirm modal (rescind / remove leader / table session chip / remove self) */
 
 function ConfirmModal({
   action,
@@ -673,6 +889,11 @@ function ConfirmModal({
     description = 'They will lose access to all assigned sessions and rosters.';
     confirmLabel = 'Remove Leader';
     cancelLabel = 'Keep Leader';
+  } else if (action.type === 'remove_self') {
+    title = 'Remove yourself as a leader from this workshop?';
+    description = '';
+    confirmLabel = 'Remove';
+    cancelLabel = 'Cancel';
   } else {
     title = `Remove ${fullName} from ${action.session?.title ?? 'this session'}?`;
     description = '';
@@ -789,13 +1010,20 @@ function LeaderTableRow({
         <div className="flex items-center gap-3">
           <LeaderAvatar leader={leader} size="sm" />
           <div className="min-w-0">
-            <button
-              type="button"
-              onClick={onView}
-              className="text-sm font-medium text-dark hover:text-primary transition-colors text-left leading-snug block truncate max-w-[180px]"
-            >
-              {displayName}
-            </button>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={onView}
+                className="text-sm font-medium text-dark hover:text-primary transition-colors text-left leading-snug truncate max-w-[180px]"
+              >
+                {displayName}
+              </button>
+              {leader.is_self_enrolled && (
+                <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 border border-teal-200 shrink-0">
+                  You
+                </span>
+              )}
+            </div>
             {email !== '—' && (
               <p className="text-xs text-medium-gray truncate max-w-[180px]">{email}</p>
             )}
@@ -815,7 +1043,7 @@ function LeaderTableRow({
       <td className="py-3.5 px-4">
         <SessionChipsCell
           leader={leader}
-          canRemove={canRemove && !isInactive}
+          canRemove={canRemove && !isInactive && !leader.is_self_enrolled}
           onRemoveFromSession={(session) =>
             onConfirmAction({ type: 'remove_session', leader, session })
           }
@@ -824,23 +1052,35 @@ function LeaderTableRow({
 
       {/* Actions */}
       <td className="py-3.5 pl-4 pr-5 text-right whitespace-nowrap">
-        {leader.invitation_status === 'pending' && canRemove && (
+        {leader.is_self_enrolled ? (
           <button
             type="button"
-            onClick={() => onConfirmAction({ type: 'rescind', leader })}
+            onClick={() => onConfirmAction({ type: 'remove_self', leader })}
             className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
           >
-            Rescind Invitation
+            Remove Yourself
           </button>
-        )}
-        {leader.invitation_status === 'accepted' && canRemove && (
-          <button
-            type="button"
-            onClick={() => onConfirmAction({ type: 'remove_leader', leader })}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
-          >
-            Remove Leader
-          </button>
+        ) : (
+          <>
+            {leader.invitation_status === 'pending' && canRemove && (
+              <button
+                type="button"
+                onClick={() => onConfirmAction({ type: 'rescind', leader })}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
+              >
+                Rescind Invitation
+              </button>
+            )}
+            {leader.invitation_status === 'accepted' && canRemove && (
+              <button
+                type="button"
+                onClick={() => onConfirmAction({ type: 'remove_leader', leader })}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/70 text-danger hover:bg-danger/5 transition-colors"
+              >
+                Remove Leader
+              </button>
+            )}
+          </>
         )}
       </td>
     </tr>
@@ -925,7 +1165,7 @@ function EmptyLeaders({ onInvite }: { onInvite: () => void }) {
 export default function WorkshopLeadersPage() {
   const { id } = useParams<{ id: string }>();
   const { setPage } = usePage();
-  const { currentOrg } = useUser();
+  const { currentOrg, user } = useUser();
 
   // owner and admin can rescind invitations and remove leaders; staff cannot.
   const canRemove =
@@ -937,6 +1177,7 @@ export default function WorkshopLeadersPage() {
   const [loading, setLoading] = useState(true);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [selfEnrollOpen, setSelfEnrollOpen] = useState(false);
   const [slideLeader, setSlideLeader] = useState<Leader | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
 
@@ -978,6 +1219,9 @@ export default function WorkshopLeadersPage() {
       { label: 'Leaders' },
     ]);
   }, [workshop, id, setPage]);
+
+  // Current user is already enrolled if any leader row has is_self_enrolled=true
+  const isAlreadyEnrolled = leaders.some((l) => l.is_self_enrolled);
 
   function openSlideOver(leader: Leader) {
     setSlideLeader(leader);
@@ -1021,6 +1265,10 @@ export default function WorkshopLeadersPage() {
           ),
         );
         toast.success('Leader removed from workshop');
+      } else if (confirmAction.type === 'remove_self') {
+        await apiDelete(`/workshops/${id}/leaders/self`);
+        toast.success("You've been removed from this workshop as a leader.");
+        load();
       } else if (confirmAction.type === 'remove_session' && confirmAction.session) {
         const { session } = confirmAction;
         await apiDelete(`/sessions/${session.id}/leaders/${confirmAction.leader.id}`);
@@ -1070,10 +1318,22 @@ export default function WorkshopLeadersPage() {
               )}
             </h2>
           </div>
-          <Button onClick={() => setInviteOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Invite Leader
-          </Button>
+          <div className="flex items-center gap-3">
+            {canRemove && !isAlreadyEnrolled && (
+              <button
+                type="button"
+                onClick={() => setSelfEnrollOpen(true)}
+                className="inline-flex items-center gap-2 border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Yourself as Leader
+              </button>
+            )}
+            <Button onClick={() => setInviteOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Invite Leader
+            </Button>
+          </div>
         </div>
 
         {/* Table or empty state */}
@@ -1101,6 +1361,18 @@ export default function WorkshopLeadersPage() {
         />
       )}
 
+      {/* Self-enroll modal */}
+      {workshop && user && (
+        <SelfEnrollModal
+          open={selfEnrollOpen}
+          orgId={workshop.organization_id}
+          workshopId={workshop.id}
+          user={user}
+          onClose={() => setSelfEnrollOpen(false)}
+          onEnrolled={load}
+        />
+      )}
+
       {/* Leader detail slide-over */}
       <LeaderSlideOver
         open={slideOpen}
@@ -1111,7 +1383,7 @@ export default function WorkshopLeadersPage() {
         onUpdated={handleSlideUpdated}
       />
 
-      {/* Confirmation modal (rescind / remove leader / remove from session via chip) */}
+      {/* Confirmation modal (rescind / remove leader / remove from session via chip / remove self) */}
       <ConfirmModal
         action={confirmAction}
         confirming={confirming}

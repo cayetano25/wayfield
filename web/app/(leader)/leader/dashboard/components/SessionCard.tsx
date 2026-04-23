@@ -61,42 +61,60 @@ function getWindowState(session: LeaderDashboardSession, now: Date): WindowState
   return 'closed';
 }
 
-function getStatusLine(
-  session: LeaderDashboardSession,
-  now: Date,
-): { text: string; color: string } | null {
-  const state = getWindowState(session, now);
-  const tz = session.workshop_timezone ?? 'UTC';
-  const closesAt = session.messaging_window_end ?? session.messaging_window?.closes_at ?? null;
-  const opensAt = session.messaging_window_start ?? session.messaging_window?.opens_at ?? null;
-
-  switch (state) {
-    case 'active': {
-      if (!closesAt) return { text: 'Messaging open', color: '#0FA3B1' };
-      const diffMs = new Date(closesAt).getTime() - now.getTime();
-      const diffMin = Math.floor(diffMs / 60_000);
-      if (diffMin < 60) {
-        return { text: `Messaging open · closes in ${Math.max(diffMin, 1)}m`, color: '#0FA3B1' };
-      }
-      return { text: `Messaging open · closes at ${formatWindowTime(closesAt, tz)}`, color: '#0FA3B1' };
-    }
-    case 'not_yet_open':
-      return {
-        text: opensAt ? `Opens ${formatWindowTime(opensAt, tz)}` : 'Not yet open',
-        color: '#9CA3AF',
-      };
-    case 'closed':
-      return { text: 'Messaging closed', color: '#9CA3AF' };
-    case 'no_participants':
-      return null;
-  }
-}
-
 function getDisabledTooltip(session: LeaderDashboardSession, now: Date): string {
   const state = getWindowState(session, now);
   if (state === 'no_participants') return 'No participants enrolled in this session';
   if (state === 'not_yet_open') return 'Opens 4 hours before session starts';
   return 'Messaging window has closed for this session';
+}
+
+/* --- WindowStatusLine --------------------------------------------------- */
+
+function WindowStatusLine({ session, now }: { session: LeaderDashboardSession; now: Date }) {
+  const isOpen = session.messaging_window_open ?? session.messaging_window?.is_open ?? false;
+  const tz = session.workshop_timezone ?? 'UTC';
+  const opensAt = session.messaging_window_start ?? session.messaging_window?.opens_at ?? null;
+
+  if (isOpen) {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-sans" style={{ fontSize: 12, color: '#0FA3B1' }}>
+        <span className="inline-block rounded-full shrink-0" style={{ width: 6, height: 6, backgroundColor: '#0FA3B1' }} />
+        Session window open · Check-in and messaging active
+      </span>
+    );
+  }
+
+  if (opensAt && new Date(opensAt) > now) {
+    const diffMs = new Date(opensAt).getTime() - now.getTime();
+    const diffH = Math.floor(diffMs / 3_600_000);
+    const diffMin = Math.floor((diffMs % 3_600_000) / 60_000);
+    const timeStr = formatWindowTime(opensAt, tz);
+
+    let durationText: string;
+    if (diffH >= 24) {
+      const days = Math.floor(diffH / 24);
+      const remH = diffH % 24;
+      durationText = remH > 0 ? `${days}d ${remH}h` : `${days}d`;
+    } else if (diffH > 0) {
+      durationText = diffMin > 0 ? `${diffH}h ${diffMin}m` : `${diffH}h`;
+    } else {
+      durationText = `${Math.max(diffMin, 1)}m`;
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 font-sans" style={{ fontSize: 12, color: '#9CA3AF' }}>
+        <span className="inline-block rounded-full shrink-0" style={{ width: 6, height: 6, border: '1px solid #9CA3AF' }} />
+        Check-in opens in {durationText} · {timeStr}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 font-sans" style={{ fontSize: 12, color: '#9CA3AF' }}>
+      <span className="inline-block rounded-full shrink-0" style={{ width: 6, height: 6, border: '1px solid #9CA3AF' }} />
+      Session window closed · Attendance is final
+    </span>
+  );
 }
 
 /* --- Helpers ------------------------------------------------------------ */
@@ -121,43 +139,174 @@ function initials(firstName: string, lastName: string): string {
 interface ParticipantRowProps {
   participant: RosterParticipant;
   sessionId: number;
+  messagingWindowOpen: boolean;
   onCheckedIn: (userId: number) => void;
+  onNoShow: (userId: number) => void;
   onReverted: (userId: number) => void;
 }
 
-function ParticipantRow({ participant, sessionId, onCheckedIn, onReverted }: ParticipantRowProps) {
-  const [loading, setLoading] = useState(false);
+function ParticipantRow({
+  participant, sessionId, messagingWindowOpen, onCheckedIn, onNoShow, onReverted,
+}: ParticipantRowProps) {
+  const [localStatus, setLocalStatus] = useState<RosterParticipant['attendance']['status']>(
+    participant.attendance.status,
+  );
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { user, attendance } = participant;
-  const isCheckedIn = attendance.status === 'checked_in';
-  const isNoShow = attendance.status === 'no_show';
+  const { user } = participant;
 
   const handleCheckIn = async () => {
-    setLoading(true);
+    if (submitting) return;
+    const prev = localStatus;
+    setLocalStatus('checked_in');
+    setSubmitting(true);
     setError(null);
     try {
       await apiPost(`/sessions/${sessionId}/attendance/${user.id}/leader-check-in`);
       onCheckedIn(user.id);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Check-in failed');
+    } catch {
+      setLocalStatus(prev);
+      setError('Check-in failed. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleNoShow = async () => {
+    if (submitting) return;
+    const prev = localStatus;
+    setLocalStatus('no_show');
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiPost(`/sessions/${sessionId}/attendance/${user.id}/no-show`);
+      onNoShow(user.id);
+    } catch {
+      setLocalStatus(prev);
+      setError('No-show failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleRevert = async () => {
-    setLoading(true);
+    if (submitting) return;
+    const prev = localStatus;
+    setLocalStatus('not_checked_in');
+    setSubmitting(true);
     setError(null);
     try {
       await apiPatch(`/sessions/${sessionId}/attendance/${user.id}/revert`);
       onReverted(user.id);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Revert failed');
+    } catch {
+      setLocalStatus(prev);
+      setError('Revert failed. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  const revertBtn = (
+    <button
+      type="button"
+      onClick={handleRevert}
+      disabled={submitting}
+      className="font-sans font-semibold rounded transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, backgroundColor: 'white', color: '#6B7280', border: '1px solid #D1D5DB' }}
+    >
+      {submitting ? '…' : 'Revert'}
+    </button>
+  );
+
+  let actions: React.ReactNode;
+
+  if (localStatus === 'checked_in') {
+    // State C — checked in, window irrelevant
+    actions = (
+      <div className="flex items-center gap-2 shrink-0">
+        <span
+          className="font-sans font-semibold rounded-full"
+          style={{ fontSize: 11, padding: '4px 12px', backgroundColor: '#D1FAE5', color: '#065F46' }}
+        >
+          Checked In
+        </span>
+        {revertBtn}
+      </div>
+    );
+  } else if (localStatus === 'no_show') {
+    // State D — no-show, window irrelevant
+    actions = (
+      <div className="flex items-center gap-2 shrink-0">
+        <span
+          className="font-sans font-semibold rounded-full"
+          style={{ fontSize: 11, padding: '4px 12px', backgroundColor: '#FEE2E2', color: '#DC2626' }}
+        >
+          No Show
+        </span>
+        {revertBtn}
+      </div>
+    );
+  } else if (messagingWindowOpen) {
+    // State A — not checked in, window open
+    actions = (
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center shrink-0">
+        <button
+          type="button"
+          onClick={handleNoShow}
+          disabled={submitting}
+          className="font-sans font-semibold rounded-lg border border-gray-300 bg-white text-gray-500 transition-colors hover:border-red-400 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ fontSize: 13, padding: '8px 16px', minHeight: 44 }}
+        >
+          {submitting ? '…' : 'No Show'}
+        </button>
+        <button
+          type="button"
+          onClick={handleCheckIn}
+          disabled={submitting}
+          className="font-sans font-semibold rounded-lg text-white transition-colors hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ fontSize: 13, padding: '8px 16px', minHeight: 44, backgroundColor: '#0FA3B1' }}
+        >
+          {submitting ? '…' : 'Check In'}
+        </button>
+      </div>
+    );
+  } else {
+    // State B — not checked in, window closed
+    actions = (
+      <div className="relative group flex flex-col sm:flex-row gap-2 items-stretch sm:items-center shrink-0">
+        <button
+          type="button"
+          disabled
+          title="Available during the session window"
+          className="font-sans font-semibold rounded-lg border border-gray-200 bg-white text-gray-400 opacity-50 cursor-not-allowed"
+          style={{ fontSize: 13, padding: '8px 16px', minHeight: 44 }}
+        >
+          No Show
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Available during the session window"
+          className="font-sans font-semibold rounded-lg bg-gray-200 text-gray-400 opacity-50 cursor-not-allowed"
+          style={{ fontSize: 13, padding: '8px 16px', minHeight: 44 }}
+        >
+          Check In
+        </button>
+        <div
+          className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none"
+          style={{ minWidth: 220 }}
+        >
+          <div
+            className="font-sans rounded-lg px-3 py-2"
+            style={{ fontSize: 12, backgroundColor: '#1F2937', color: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+          >
+            Available during the session window
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -172,7 +321,7 @@ function ParticipantRow({ participant, sessionId, onCheckedIn, onReverted }: Par
         {initials(user.first_name, user.last_name)}
       </div>
 
-      {/* Name + phone */}
+      {/* Name + phone + inline error */}
       <div className="flex-1 min-w-0">
         <p className="font-sans font-semibold" style={{ fontSize: 14, color: '#2E2E2E' }}>
           {user.first_name} {user.last_name}
@@ -186,74 +335,29 @@ function ParticipantRow({ participant, sessionId, onCheckedIn, onReverted }: Par
             {formatPhone(user.phone_number)}
           </a>
         )}
-      </div>
-
-      {/* Error hint */}
-      {error && (
-        <span className="font-sans" style={{ fontSize: 11, color: '#E94F37' }}>
-          {error}
-        </span>
-      )}
-
-      {/* Status / actions */}
-      <div className="shrink-0 flex items-center gap-2 flex-wrap">
-        {isCheckedIn ? (
-          <>
-            <span
-              className="font-sans font-semibold rounded-full"
-              style={{ fontSize: 11, padding: '4px 12px', backgroundColor: '#D1FAE5', color: '#065F46' }}
-            >
-              Checked In
-            </span>
-            <button
-              type="button"
-              onClick={handleRevert}
-              disabled={loading}
-              className="font-sans font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                fontSize: 12,
-                padding: '6px 14px',
-                minHeight: 30,
-                backgroundColor: 'white',
-                color: '#6B7280',
-                border: '1px solid #D1D5DB',
-              }}
-            >
-              {loading ? '…' : 'Revert'}
-            </button>
-          </>
-        ) : isNoShow ? (
-          <span
-            className="font-sans font-semibold rounded-full"
-            style={{ fontSize: 11, padding: '4px 12px', backgroundColor: '#FEE2E2', color: '#B91C1C' }}
-          >
-            No Show
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={handleCheckIn}
-            disabled={loading}
-            className="font-sans font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              fontSize: 13,
-              padding: '8px 16px',
-              minHeight: 44,
-              backgroundColor: '#0FA3B1',
-              color: 'white',
-            }}
-          >
-            {loading ? '…' : 'Check In'}
-          </button>
+        {error && (
+          <p className="font-sans" style={{ fontSize: 12, color: '#E94F37', marginTop: 2 }}>
+            {error}
+          </p>
         )}
       </div>
+
+      {/* Actions */}
+      {actions}
     </div>
   );
 }
 
 /* --- ParticipantsPanel -------------------------------------------------- */
 
-function ParticipantsPanel({ sessionId }: { sessionId: number }) {
+interface ParticipantsPanelProps {
+  sessionId: number;
+  messagingWindowOpen: boolean;
+  session: LeaderDashboardSession;
+  now: Date;
+}
+
+function ParticipantsPanel({ sessionId, messagingWindowOpen, session, now }: ParticipantsPanelProps) {
   const [roster, setRoster] = useState<RosterParticipant[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -282,6 +386,18 @@ function ParticipantsPanel({ sessionId }: { sessionId: number }) {
         ? prev.map(p =>
             p.user.id === userId
               ? { ...p, attendance: { ...p.attendance, status: 'checked_in' as const, checked_in_at: new Date().toISOString() } }
+              : p,
+          )
+        : prev,
+    );
+  };
+
+  const handleNoShow = (userId: number) => {
+    setRoster(prev =>
+      prev
+        ? prev.map(p =>
+            p.user.id === userId
+              ? { ...p, attendance: { ...p.attendance, status: 'no_show' as const } }
               : p,
           )
         : prev,
@@ -336,12 +452,19 @@ function ParticipantsPanel({ sessionId }: { sessionId: number }) {
 
   return (
     <div>
+      {/* Window status line above the roster */}
+      <div style={{ padding: '10px 20px 8px', borderBottom: '1px solid #F9FAFB' }}>
+        <WindowStatusLine session={session} now={now} />
+      </div>
+
       {roster.map(p => (
         <ParticipantRow
           key={p.user.id}
           participant={p}
           sessionId={sessionId}
+          messagingWindowOpen={messagingWindowOpen}
           onCheckedIn={handleCheckedIn}
+          onNoShow={handleNoShow}
           onReverted={handleReverted}
         />
       ))}
@@ -364,9 +487,7 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
   const tz = session.workshop_timezone ?? 'UTC';
   const dateTimeStr = formatSessionDateTime(session.start_at, session.end_at, tz);
   const windowState = getWindowState(session, now);
-  const statusLine = getStatusLine(session, now);
   const isWindowActive = windowState === 'active';
-  const isButtonDisabled = !isWindowActive;
 
   const loc = session.location ?? null;
   const workshopDefaultLocationId = session.workshop_default_location_id ?? null;
@@ -526,8 +647,8 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
           className="flex items-start justify-between flex-wrap gap-2"
           style={{ padding: '12px 20px', borderTop: '1px solid #F3F4F6' }}
         >
-          {/* Send Notification + status line */}
-          <div className="flex flex-col gap-1">
+          {/* Send Notification + window status line */}
+          <div className="flex flex-col gap-1.5">
             <div className="relative group">
               {isWindowActive ? (
                 <button
@@ -565,7 +686,6 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
                     <Bell className="w-3.5 h-3.5" />
                     Send Notification
                   </button>
-                  {/* Custom tooltip for browsers that don't style title */}
                   <div
                     className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10 pointer-events-none"
                     style={{ minWidth: 230 }}
@@ -586,15 +706,8 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
               )}
             </div>
 
-            {/* Window status line */}
-            {statusLine && (
-              <p
-                className="font-sans"
-                style={{ fontSize: 12, color: statusLine.color, paddingLeft: 2 }}
-              >
-                {statusLine.text}
-              </p>
-            )}
+            {/* Window status line (footer — visible when collapsed) */}
+            <WindowStatusLine session={session} now={now} />
           </div>
 
           {/* Participants toggle */}
@@ -619,7 +732,12 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
         {/* Expanded participant list */}
         {expanded && (
           <div style={{ borderTop: '1px solid #F3F4F6' }}>
-            <ParticipantsPanel sessionId={session.session_id} />
+            <ParticipantsPanel
+              sessionId={session.session_id}
+              messagingWindowOpen={isWindowActive}
+              session={session}
+              now={now}
+            />
           </div>
         )}
       </div>

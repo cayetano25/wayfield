@@ -69,6 +69,10 @@ export default function NewWorkshopPage() {
         timezone: values.timezone,
         public_page_enabled: values.public_page_enabled,
         default_location_id: defaultLocationId,
+        category_id: values.category_id,
+        subcategory_id: values.subcategory_id,
+        specialization_id: values.specialization_id,
+        tag_ids: values.tag_ids,
       }) as { id: number };
 
       toast.success('Workshop created');

@@ -7,6 +7,13 @@ import { usePage } from '@/contexts/PageContext';
 import { apiGet, apiPatch, ApiError } from '@/lib/api/client';
 import { WorkshopForm, type WorkshopFormValues, type WorkshopFormErrors } from '@/components/workshops/WorkshopForm';
 
+interface WorkshopTaxonomyDetail {
+  category: { id: number } | null;
+  subcategory: { id: number } | null;
+  specialization: { id: number } | null;
+  tags: { id: number }[];
+}
+
 interface WorkshopDetail {
   id: number;
   title: string;
@@ -17,6 +24,7 @@ interface WorkshopDetail {
   timezone: string;
   public_page_enabled: boolean;
   header_image_url: string | null;
+  taxonomy?: WorkshopTaxonomyDetail | null;
 }
 
 export default function EditWorkshopPage() {
@@ -61,6 +69,10 @@ export default function EditWorkshopPage() {
         end_date: values.end_date,
         timezone: values.timezone,
         public_page_enabled: values.public_page_enabled,
+        category_id: values.category_id,
+        subcategory_id: values.subcategory_id,
+        specialization_id: values.specialization_id,
+        tag_ids: values.tag_ids,
       });
 
       toast.success('Workshop updated');
@@ -107,6 +119,10 @@ export default function EditWorkshopPage() {
           end_date: workshop.end_date,
           timezone: workshop.timezone,
           public_page_enabled: workshop.public_page_enabled,
+          category_id: workshop.taxonomy?.category?.id ?? null,
+          subcategory_id: workshop.taxonomy?.subcategory?.id ?? null,
+          specialization_id: workshop.taxonomy?.specialization?.id ?? null,
+          tag_ids: workshop.taxonomy?.tags?.map((t) => t.id) ?? [],
         }}
         workshopId={workshop.id}
         initialHeaderImageUrl={workshop.header_image_url}

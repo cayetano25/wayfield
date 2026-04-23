@@ -1,19 +1,8 @@
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
-import type { DiscoverWorkshop } from '@/lib/api/public';
+import { MapPin, Monitor, Layers, Users, Calendar } from 'lucide-react';
+import type { DiscoverWorkshop, DiscoverWorkshopTag } from '@/lib/api/public';
 
-/* --- Helpers ----------------------------------------------------------- */
-
-const GRADIENTS = [
-  'linear-gradient(135deg, #E67E22 0%, #C0392B 100%)', // warm desert
-  'linear-gradient(135deg, #0FA3B1 0%, #0891B2 100%)', // ocean teal
-  'linear-gradient(135deg, #27AE60 0%, #1E8449 100%)', // forest green
-  'linear-gradient(135deg, #2C3E50 0%, #1A252F 100%)', // night sky
-];
-
-function titleGradient(title: string): string {
-  return GRADIENTS[title.length % 4];
-}
+/* --- Helpers --------------------------------------------------------------- */
 
 function formatDateRange(start: string, end: string): string {
   const [sy, sm, sd] = start.split('-').map(Number);
@@ -24,170 +13,177 @@ function formatDateRange(start: string, end: string): string {
     return startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
   if (sm === em && sy === ey) {
-    return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${ed}, ${sy}`;
+    return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${ed}, ${sy}`;
   }
   return `${startDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
-/* --- Availability badge ------------------------------------------------ */
+function getTagByGroup(tags: DiscoverWorkshopTag[] | undefined, groupKey: string): DiscoverWorkshopTag | undefined {
+  return tags?.find((t) => t.group_key === groupKey);
+}
 
-function AvailabilityBadge({ spots }: { spots?: number | null }) {
-  if (spots === undefined || spots === null) return null;
+const GRADIENTS = [
+  'linear-gradient(135deg, #0FA3B1 0%, #0891B2 100%)',
+  'linear-gradient(135deg, #E67E22 0%, #C0392B 100%)',
+  'linear-gradient(135deg, #27AE60 0%, #1E8449 100%)',
+  'linear-gradient(135deg, #2C3E50 0%, #1A252F 100%)',
+];
 
-  if (spots === 0) {
+function titleGradient(title: string): string {
+  return GRADIENTS[title.length % 4];
+}
+
+/* --- Format indicator ------------------------------------------------------ */
+
+function FormatIndicator({ format }: { format: string | undefined }) {
+  if (!format) return null;
+  const lower = format.toLowerCase();
+  if (lower.includes('virtual')) {
     return (
-      <span
-        className="font-sans font-semibold"
-        style={{
-          fontSize: 11,
-          padding: '4px 10px',
-          borderRadius: 6,
-          backgroundColor: '#FEE2E2',
-          color: '#991B1B',
-        }}
-      >
-        Fully booked
+      <span className="inline-flex items-center gap-1 text-xs text-medium-gray">
+        <Monitor className="w-3 h-3" />
+        Virtual
       </span>
     );
   }
-
-  const bg = spots > 20 ? '#D1FAE5' : 'white';
-  const color = spots > 20 ? '#065F46' : '#2E2E2E';
-
+  if (lower.includes('hybrid')) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-medium-gray">
+        <Layers className="w-3 h-3" />
+        Hybrid
+      </span>
+    );
+  }
   return (
-    <span
-      className="font-sans font-semibold"
-      style={{
-        fontSize: 11,
-        padding: '4px 10px',
-        borderRadius: 6,
-        backgroundColor: bg,
-        color,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-      }}
-    >
-      {spots > 20 ? `${spots} spots` : `${spots} spots left`}
+    <span className="inline-flex items-center gap-1 text-xs text-medium-gray">
+      <MapPin className="w-3 h-3" />
+      In-Person
     </span>
   );
 }
 
-/* --- Leader avatar ----------------------------------------------------- */
-
-function LeaderAvatar({ firstName, lastName, imageUrl }: {
-  firstName: string;
-  lastName: string;
-  imageUrl?: string | null;
-}) {
-  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
-  if (imageUrl) {
-    return <img src={imageUrl} alt={`${firstName} ${lastName}`} className="w-7 h-7 rounded-full object-cover shrink-0" />;
-  }
-  return (
-    <div
-      className="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0"
-      style={{ fontSize: 10, fontWeight: 600, background: 'linear-gradient(135deg, #0FA3B1 0%, #0074A6 100%)' }}
-    >
-      {initials}
-    </div>
-  );
-}
-
-/* --- WorkshopCard ------------------------------------------------------ */
+/* --- WorkshopCard ---------------------------------------------------------- */
 
 interface WorkshopCardProps {
   workshop: DiscoverWorkshop;
 }
 
 export function WorkshopCard({ workshop }: WorkshopCardProps) {
-  const location = [
-    workshop.location?.city,
-    workshop.location?.state_or_region,
-  ].filter(Boolean).join(', ');
+  const formatTag = getTagByGroup(workshop.tags, 'format');
+  const skillTag = getTagByGroup(workshop.tags, 'skill_level');
+  const formatValue = formatTag?.label ?? formatTag?.value;
 
-  const leader = workshop.first_leader;
-  const leaderName = leader
-    ? `${leader.first_name} ${leader.last_name[0] ?? ''}.`
-    : null;
+  const loc = workshop.default_location ?? workshop.location;
+  const locationParts = [loc?.city, loc?.state_or_region].filter(Boolean);
+  let locationText: string;
+  if (locationParts.length > 0) {
+    locationText = locationParts.join(', ');
+  } else if (formatValue?.toLowerCase().includes('virtual')) {
+    locationText = 'Online';
+  } else {
+    locationText = 'Location TBA';
+  }
+
+  const categoryName = workshop.taxonomy?.category?.name ?? workshop.category;
+  const subcategoryName = workshop.taxonomy?.subcategory?.name;
 
   return (
-    <div
-      className="bg-white overflow-hidden flex flex-col"
-      style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+    <Link
+      href={workshop.public_slug ? `/w/${workshop.public_slug}` : '#'}
+      className="group bg-white rounded-xl border border-border-gray overflow-hidden flex flex-col
+                 transition-shadow duration-200 hover:shadow-[0_8px_24px_rgba(46,46,46,0.12)]
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
-      {/* Image section */}
-      <div className="relative overflow-hidden" style={{ height: 200 }}>
+      {/* Image */}
+      <div className="relative h-44 overflow-hidden shrink-0">
         {workshop.hero_image_url ? (
           <img
             src={workshop.hero_image_url}
             alt={workshop.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div
-            className="w-full h-full"
+            className="w-full h-full transition-transform duration-300 group-hover:scale-105"
             style={{ background: titleGradient(workshop.title) }}
           />
         )}
 
-        {/* Availability badge — top right */}
-        <div className="absolute top-3 right-3">
-          <AvailabilityBadge spots={workshop.spots_remaining} />
-        </div>
+        {/* Category badge — top left */}
+        {categoryName && (
+          <span className="absolute top-3 left-3 bg-primary text-white text-[11px] font-semibold font-sans
+                           px-2.5 py-1 rounded-full leading-none">
+            {categoryName}
+          </span>
+        )}
       </div>
 
-      {/* Content section */}
-      <div className="flex flex-col flex-1" style={{ padding: '16px 20px' }}>
+      {/* Content */}
+      <div className="flex flex-col flex-1 p-4 gap-2">
+        {/* Subcategory */}
+        {subcategoryName && (
+          <p className="font-sans text-[11px] text-medium-gray -mb-1">{subcategoryName}</p>
+        )}
+
         {/* Title */}
-        <h3
-          className="font-heading font-bold leading-snug"
-          style={{ fontSize: 18, color: '#2E2E2E', lineHeight: 1.3 }}
-        >
+        <h3 className="font-heading font-semibold text-dark text-[15px] leading-snug
+                       line-clamp-2">
           {workshop.title}
         </h3>
 
-        {/* Location */}
-        {location && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <MapPin className="shrink-0" style={{ width: 12, height: 12, color: '#9CA3AF' }} />
-            <span className="font-sans" style={{ fontSize: 12, color: '#6B7280' }}>
-              {location}
-            </span>
-          </div>
-        )}
+        {/* Description */}
+        <p className="font-sans text-xs text-medium-gray leading-relaxed line-clamp-2">
+          {workshop.description}
+        </p>
 
-        {/* Leader row */}
-        <div className="flex items-center gap-2 mt-3">
-          {leader && leaderName && (
-            <>
-              <LeaderAvatar
-                firstName={leader.first_name}
-                lastName={leader.last_name}
-                imageUrl={leader.profile_image_url}
-              />
-              <span className="font-sans flex-1 min-w-0" style={{ fontSize: 13, color: '#4B5563' }}>
-                {leaderName}
-              </span>
-            </>
-          )}
-          {!leader && <div className="flex-1" />}
-
-          {/* Date pushed right */}
-          <span className="font-sans shrink-0" style={{ fontSize: 12, color: '#9CA3AF' }}>
+        {/* Date + Location row */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+          <span className="inline-flex items-center gap-1 text-xs text-medium-gray">
+            <Calendar className="w-3 h-3 shrink-0" />
             {formatDateRange(workshop.start_date, workshop.end_date)}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-medium-gray">
+            <MapPin className="w-3 h-3 shrink-0" />
+            {locationText}
           </span>
         </div>
 
-        {/* View link */}
-        {workshop.public_slug && (
-          <Link
-            href={`/w/${workshop.public_slug}`}
-            className="font-sans font-semibold mt-3 hover:underline"
-            style={{ fontSize: 13, color: '#0FA3B1' }}
-          >
+        {/* Tags row */}
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          {skillTag && (
+            <span className="inline-flex items-center text-[11px] font-semibold font-sans
+                             px-2 py-0.5 rounded-full text-white"
+                  style={{ backgroundColor: '#7EA8BE' }}>
+              {skillTag.label ?? skillTag.value}
+            </span>
+          )}
+          <FormatIndicator format={formatValue} />
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Bottom row */}
+        <div className="flex items-center justify-between pt-3 border-t border-border-gray mt-1">
+          <div className="flex flex-col gap-0.5 min-w-0">
+            {workshop.organization?.name && (
+              <p className="font-sans text-[11px] text-light-gray truncate">
+                {workshop.organization.name}
+              </p>
+            )}
+            {workshop.leader_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-light-gray">
+                <Users className="w-3 h-3" />
+                {workshop.leader_count} leader{workshop.leader_count !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <span className="font-sans font-semibold text-xs text-primary shrink-0 ml-2
+                           group-hover:underline">
             View Workshop →
-          </Link>
-        )}
+          </span>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

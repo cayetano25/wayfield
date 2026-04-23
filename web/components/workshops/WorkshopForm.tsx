@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import { AddressForm } from '@/components/ui/AddressForm';
+import { TaxonomySection } from '@/components/workshops/TaxonomySection';
+import { useTaxonomy } from '@/hooks/useTaxonomy';
 import { apiPatch } from '@/lib/api/client';
 import type { AddressFormData } from '@/lib/types/address';
 
@@ -56,6 +58,10 @@ export interface WorkshopFormValues {
   public_page_enabled: boolean;
   location_name: string;
   location_address_data: AddressFormData | null;
+  category_id: number | null;
+  subcategory_id: number | null;
+  specialization_id: number | null;
+  tag_ids: number[];
 }
 
 export interface WorkshopFormErrors {
@@ -103,6 +109,8 @@ export function WorkshopForm({
   workshopId,
   initialHeaderImageUrl = null,
 }: WorkshopFormProps) {
+  const { categories, tagGroups, isLoading: taxonomyLoading } = useTaxonomy();
+
   const [values, setValues] = useState<WorkshopFormValues>({
     title: '',
     description: '',
@@ -113,6 +121,10 @@ export function WorkshopForm({
     public_page_enabled: false,
     location_name: '',
     location_address_data: null,
+    category_id: null,
+    subcategory_id: null,
+    specialization_id: null,
+    tag_ids: [],
     ...initialValues,
   });
   const [locationExpanded, setLocationExpanded] = useState(false);
@@ -124,6 +136,22 @@ export function WorkshopForm({
 
   function setAddress(data: AddressFormData) {
     setValues((prev) => ({ ...prev, location_address_data: data }));
+  }
+
+  function handleCategoryChange(id: number | null) {
+    setValues((prev) => ({ ...prev, category_id: id, subcategory_id: null, specialization_id: null }));
+  }
+
+  function handleSubcategoryChange(id: number | null) {
+    setValues((prev) => ({ ...prev, subcategory_id: id, specialization_id: null }));
+  }
+
+  function handleSpecializationChange(id: number | null) {
+    setValues((prev) => ({ ...prev, specialization_id: id }));
+  }
+
+  function handleTagIdsChange(ids: number[]) {
+    setValues((prev) => ({ ...prev, tag_ids: ids }));
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -290,6 +318,21 @@ export function WorkshopForm({
           </div>
         </div>
       </div>
+
+      {/* Category & Discovery */}
+      <TaxonomySection
+        categories={categories}
+        tagGroups={tagGroups}
+        isLoading={taxonomyLoading}
+        categoryId={values.category_id}
+        subcategoryId={values.subcategory_id}
+        specializationId={values.specialization_id}
+        tagIds={values.tag_ids}
+        onCategoryChange={handleCategoryChange}
+        onSubcategoryChange={handleSubcategoryChange}
+        onSpecializationChange={handleSpecializationChange}
+        onTagIdsChange={handleTagIdsChange}
+      />
 
       {/* Default location (expandable) */}
       <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
