@@ -133,7 +133,7 @@ export function WorkshopCard({ workshop }: WorkshopCardProps) {
 
         {/* Description */}
         <p className="font-sans text-xs text-medium-gray leading-relaxed line-clamp-2">
-          {workshop.description}
+          {workshop.description?.replace(/<[^>]*>/g, '') ?? ''}
         </p>
 
         {/* Date + Location row */}

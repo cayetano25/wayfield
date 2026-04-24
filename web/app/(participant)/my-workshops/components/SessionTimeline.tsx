@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import type { ParticipantSession, ParticipantSessionLeader } from '@/lib/types/participant';
 import type { SessionLocationResponse } from '@/lib/types/session-location';
 
@@ -349,9 +350,10 @@ export function SessionTimeline({ sessions }: SessionTimelineProps) {
                   style={{ padding: '0 20px 16px 48px', transition: 'all 0.2s ease' }}
                 >
                   {session.description && (
-                    <p className="font-sans" style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6 }}>
-                      {session.description}
-                    </p>
+                    <RichTextDisplay
+                      html={session.description}
+                      className="text-gray-500 text-sm"
+                    />
                   )}
                   <LocationBlock location={session.location ?? null} />
                   <LeadersBlock leaders={session.leaders ?? []} />

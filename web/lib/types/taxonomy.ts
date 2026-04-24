@@ -23,8 +23,8 @@ export interface TaxonomyCategory {
 
 export interface TaxonomyTag {
   id: number;
-  name: string;
-  slug: string;
+  value: string;
+  label: string;
   sort_order: number;
 }
 

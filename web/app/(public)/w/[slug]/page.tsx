@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
+import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 
 // Allowed public leader fields — enforced here as a second layer after the API
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
@@ -323,7 +324,7 @@ export async function generateMetadata(
   const resolvedDescription = (
     workshop.social_share_description ||
     workshop.public_summary ||
-    workshop.description
+    (workshop.description ? workshop.description.replace(/<[^>]*>/g, '') : undefined)
   )?.slice(0, 160) || undefined;
 
   const canonical = workshop.canonical_url;
@@ -441,7 +442,7 @@ export default async function PublicWorkshopPage(
       {(workshop.description || workshop.body_content) && (
         <section className="max-w-4xl mx-auto px-6 py-16">
           <h2 className="font-heading text-2xl font-bold text-dark mb-6">About This Workshop</h2>
-          <p className="text-medium-gray leading-relaxed text-base mb-6">{workshop.description}</p>
+          <RichTextDisplay html={workshop.description ?? ''} className="text-medium-gray mb-6" />
           {workshop.body_content && (
             <div
               className="prose prose-sm max-w-none text-medium-gray leading-relaxed"

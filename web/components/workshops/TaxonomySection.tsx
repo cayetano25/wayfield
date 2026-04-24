@@ -35,17 +35,17 @@ export function TaxonomySection({
   return (
     <div>
       {/* Section header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 font-[Sora] mb-2">
+      <div className="mb-4">
+        <h2 className="font-heading text-base font-semibold text-dark">
           Category &amp; Discovery
-        </h1>
-        <p className="text-base text-gray-500 font-[Plus_Jakarta_Sans]">
+        </h2>
+        <p className="text-sm text-medium-gray mt-1">
           Map your workshop to participant search filters to ensure maximum reach.
         </p>
       </div>
 
-      {/* Three-card grid — stacked on mobile, three columns on lg+ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Three-card grid — stacked on mobile, three columns on md+ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <AboutThisWorkshopCard
           categories={categories}
           tagGroups={tagGroups}

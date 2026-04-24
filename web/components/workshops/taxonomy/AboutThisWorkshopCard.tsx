@@ -31,20 +31,20 @@ interface Props {
 }
 
 const SKILL_LEVEL_OPTIONS = [
-  { display: 'Beginner', tagName: 'Beginner' },
-  { display: 'Intermediate', tagName: 'Intermediate' },
-  { display: 'Advanced', tagName: 'Advanced' },
-  { display: 'All Levels', tagName: 'All Levels' },
+  { display: 'Beginner', tagName: 'beginner_friendly' },
+  { display: 'Intermediate', tagName: 'intermediate' },
+  { display: 'Advanced', tagName: 'advanced' },
+  { display: 'All Levels', tagName: 'all_levels' },
 ];
 
 const AUDIENCE_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
-  { display: 'Adults', tagName: 'Adults', Icon: User },
-  { display: 'Kids', tagName: 'Kids', Icon: BookOpen },
-  { display: 'Teens', tagName: 'Teens', Icon: GraduationCap },
-  { display: 'Professionals', tagName: 'Professionals', Icon: Briefcase },
-  { display: 'Creatives', tagName: 'Creatives', Icon: Palette },
-  { display: 'Hobbyists', tagName: 'Hobbyists', Icon: Compass },
-  { display: 'Seniors', tagName: 'Seniors', Icon: Heart },
+  { display: 'Adults', tagName: 'adults', Icon: User },
+  { display: 'Kids', tagName: 'kids', Icon: BookOpen },
+  { display: 'Teens', tagName: 'teens', Icon: GraduationCap },
+  { display: 'Professionals', tagName: 'professionals', Icon: Briefcase },
+  { display: 'Families', tagName: 'families', Icon: Palette },
+  { display: 'Hobbyists', tagName: 'hobbyists', Icon: Compass },
+  { display: 'Seniors', tagName: 'seniors', Icon: Heart },
 ];
 
 export function AboutThisWorkshopCard({
@@ -86,7 +86,7 @@ export function AboutThisWorkshopCard({
       const skillGroup = tagGroups.find((g) => g.key === 'skill_level');
       if (skillGroup) {
         const match = SKILL_LEVEL_OPTIONS.find((o) => {
-          const t = skillGroup.tags.find((t) => t.name === o.tagName);
+          const t = skillGroup.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedSkillLevel(match.tagName);
@@ -98,7 +98,7 @@ export function AboutThisWorkshopCard({
       if (audGroup) {
         const matches = AUDIENCE_OPTIONS
           .filter((o) => {
-            const t = audGroup.tags.find((t) => t.name === o.tagName);
+            const t = audGroup.tags.find((t) => t.value === o.tagName);
             return t && tagIds.includes(t.id);
           })
           .map((o) => o.tagName);
@@ -106,7 +106,7 @@ export function AboutThisWorkshopCard({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tagGroups.length]);
+  }, [tagGroups.length, tagIds.length]);
 
   function toggleSkillLevel(tagName: string) {
     const newSelected = selectedSkillLevel === tagName ? null : tagName;
@@ -117,7 +117,7 @@ export function AboutThisWorkshopCard({
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === newSelected);
+      const tag = group.tags.find((t) => t.value === newSelected);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -130,7 +130,7 @@ export function AboutThisWorkshopCard({
       isSelected ? prev.filter((n) => n !== tagName) : [...prev, tagName],
     );
 
-    const tag = tagGroups.find((g) => g.key === 'audience')?.tags.find((t) => t.name === tagName);
+    const tag = tagGroups.find((g) => g.key === 'audience')?.tags.find((t) => t.value === tagName);
     if (!tag) return;
     onTagIdsChange(isSelected ? tagIds.filter((id) => id !== tag.id) : [...tagIds, tag.id]);
   }
@@ -143,8 +143,8 @@ export function AboutThisWorkshopCard({
           <Info size={20} className="text-blue-500" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-[Sora]">About This Workshop</h2>
-          <p className="text-xs font-medium text-gray-500 mt-0.5 tracking-wide">
+          <h2 className="font-heading text-base font-semibold text-dark">About This Workshop</h2>
+          <p className="text-xs font-medium text-gray-500 mt-0.5">
             Classification
           </p>
         </div>

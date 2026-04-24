@@ -57,8 +57,11 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
     }
   }
 
-  const descriptionExcerpt = workshop.description
-    ? workshop.description.slice(0, 120) + (workshop.description.length > 120 ? '…' : '')
+  const plainDescription = workshop.description
+    ? workshop.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+    : null;
+  const descriptionExcerpt = plainDescription
+    ? plainDescription.slice(0, 120) + (plainDescription.length > 120 ? '…' : '')
     : null;
 
   return (

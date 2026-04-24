@@ -253,7 +253,7 @@ export default function JoinPageClient({ code, isMobileSsr }: Props) {
 
               {(workshop.public_summary || workshop.description) && (
                 <p className="text-medium-gray leading-relaxed text-sm">
-                  {workshop.public_summary ?? (workshop.description ?? '').slice(0, 200)}
+                  {workshop.public_summary ?? (workshop.description ?? '').replace(/<[^>]*>/g, '').slice(0, 200)}
                 </p>
               )}
 
