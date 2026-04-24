@@ -64,7 +64,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       if (selectedLearningFormats.length === 0) {
         const matches = LEARNING_FORMAT_OPTIONS
           .filter((o) => {
-            const t = esGroup.tags.find((t) => t.name === o.tagName);
+            const t = esGroup.tags.find((t) => t.value === o.tagName);
             return t && tagIds.includes(t.id);
           })
           .map((o) => o.tagName);
@@ -72,7 +72,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       }
       if (selectedExperienceStyle === null) {
         const match = EXPERIENCE_STYLE_RADIO_OPTIONS.find((o) => {
-          const t = esGroup.tags.find((t) => t.name === o.tagName);
+          const t = esGroup.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedExperienceStyle(match.tagName);
@@ -83,7 +83,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       const envGroup = tagGroups.find((g) => g.key === 'environment');
       if (envGroup) {
         const match = ENVIRONMENT_OPTIONS.find((o) => {
-          const t = envGroup.tags.find((t) => t.name === o.tagName);
+          const t = envGroup.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedEnvironment(match.tagName);
@@ -94,7 +94,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       const paceGroup = tagGroups.find((g) => g.key === 'pace');
       if (paceGroup) {
         const match = PACE_OPTIONS.find((o) => {
-          const t = paceGroup.tags.find((t) => t.name === o.tagName);
+          const t = paceGroup.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedPace(match.tagName);
@@ -110,7 +110,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
     );
     const tag = tagGroups
       .find((g) => g.key === 'experience_style')
-      ?.tags.find((t) => t.name === tagName);
+      ?.tags.find((t) => t.value === tagName);
     if (!tag) return;
     onTagIdsChange(isSelected ? tagIds.filter((id) => id !== tag.id) : [...tagIds, tag.id]);
   }
@@ -123,7 +123,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === newSelected);
+      const tag = group.tags.find((t) => t.value === newSelected);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -136,11 +136,11 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
     const group = tagGroups.find((g) => g.key === 'experience_style');
     if (!group) return;
     const radioIds = EXPERIENCE_STYLE_RADIO_TAG_NAMES
-      .map((n) => group.tags.find((t) => t.name === n)?.id)
+      .map((n) => group.tags.find((t) => t.value === n)?.id)
       .filter((id): id is number => id !== undefined);
     const withoutRadios = tagIds.filter((id) => !radioIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === newSelected);
+      const tag = group.tags.find((t) => t.value === newSelected);
       onTagIdsChange(tag ? [...withoutRadios, tag.id] : withoutRadios);
     } else {
       onTagIdsChange(withoutRadios);
@@ -155,7 +155,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === newSelected);
+      const tag = group.tags.find((t) => t.value === newSelected);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);

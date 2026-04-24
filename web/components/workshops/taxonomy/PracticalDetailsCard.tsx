@@ -69,7 +69,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
       const group = tagGroups.find((g) => g.key === 'duration');
       if (group) {
         const match = DURATION_OPTIONS.find((o) => {
-          const t = group.tags.find((t) => t.name === o.tagName);
+          const t = group.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedDuration(match.display);
@@ -80,7 +80,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
       const group = tagGroups.find((g) => g.key === 'group_size');
       if (group) {
         const match = GROUP_SIZE_OPTIONS.find((o) => {
-          const t = group.tags.find((t) => t.name === o.tagName);
+          const t = group.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedGroupSize(match.display);
@@ -91,7 +91,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
       const group = tagGroups.find((g) => g.key === 'price_model');
       if (group) {
         const match = PRICE_MODEL_OPTIONS.find((o) => {
-          const t = group.tags.find((t) => t.name === o.tagName);
+          const t = group.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedPriceModel(match.display);
@@ -102,7 +102,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
       const group = tagGroups.find((g) => g.key === 'accessibility');
       if (group) {
         const matches = ACCESSIBILITY_OPTIONS.filter((o) => {
-          const t = group.tags.find((t) => t.name === o.value);
+          const t = group.tags.find((t) => t.value === o.value);
           return t && tagIds.includes(t.id);
         }).map((o) => o.value);
         if (matches.length) setSelectedAccessibility(matches);
@@ -113,7 +113,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     if (activeSeason === null) {
       const group = tagGroups.find((g) => g.key === 'seasonality');
       if (group) {
-        const summerTag = group.tags.find((t) => t.name === 'Summer');
+        const summerTag = group.tags.find((t) => t.value === 'Summer');
         if (summerTag && tagIds.includes(summerTag.id)) {
           setActiveSeason('summer');
         }
@@ -131,7 +131,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === tagName);
+      const tag = group.tags.find((t) => t.value === tagName);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -146,7 +146,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === tagName);
+      const tag = group.tags.find((t) => t.value === tagName);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -161,7 +161,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === tagName);
+      const tag = group.tags.find((t) => t.value === tagName);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -173,7 +173,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     setSelectedAccessibility((prev) =>
       isSelected ? prev.filter((v) => v !== value) : [...prev, value],
     );
-    const tag = tagGroups.find((g) => g.key === 'accessibility')?.tags.find((t) => t.name === value);
+    const tag = tagGroups.find((g) => g.key === 'accessibility')?.tags.find((t) => t.value === value);
     if (!tag) return;
     onTagIdsChange(isSelected ? tagIds.filter((id) => id !== tag.id) : [...tagIds, tag.id]);
   }
@@ -182,7 +182,7 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
     const group = tagGroups.find((g) => g.key === 'seasonality');
     if (!group) return;
     const groupTagIds = group.tags.map((t) => t.id);
-    const tag = group.tags.find((t) => t.name === tagName);
+    const tag = group.tags.find((t) => t.value === tagName);
 
     if (activeSeason === season) {
       setActiveSeason(null);

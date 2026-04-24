@@ -86,7 +86,7 @@ export function AboutThisWorkshopCard({
       const skillGroup = tagGroups.find((g) => g.key === 'skill_level');
       if (skillGroup) {
         const match = SKILL_LEVEL_OPTIONS.find((o) => {
-          const t = skillGroup.tags.find((t) => t.name === o.tagName);
+          const t = skillGroup.tags.find((t) => t.value === o.tagName);
           return t && tagIds.includes(t.id);
         });
         if (match) setSelectedSkillLevel(match.tagName);
@@ -98,7 +98,7 @@ export function AboutThisWorkshopCard({
       if (audGroup) {
         const matches = AUDIENCE_OPTIONS
           .filter((o) => {
-            const t = audGroup.tags.find((t) => t.name === o.tagName);
+            const t = audGroup.tags.find((t) => t.value === o.tagName);
             return t && tagIds.includes(t.id);
           })
           .map((o) => o.tagName);
@@ -117,7 +117,7 @@ export function AboutThisWorkshopCard({
     const groupTagIds = group.tags.map((t) => t.id);
     const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
-      const tag = group.tags.find((t) => t.name === newSelected);
+      const tag = group.tags.find((t) => t.value === newSelected);
       onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
       onTagIdsChange(withoutGroup);
@@ -130,7 +130,7 @@ export function AboutThisWorkshopCard({
       isSelected ? prev.filter((n) => n !== tagName) : [...prev, tagName],
     );
 
-    const tag = tagGroups.find((g) => g.key === 'audience')?.tags.find((t) => t.name === tagName);
+    const tag = tagGroups.find((g) => g.key === 'audience')?.tags.find((t) => t.value === tagName);
     if (!tag) return;
     onTagIdsChange(isSelected ? tagIds.filter((id) => id !== tag.id) : [...tagIds, tag.id]);
   }

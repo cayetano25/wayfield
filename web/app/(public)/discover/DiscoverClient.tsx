@@ -257,7 +257,7 @@ export function DiscoverClient() {
     const apiGroup = tagGroups.find((g) => g.key === groupKey);
     const staticGroup = FILTER_GROUPS.find((g) => g.key === groupKey);
     const groupSlugs =
-      apiGroup?.tags.map((t) => t.slug) ??
+      apiGroup?.tags.map((t) => t.value) ??
       staticGroup?.options.map((o) => o.slug) ??
       [];
 
