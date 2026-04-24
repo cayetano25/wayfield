@@ -4,6 +4,11 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Domain\Payments\Models\Cart;
+use App\Domain\Payments\Models\Order;
+use App\Domain\Payments\Models\PlatformCredit;
+use App\Domain\Payments\Models\RefundRequest;
+use App\Domain\Payments\Models\WaitlistPromotionPayment;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -114,6 +119,31 @@ class User extends Authenticatable
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function carts(): HasMany
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    public function platformCredits(): HasMany
+    {
+        return $this->hasMany(PlatformCredit::class);
+    }
+
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(RefundRequest::class, 'requested_by_user_id');
+    }
+
+    public function waitlistPromotionPayments(): HasMany
+    {
+        return $this->hasMany(WaitlistPromotionPayment::class);
     }
 
     public function hasVerifiedEmail(): bool

@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Domain\Payments\Models\SessionPricing;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Session extends Model
 {
@@ -193,5 +195,10 @@ class Session extends Model
             ->where('publication_status', 'published')
             ->where('participant_visibility', 'visible')
             ->where('enrollment_mode', 'self_select');
+    }
+
+    public function pricing(): HasOne
+    {
+        return $this->hasOne(SessionPricing::class);
     }
 }
