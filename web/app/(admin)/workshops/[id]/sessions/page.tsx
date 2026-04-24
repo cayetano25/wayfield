@@ -19,7 +19,7 @@ import { SessionDateTimeField } from '@/components/sessions/SessionDateTimeField
 import { UTCToLocal } from '@/lib/datetime/timezoneUtils';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
-import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from '@/lib/api/client';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, ApiError } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -298,6 +298,11 @@ function SessionSlideOver({
   const [saving, setSaving] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
+  // Add-on session pricing state
+  const [addonPriceCents, setAddonPriceCents] = useState(0);
+  const [addonIsNonrefundable, setAddonIsNonrefundable] = useState(false);
+  const [addonPricingExists, setAddonPricingExists] = useState(false);
+
   // Populate form when panel opens / session changes
   useEffect(() => {
     if (!open) return;
@@ -336,8 +341,25 @@ function SessionSlideOver({
       setLocationData(EMPTY_SESSION_LOCATION);
     }
     setErrors({});
+    setAddonPriceCents(0);
+    setAddonIsNonrefundable(false);
+    setAddonPricingExists(false);
     setTimeout(() => firstInputRef.current?.focus(), 50);
   }, [open, editingSession, workshop.timezone]);
+
+  // Fetch add-on pricing when editing an addon session
+  useEffect(() => {
+    if (!open || !editingSession || editingSession.session_type !== 'addon') return;
+    apiGet<{ price_cents: number; is_nonrefundable: boolean }>(
+      `/sessions/${editingSession.id}/pricing`,
+    ).then((p) => {
+      setAddonPriceCents(p.price_cents ?? 0);
+      setAddonIsNonrefundable(p.is_nonrefundable ?? false);
+      setAddonPricingExists(true);
+    }).catch(() => {
+      // 404 = no pricing yet — leave defaults
+    });
+  }, [open, editingSession]);
 
   function setF<K extends keyof SessionForm>(k: K, v: SessionForm[K]) {
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -447,13 +469,32 @@ function SessionSlideOver({
     };
 
     try {
+      let sessionId: number;
       if (editingSession) {
         await apiPatch(`/sessions/${editingSession.id}`, payload);
+        sessionId = editingSession.id;
         toast.success('Session updated');
       } else {
-        await apiPost(`/workshops/${workshop.id}/sessions`, payload);
+        const created = await apiPost<{ id: number }>(`/workshops/${workshop.id}/sessions`, payload);
+        sessionId = created.id;
         toast.success('Session created');
       }
+
+      // Save add-on pricing when applicable
+      if (form.session_type === 'addon') {
+        const pricingPayload = {
+          price_cents: addonPriceCents,
+          is_nonrefundable: addonIsNonrefundable,
+        };
+        if (addonPricingExists || !editingSession) {
+          await apiPut(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {
+            apiPost(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {});
+          });
+        } else {
+          await apiPost(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {});
+        }
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -742,6 +783,50 @@ function SessionSlideOver({
               </div>
             ))}
           </div>
+
+          {/* Add-on session pricing */}
+          {form.session_type === 'addon' && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Add-On Price</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Participants purchase this add-on at checkout in addition to the
+                    base workshop registration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative flex items-center mb-3">
+                <span className="absolute left-4 text-gray-400 select-none">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl text-sm
+                    text-gray-900 focus:border-[#0FA3B1] focus:ring-1 focus:ring-[#0FA3B1]"
+                  placeholder="0 (free add-on)"
+                  value={addonPriceCents > 0 ? (addonPriceCents / 100).toFixed(2) : ''}
+                  onChange={(e) => {
+                    const raw = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                    setAddonPriceCents(isNaN(raw) ? 0 : Math.round(raw * 100));
+                  }}
+                />
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={addonIsNonrefundable}
+                  onChange={(e) => setAddonIsNonrefundable(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[#0FA3B1]"
+                />
+                <span className="text-sm text-gray-700">
+                  This add-on is non-refundable (even when the workshop allows refunds)
+                </span>
+              </label>
+            </div>
+          )}
 
           <Textarea
             label="Internal Notes"

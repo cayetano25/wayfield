@@ -80,6 +80,9 @@ export interface ParticipantOtherWorkshop {
   sessions_count: number;
   checked_in_count: number;
   total_sessions: number;
+  /** Payment status label from Order.getPaymentStatusLabel() — absent when workshop is free */
+  payment_status?: 'Free' | 'Deposit Paid' | 'Fully Paid' | 'Balance Due' | 'Payment Pending' | null;
+  balance_due_date?: string | null;
 }
 
 export interface ParticipantDashboard {
