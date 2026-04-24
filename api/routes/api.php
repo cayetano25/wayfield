@@ -8,7 +8,10 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\BillingController;
+use App\Http\Controllers\Api\V1\RefundPolicyController;
+use App\Http\Controllers\Api\V1\SessionPricingController;
 use App\Http\Controllers\Api\V1\StripeConnectController;
+use App\Http\Controllers\Api\V1\WorkshopPricingController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
 use App\Http\Controllers\Webhooks\StripeWebhookController as StripeConnectWebhookController;
@@ -414,6 +417,25 @@ Route::prefix('v1')->group(function () {
         Route::get('organizations/{organization}/api-keys', [ApiKeyController::class, 'index']);
         Route::post('organizations/{organization}/api-keys', [ApiKeyController::class, 'store']);
         Route::delete('organizations/{organization}/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
+
+        // ─── Pricing & Refund Policies (Step 3A) ─────────────────────────────
+        Route::get('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'show']);
+        Route::post('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'store']);
+        Route::put('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'update']);
+        Route::get('workshops/{workshop}/pricing/preview', [WorkshopPricingController::class, 'preview']);
+
+        Route::get('sessions/{session}/pricing', [SessionPricingController::class, 'show']);
+        Route::post('sessions/{session}/pricing', [SessionPricingController::class, 'store']);
+        Route::put('sessions/{session}/pricing', [SessionPricingController::class, 'update']);
+        Route::delete('sessions/{session}/pricing', [SessionPricingController::class, 'destroy']);
+
+        Route::get('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'showForOrganization']);
+        Route::post('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'storeForOrganization']);
+        Route::put('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'updateForOrganization']);
+
+        Route::get('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'showForWorkshop']);
+        Route::post('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'storeForWorkshop']);
+        Route::put('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'updateForWorkshop']);
 
         // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────
         Route::middleware('payments.enabled')

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkshopPricing extends Model
 {
+    protected $table = 'workshop_pricing';
+
     protected $fillable = [
         'workshop_id',
         'base_price_cents',
