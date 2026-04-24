@@ -61,8 +61,10 @@ export function DiscoverHero({ featuredWorkshop = null, onSearch }: Props) {
   }
 
   const descSnippet = featuredWorkshop
-    ? featuredWorkshop.description.slice(0, 80) +
-      (featuredWorkshop.description.length > 80 ? '…' : '')
+    ? (() => {
+        const plain = featuredWorkshop.description.replace(/<[^>]*>/g, '');
+        return plain.slice(0, 80) + (plain.length > 80 ? '…' : '');
+      })()
     : ''
 
   return (

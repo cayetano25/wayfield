@@ -34,7 +34,7 @@ export async function generateMetadata({
   }
 
   const w = data.workshop;
-  const description = w.public_summary ?? (w.description ?? '').slice(0, 200);
+  const description = w.public_summary ?? (w.description ?? '').replace(/<[^>]*>/g, '').slice(0, 200);
 
   return {
     ...base,

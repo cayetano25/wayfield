@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { ImageUploader } from '@/components/ui/ImageUploader';
@@ -199,15 +199,23 @@ export function WorkshopForm({
             placeholder="e.g. Pacific Northwest Photo Retreat 2026"
             required
           />
-          <Textarea
-            label="Description"
-            value={values.description}
-            onChange={(e) => set('description', e.target.value)}
-            error={errors.description}
-            placeholder="Describe what participants can expect..."
-            rows={4}
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <RichTextEditor
+              value={values.description}
+              onChange={(html) => set('description', html)}
+              placeholder="Describe your workshop — what participants will experience, learn, and take away. Use headings to organise sections and bullet points to highlight key details."
+              minHeight="200px"
+            />
+            {errors.description && (
+              <p className="text-xs text-danger mt-1">{errors.description}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1.5">
+              Supports formatting — bold, lists, and section headings.
+            </p>
+          </div>
         </div>
       </div>
 

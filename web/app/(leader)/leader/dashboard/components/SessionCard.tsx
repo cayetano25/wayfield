@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, Calendar, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
+import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import toast from 'react-hot-toast';
 import { apiGet, apiPatch, apiPost } from '@/lib/api/client';
 import { LeaderNotificationComposeModal } from '@/components/notifications/LeaderNotificationComposeModal';
@@ -633,12 +634,12 @@ export function SessionCard({ session }: { session: LeaderDashboardSession }) {
 
           {/* Description */}
           {session.description && (
-            <p
-              className="font-sans leading-relaxed"
-              style={{ fontSize: 14, color: '#6B7280', marginTop: 16 }}
-            >
-              {session.description}
-            </p>
+            <div style={{ marginTop: 16 }}>
+              <RichTextDisplay
+                html={session.description}
+                className="text-sm text-gray-500"
+              />
+            </div>
           )}
         </div>
 

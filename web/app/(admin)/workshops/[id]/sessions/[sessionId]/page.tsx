@@ -17,6 +17,7 @@ import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet } from '@/lib/api/client';
 import { Card } from '@/components/ui/Card';
+import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AssignParticipantModal } from '@/components/participants/AssignParticipantModal';
@@ -543,7 +544,10 @@ export default function SessionDetailPage() {
           {session.description && (
             <Card className="p-5">
               <h2 className="font-heading text-sm font-semibold text-dark mb-2">Description</h2>
-              <p className="text-sm text-medium-gray leading-relaxed">{session.description}</p>
+              <RichTextDisplay
+                html={session.description}
+                className="text-sm text-medium-gray"
+              />
             </Card>
           )}
 

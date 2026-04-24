@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { Select } from '@/components/ui/Select';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 
@@ -540,13 +541,17 @@ function SessionSlideOver({
             />
           )}
 
-          <Textarea
-            label="Description"
-            value={form.description}
-            onChange={(e) => setF('description', e.target.value)}
-            rows={3}
-            placeholder="What participants can expect from this session…"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <RichTextEditor
+              value={form.description}
+              onChange={(html) => setF('description', html)}
+              placeholder="Describe what happens in this session — the activity, any equipment participants should bring, and what they will create or learn."
+              minHeight="120px"
+            />
+          </div>
 
           <Select
             label="Track"

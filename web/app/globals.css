@@ -151,3 +151,93 @@ body {
   height: 4px;
   border: none;
 }
+
+/* ── Tiptap editor content styles ───────────────────────────────────────── */
+
+.ProseMirror {
+  outline: none;
+  min-height: inherit;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  color: #374151;
+  font-size: 0.9375rem;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.ProseMirror h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-heading);
+}
+
+.ProseMirror h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-top: 1rem;
+  margin-bottom: 0.375rem;
+}
+
+.ProseMirror strong {
+  font-weight: 700;
+  color: #111827;
+}
+
+.ProseMirror em {
+  font-style: italic;
+  color: #374151;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ── Prose display styles (read-only rendered HTML) ─────────────────────── */
+
+.prose-wayfield p { margin-bottom: 0.75rem; line-height: 1.6; color: #374151; }
+.prose-wayfield p:last-child { margin-bottom: 0; }
+.prose-wayfield ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-wayfield ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-wayfield li { margin-bottom: 0.25rem; line-height: 1.5; }
+.prose-wayfield h2 { font-size: 1.125rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+.prose-wayfield strong { font-weight: 700; }
+.prose-wayfield em { font-style: italic; }
