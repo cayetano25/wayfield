@@ -165,10 +165,10 @@ export function WorkshopForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-[720px]">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header image — only shown when editing an existing workshop */}
       {workshopId && (
-        <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] px-6 py-6">
+        <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] px-6 py-6 max-w-[720px]">
           <h2 className="font-heading text-base font-semibold text-dark mb-4">Workshop Header Image</h2>
           <ImageUploader
             currentUrl={headerImageUrl}
@@ -186,7 +186,7 @@ export function WorkshopForm({
       )}
 
       {/* Basic info */}
-      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
+      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] max-w-[720px]">
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Basic Information</h2>
         </div>
@@ -212,7 +212,7 @@ export function WorkshopForm({
       </div>
 
       {/* Workshop type */}
-      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
+      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] max-w-[720px]">
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Workshop Type</h2>
           {errors.workshop_type && (
@@ -267,7 +267,7 @@ export function WorkshopForm({
       </div>
 
       {/* Schedule */}
-      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
+      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] max-w-[720px]">
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Schedule</h2>
         </div>
@@ -334,7 +334,7 @@ export function WorkshopForm({
       />
 
       {/* Default location (expandable) */}
-      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
+      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] max-w-[720px]">
         <button
           type="button"
           onClick={() => setLocationExpanded((v) => !v)}
@@ -378,7 +378,7 @@ export function WorkshopForm({
       </div>
 
       {/* Public page */}
-      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
+      <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)] max-w-[720px]">
         <div className="px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -396,7 +396,7 @@ export function WorkshopForm({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex items-center justify-end gap-3 pt-2 max-w-[720px]">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
