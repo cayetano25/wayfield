@@ -225,10 +225,7 @@ export function DiscoverHero({ featuredWorkshop = null, onSearch }: Props) {
                           )}
                         </div>
 
-                        {/* Price */}
-                        <span className="text-sm font-semibold text-[#0FA3B1]">
-                          From ${featuredWorkshop.startingPrice.toLocaleString()}
-                        </span>
+                        {/* Price — hidden for now */}
                       </div>
                     </div>
                   </div>
