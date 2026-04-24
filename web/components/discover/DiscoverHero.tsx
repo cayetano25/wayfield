@@ -163,7 +163,7 @@ export function DiscoverHero({ featuredWorkshop = null, onSearch }: Props) {
                     onClick={handleSearch}
                     className="m-1.5 px-6 py-3 bg-[#0FA3B1] hover:bg-[#0c8a96] text-white font-semibold text-sm rounded-full transition-colors whitespace-nowrap font-sans"
                   >
-                    Search Atelier
+                    Explore Workshops
                   </button>
                 </div>
               </div>

@@ -6,12 +6,12 @@ import { X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { useTaxonomy } from '@/hooks/useTaxonomy';
 import { discoverWorkshopsV2 } from '@/lib/api/public';
 import type { DiscoverWorkshop, DiscoverResponse } from '@/lib/api/public';
-import { FilterSidebar, type ActiveFilters } from './components/FilterSidebar';
+import { FilterSidebar, FILTER_GROUPS } from './components/FilterSidebar';
 import { SkeletonCard } from './components/SkeletonCard';
 import { DiscoverHero } from '@/components/discover/DiscoverHero';
-import { DiscoverFilterBar } from '@/components/discover/DiscoverFilterBar';
-import { AdvancedFiltersSidebar } from '@/components/discover/AdvancedFiltersSidebar';
+import { DiscoverSidebar } from '@/components/discover/DiscoverSidebar';
 import { WorkshopCard } from '@/components/discover/WorkshopCard';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import type { FeaturedWorkshop } from '@/components/discover/DiscoverHero';
 
 /* --- Pagination helpers ---------------------------------------------------- */
@@ -30,33 +30,39 @@ function getPageNumbers(current: number, total: number): (number | 'ellipsis')[]
   return result;
 }
 
-/* --- Date helpers ---------------------------------------------------------- */
+/* --- Date range → API params ----------------------------------------------- */
 
-const SKILL_LEVEL_QUICK_SLUGS = ['beginner', 'intermediate', 'advanced'];
-
-function fmtDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function computeActiveDatePreset(startAfter: string, startBefore: string): string {
-  if (!startAfter && !startBefore) return 'any';
+function dateRangeToApiParams(
+  range: string | null,
+  customFrom: string | null,
+  customTo: string | null,
+): { start_after?: string; start_before?: string } {
+  if (!range) return {};
   const today = new Date();
-
-  const dayOfWeek = today.getDay();
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  if (startAfter === fmtDate(weekStart) && startBefore === fmtDate(weekEnd)) return 'this-week';
-
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  if (startAfter === fmtDate(monthStart) && startBefore === fmtDate(monthEnd)) return 'this-month';
-
-  const threeMonthsEnd = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
-  if (startAfter === fmtDate(today) && startBefore === fmtDate(threeMonthsEnd)) return 'next-3-months';
-
-  return 'custom';
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+  switch (range) {
+    case 'next-week': {
+      const end = new Date(today);
+      end.setDate(today.getDate() + 7);
+      return { start_after: fmt(today), start_before: fmt(end) };
+    }
+    case 'this-month': {
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { start_after: fmt(today), start_before: fmt(end) };
+    }
+    case 'next-3-months': {
+      const end = new Date(today);
+      end.setMonth(today.getMonth() + 3);
+      return { start_after: fmt(today), start_before: fmt(end) };
+    }
+    case 'custom':
+      return {
+        ...(customFrom ? { start_after: customFrom } : {}),
+        ...(customTo ? { start_before: customTo } : {}),
+      };
+    default:
+      return {};
+  }
 }
 
 /* --- Workshop card data helpers -------------------------------------------- */
@@ -123,40 +129,35 @@ export function DiscoverClient() {
   const searchParams = useSearchParams();
   const { categories, tagGroups, isLoading: taxonomyLoading } = useTaxonomy();
 
-  // --- Derive filter state from URL ---
+  // --- URL-derived filter state (tags, sort, pagination, search) -----------
   const q = searchParams.get('q') ?? '';
-  const category = searchParams.get('category') ?? '';
-  const subcategory = searchParams.get('subcategory') ?? '';
-  const specialization = searchParams.get('specialization') ?? '';
   const tags = searchParams.getAll('tag');
-  const startAfter = searchParams.get('start_after') ?? '';
-  const startBefore = searchParams.get('start_before') ?? '';
   const perPage = Number(searchParams.get('per_page') ?? '12') as 12 | 24 | 48;
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'));
   const sort = (searchParams.get('sort') ?? 'start_date') as 'newest' | 'start_date' | 'relevance';
 
-  // Advanced filter URL state (applied)
-  const appliedDuration = searchParams.get('duration') ?? '';
-  const appliedExpStyles = searchParams.getAll('exp_style');
-  const appliedPriceMin = Number(searchParams.get('price_min') ?? '0');
-  const appliedPriceMax = Number(searchParams.get('price_max') ?? '2500');
-  const appliedGroupSize = searchParams.get('group_size') ?? '';
+  // --- Right sidebar filter state (React state) ----------------------------
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
+  const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState<string | null>(null);
+  const [selectedSpecializationSlug, setSelectedSpecializationSlug] = useState<string | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<string | null>(null);
+  const [customDateFrom, setCustomDateFrom] = useState<string | null>(null);
+  const [customDateTo, setCustomDateTo] = useState<string | null>(null);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(2500);
 
-  const filters: ActiveFilters = { category, subcategory, specialization, tags, startAfter, startBefore };
+  // Debounced location (300ms) — avoids re-fetch on every keystroke
+  const [debouncedLocation, setDebouncedLocation] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedLocation(locationQuery), 300);
+    return () => clearTimeout(t);
+  }, [locationQuery]);
 
-  // --- Local UI state ---
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // --- UI state -------------------------------------------------------------
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Advanced filter pending state (mirrors sidebar before Apply)
-  const pendingAdvancedRef = useRef({
-    duration: appliedDuration || undefined as string | undefined,
-    experienceStyles: appliedExpStyles,
-    priceMin: appliedPriceMin,
-    priceMax: appliedPriceMax,
-    groupSize: appliedGroupSize || undefined as string | undefined,
-  });
-
-  // --- Featured workshop for hero ---
+  // --- Featured workshop for hero ------------------------------------------
   const [featuredWorkshop, setFeaturedWorkshop] = useState<FeaturedWorkshop | null>(null);
 
   useEffect(() => {
@@ -178,27 +179,32 @@ export function DiscoverClient() {
     });
   }, []);
 
-  // --- API state ---
+  // --- Workshop API state ---------------------------------------------------
   const [workshops, setWorkshops] = useState<DiscoverWorkshop[]>([]);
   const [meta, setMeta] = useState<DiscoverResponse['meta'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // --- Fetch workshops when URL params change ---
+  // --- Fetch workshops whenever any filter changes --------------------------
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
 
+    const dateParams = dateRangeToApiParams(selectedDateRange, customDateFrom, customDateTo);
+
     discoverWorkshopsV2({
       q: q || undefined,
-      category: category || undefined,
-      subcategory: subcategory || undefined,
-      specialization: specialization || undefined,
+      category: selectedCategorySlug || undefined,
+      subcategory: selectedSubcategorySlug || undefined,
+      specialization: selectedSpecializationSlug || undefined,
       tags: tags.length > 0 ? tags : undefined,
-      start_after: startAfter || undefined,
-      start_before: startBefore || undefined,
+      start_after: dateParams.start_after,
+      start_before: dateParams.start_before,
+      location: debouncedLocation.trim() || undefined,
+      ...(FEATURE_FLAGS.PAYMENTS_ENABLED && priceMin > 0 ? { price_min: priceMin } : {}),
+      ...(FEATURE_FLAGS.PAYMENTS_ENABLED && priceMax < 2500 ? { price_max: priceMax } : {}),
       per_page: perPage,
       page,
       sort,
@@ -216,9 +222,20 @@ export function DiscoverClient() {
       });
 
     return () => { cancelled = true; };
-  }, [searchParams.toString()]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    searchParams.toString(),
+    selectedCategorySlug,
+    selectedSubcategorySlug,
+    selectedSpecializationSlug,
+    selectedDateRange,
+    customDateFrom,
+    customDateTo,
+    debouncedLocation,
+    priceMin,
+    priceMax,
+  ]);
 
-  // --- URL update helpers ---
+  // --- URL update helper (for tags, sort, page, q) -------------------------
   function pushParams(updates: Record<string, string | string[] | null>, resetPage = true) {
     const p = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(updates)) {
@@ -235,21 +252,14 @@ export function DiscoverClient() {
     router.push(`/discover?${p.toString()}`);
   }
 
-  function handleCategoryChange(slug: string | null) {
-    pushParams({ category: slug, subcategory: null, specialization: null });
-  }
-
-  function handleSubcategoryChange(slug: string | null) {
-    pushParams({ subcategory: slug, specialization: null });
-  }
-
-  function handleSpecializationChange(slug: string | null) {
-    pushParams({ specialization: slug });
-  }
-
+  // --- Tag toggle (used by slide-out FilterSidebar) -------------------------
   function handleTagToggle(tagSlug: string, groupKey: string, allowsMultiple: boolean) {
-    const group = tagGroups.find((g) => g.key === groupKey);
-    const groupSlugs = group?.tags.map((t) => t.slug) ?? [];
+    const apiGroup = tagGroups.find((g) => g.key === groupKey);
+    const staticGroup = FILTER_GROUPS.find((g) => g.key === groupKey);
+    const groupSlugs =
+      apiGroup?.tags.map((t) => t.slug) ??
+      staticGroup?.options.map((o) => o.slug) ??
+      [];
 
     let newTags: string[];
     if (allowsMultiple) {
@@ -263,11 +273,7 @@ export function DiscoverClient() {
     pushParams({ tag: newTags.length > 0 ? newTags : null });
   }
 
-  function handleDateChange(field: 'startAfter' | 'startBefore', value: string) {
-    const key = field === 'startAfter' ? 'start_after' : 'start_before';
-    pushParams({ [key]: value || null });
-  }
-
+  // --- Hero search ----------------------------------------------------------
   function handleHeroSearch(query: string) {
     const p = new URLSearchParams(searchParams.toString());
     if (query) p.set('q', query);
@@ -276,45 +282,21 @@ export function DiscoverClient() {
     router.push(`/discover?${p.toString()}`);
   }
 
-  function handleFilterBarDateChange(value: string, range?: { from?: string; to?: string }) {
-    const today = new Date();
-    if (value === 'any') {
-      pushParams({ start_after: null, start_before: null });
-    } else if (value === 'this-week') {
-      const dow = today.getDay();
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      pushParams({ start_after: fmtDate(weekStart), start_before: fmtDate(weekEnd) });
-    } else if (value === 'this-month') {
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      pushParams({ start_after: fmtDate(monthStart), start_before: fmtDate(monthEnd) });
-    } else if (value === 'next-3-months') {
-      const end = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
-      pushParams({ start_after: fmtDate(today), start_before: fmtDate(end) });
-    } else if (value === 'custom' && range) {
-      pushParams({
-        start_after: range.from || null,
-        start_before: range.to || null,
-      });
-    }
-  }
-
-  function handleSkillLevelChange(value: string | null) {
-    const withoutSkillLevel = tags.filter((t) => !SKILL_LEVEL_QUICK_SLUGS.includes(t));
-    if (value === null) {
-      pushParams({ tag: withoutSkillLevel.length > 0 ? withoutSkillLevel : null });
-    } else {
-      pushParams({ tag: [...withoutSkillLevel, value] });
-    }
-  }
-
+  // --- Clear all (sidebar + URL) -------------------------------------------
   function handleClearAll() {
+    setSelectedCategorySlug(null);
+    setSelectedSubcategorySlug(null);
+    setSelectedSpecializationSlug(null);
+    setSelectedDateRange(null);
+    setCustomDateFrom(null);
+    setCustomDateTo(null);
+    setLocationQuery('');
+    setPriceMin(0);
+    setPriceMax(2500);
     router.push('/discover');
   }
 
+  // --- Pagination -----------------------------------------------------------
   function handlePageChange(newPage: number) {
     const p = new URLSearchParams(searchParams.toString());
     p.set('page', String(newPage));
@@ -322,123 +304,94 @@ export function DiscoverClient() {
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // --- Advanced filter handlers --------------------------------------------
-
-  function handleAdvancedChange(key: string, value: unknown) {
-    pendingAdvancedRef.current = { ...pendingAdvancedRef.current, [key]: value };
-  }
-
-  function handleAdvancedApply() {
-    const p = pendingAdvancedRef.current;
-    pushParams({
-      duration: p.duration || null,
-      exp_style: (p.experienceStyles?.length ?? 0) > 0 ? p.experienceStyles : null,
-      price_min: p.priceMin > 0 ? String(p.priceMin) : null,
-      price_max: p.priceMax < 2500 ? String(p.priceMax) : null,
-      group_size: p.groupSize || null,
-    });
-  }
-
-  function handleAdvancedReset() {
-    pendingAdvancedRef.current = {
-      duration: undefined,
-      experienceStyles: [],
-      priceMin: 0,
-      priceMax: 2500,
-      groupSize: undefined,
-    };
-    pushParams({
-      duration: null,
-      exp_style: null,
-      price_min: null,
-      price_max: null,
-      group_size: null,
-    });
-  }
-
-  // --- Derived pagination values ---
+  // --- Derived values -------------------------------------------------------
   const total = meta?.total ?? 0;
   const totalPages = meta?.last_page ?? 1;
   const pageNumbers = getPageNumbers(page, totalPages);
 
-  const hasAnyFilter = !!category || tags.length > 0 || !!startAfter || !!startBefore || !!q;
-  const hasAdvancedFilters = !!appliedDuration || appliedExpStyles.length > 0 ||
-    appliedPriceMin > 0 || appliedPriceMax < 2500 || !!appliedGroupSize;
+  // Count active filter groups in the slide-out (for badge on Filters button)
+  const activeSlideOutFilterCount = FILTER_GROUPS.reduce((count, group) => {
+    const hasActive = group.options.some((o) => tags.includes(o.slug));
+    return hasActive ? count + 1 : count;
+  }, 0);
+
+  // Taxonomy shaped for DiscoverSidebar
+  const sidebarTaxonomy = taxonomyLoading ? null : {
+    categories: categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      subcategories: cat.subcategories.map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+        specializations: sub.specializations.map((spec) => ({
+          id: spec.id,
+          name: spec.name,
+          slug: spec.slug,
+        })),
+      })),
+    })),
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <DiscoverHero featuredWorkshop={featuredWorkshop} onSearch={handleHeroSearch} />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────── */}
-      <DiscoverFilterBar
-        activeCategory={category || undefined}
-        activeDate={computeActiveDatePreset(startAfter, startBefore)}
-        activeDateRange={
-          startAfter || startBefore
-            ? { from: startAfter || undefined, to: startBefore || undefined }
-            : undefined
-        }
-        activeSkillLevel={tags.find((t) => SKILL_LEVEL_QUICK_SLUGS.includes(t))}
-        onCategoryChange={handleCategoryChange}
-        onDateChange={handleFilterBarDateChange}
-        onSkillLevelChange={handleSkillLevelChange}
-        onMoreFilters={() => setDrawerOpen(true)}
-        hasActiveAdvancedFilters={
-          !!subcategory ||
-          !!specialization ||
-          tags.some((t) => !SKILL_LEVEL_QUICK_SLUGS.includes(t)) ||
-          hasAdvancedFilters
-        }
-      />
+      {/* ── Content area ──────────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
 
-      {/* ── Results section ─────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-
-        {/* Results header row */}
+        {/* Top bar: Filters button + results count + sort */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 font-[Sora]">
-            Available Workshops{' '}
-            {!loading && (
-              <span className="text-gray-400 font-normal text-xl">({total})</span>
-            )}
-          </h2>
-          <div className="flex items-center gap-3">
-            {/* Mobile filters button */}
+          <div className="flex items-center gap-4">
             <button
               type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="md:hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200
-                         bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => setFiltersOpen(true)}
+              className="flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2
+                         text-sm font-medium text-gray-700
+                         hover:border-gray-400 hover:bg-gray-50 transition-colors"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <SlidersHorizontal size={15} />
               Filters
-              {hasAnyFilter && (
-                <span className="w-2 h-2 rounded-full bg-[#0FA3B1] shrink-0" />
+              {activeSlideOutFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full
+                                 bg-[#0FA3B1] text-white text-xs font-bold ml-1">
+                  {activeSlideOutFilterCount}
+                </span>
               )}
             </button>
+            <p className="text-sm text-gray-500">
+              {!loading && (
+                <>
+                  <span className="font-semibold text-gray-900">{total}</span>
+                  {' '}workshop{total !== 1 ? 's' : ''}
+                </>
+              )}
+            </p>
+          </div>
 
-            {/* Sort select */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="hidden sm:inline">Sort by:</span>
-              <select
-                value={sort}
-                onChange={(e) => pushParams({ sort: e.target.value }, false)}
-                className="font-medium text-gray-900 border-none bg-transparent cursor-pointer focus:outline-none"
-              >
-                <option value="start_date">Start Date</option>
-                <option value="newest">Newest</option>
-                <option value="relevance">Most Relevant</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            Sort by:
+            <select
+              value={sort}
+              onChange={(e) => pushParams({ sort: e.target.value }, false)}
+              className="font-medium text-gray-900 border-none bg-transparent cursor-pointer focus:outline-none"
+            >
+              <option value="start_date">Start Date</option>
+              <option value="newest">Newest</option>
+              <option value="relevance">Most Relevant</option>
+            </select>
           </div>
         </div>
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-start">
+        {/* Main content: sidebar above on mobile, grid left + sidebar right on desktop */}
+        <div className="flex flex-col-reverse gap-6 lg:flex-row lg:items-start">
 
-          {/* ── LEFT: Workshop card grid ────────────────────────────────── */}
-          <div ref={gridRef}>
+          {/* ── Workshop card grid ────────────────────────────────────────── */}
+          <div className="flex-1 min-w-0" ref={gridRef}>
+
             {/* Error state */}
             {error && !loading && (
               <div className="flex flex-col items-center text-center bg-white rounded-xl border border-gray-200 p-12">
@@ -447,10 +400,7 @@ export function DiscoverClient() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    const p = new URLSearchParams(searchParams.toString());
-                    router.push(`/discover?${p.toString()}`);
-                  }}
+                  onClick={() => router.push(`/discover?${searchParams.toString()}`)}
                   className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#0FA3B1] text-white text-sm font-semibold hover:bg-[#0c8a96] transition-colors"
                 >
                   Retry
@@ -461,7 +411,7 @@ export function DiscoverClient() {
             {/* Workshop grid */}
             {!error && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {loading
                     ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
                     : workshops.map((w) => {
@@ -542,73 +492,65 @@ export function DiscoverClient() {
             )}
           </div>
 
-          {/* ── RIGHT: Advanced Filters sidebar ─────────────────────────── */}
-          <div className="hidden lg:block lg:sticky lg:top-[72px]">
-            <AdvancedFiltersSidebar
-              activeDuration={appliedDuration || undefined}
-              activeExperienceStyles={appliedExpStyles}
-              priceMin={appliedPriceMin}
-              priceMax={appliedPriceMax}
-              activeGroupSize={appliedGroupSize || undefined}
-              onChange={handleAdvancedChange}
-              onApply={handleAdvancedApply}
-              onReset={handleAdvancedReset}
+          {/* ── Right sidebar ─────────────────────────────────────────────── */}
+          <div className="w-full lg:w-72 lg:flex-shrink-0">
+            <DiscoverSidebar
+              selectedCategorySlug={selectedCategorySlug}
+              selectedSubcategorySlug={selectedSubcategorySlug}
+              selectedSpecializationSlug={selectedSpecializationSlug}
+              onCategoryChange={setSelectedCategorySlug}
+              onSubcategoryChange={setSelectedSubcategorySlug}
+              onSpecializationChange={setSelectedSpecializationSlug}
+              selectedDateRange={selectedDateRange}
+              customDateFrom={customDateFrom}
+              customDateTo={customDateTo}
+              onDateRangeChange={setSelectedDateRange}
+              onCustomDateChange={(from, to) => {
+                setCustomDateFrom(from);
+                setCustomDateTo(to);
+              }}
+              locationQuery={locationQuery}
+              onLocationChange={setLocationQuery}
+              priceMin={priceMin}
+              priceMax={priceMax}
+              onPriceChange={(min, max) => {
+                setPriceMin(min);
+                setPriceMax(max);
+              }}
+              taxonomy={sidebarTaxonomy}
             />
           </div>
+
         </div>
       </div>
 
-      {/* ── Mobile drawer backdrop ──────────────────────────────────────── */}
+      {/* ── Slide-out backdrop ────────────────────────────────────────────── */}
       <div
         className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300
-          ${drawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setDrawerOpen(false)}
+          ${filtersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setFiltersOpen(false)}
       />
 
-      {/* ── Mobile drawer panel ─────────────────────────────────────────── */}
+      {/* ── Slide-out panel ───────────────────────────────────────────────── */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl overflow-y-auto
+        className={`fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-2xl overflow-y-auto
           transform transition-transform duration-300 ease-in-out
-          ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          ${filtersOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Drawer header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h2 className="font-[Sora] font-bold text-gray-900 text-base">Filters</h2>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Close filters"
-          >
-            <X className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
-
         <FilterSidebar
-          categories={categories}
-          tagGroups={tagGroups}
-          taxonomyLoading={taxonomyLoading}
-          filters={filters}
-          onCategoryChange={(slug) => { handleCategoryChange(slug); setDrawerOpen(false); }}
-          onSubcategoryChange={(slug) => { handleSubcategoryChange(slug); }}
-          onSpecializationChange={(slug) => { handleSpecializationChange(slug); }}
-          onTagToggle={(slug, gk, multi) => { handleTagToggle(slug, gk, multi); }}
-          onDateChange={(field, value) => { handleDateChange(field, value); }}
-          onClearAll={() => { handleClearAll(); setDrawerOpen(false); }}
+          selectedTags={tags}
+          onTagToggle={(slug, gk, multi) => handleTagToggle(slug, gk, multi)}
+          priceMin={priceMin}
+          priceMax={priceMax}
+          onPriceChange={(min, max) => {
+            setPriceMin(min);
+            setPriceMax(max);
+          }}
+          onClose={() => setFiltersOpen(false)}
+          onClearAll={() => { handleClearAll(); setFiltersOpen(false); }}
         />
-
-        {/* Drawer apply button */}
-        <div className="px-4 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            className="w-full h-10 rounded-lg bg-[#0FA3B1] text-white text-sm font-semibold
-                       hover:bg-[#0c8a96] transition-colors"
-          >
-            Apply Filters
-          </button>
-        </div>
       </div>
+
     </div>
   );
 }

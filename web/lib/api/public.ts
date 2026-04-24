@@ -176,6 +176,9 @@ export interface DiscoverFilters {
   tags?: string[];
   start_after?: string;
   start_before?: string;
+  location?: string;
+  price_min?: number;
+  price_max?: number;
   per_page?: number;
   page?: number;
   sort?: 'newest' | 'start_date' | 'relevance';
@@ -192,6 +195,9 @@ export async function discoverWorkshopsV2(
   filters.tags?.forEach((t) => qs.append('tag[]', t));
   if (filters.start_after) qs.set('start_after', filters.start_after);
   if (filters.start_before) qs.set('start_before', filters.start_before);
+  if (filters.location) qs.set('location', filters.location);
+  if (filters.price_min !== undefined && filters.price_min > 0) qs.set('price_min', String(filters.price_min));
+  if (filters.price_max !== undefined && filters.price_max < 2500) qs.set('price_max', String(filters.price_max));
   qs.set('per_page', String(filters.per_page ?? 12));
   qs.set('page', String(filters.page ?? 1));
   if (filters.sort) qs.set('sort', filters.sort);

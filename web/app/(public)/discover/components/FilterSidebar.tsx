@@ -1,407 +1,328 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
-import type { TaxonomyCategory, TaxonomyTagGroup } from '@/lib/types/taxonomy';
+import { Check, X } from 'lucide-react';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
-/* --- Types ---------------------------------------------------------------- */
+/* --- Types ----------------------------------------------------------------- */
 
-export interface ActiveFilters {
-  category: string;
-  subcategory: string;
-  specialization: string;
-  tags: string[];
-  startAfter: string;
-  startBefore: string;
-}
-
-interface FilterSidebarProps {
-  categories: TaxonomyCategory[];
-  tagGroups: TaxonomyTagGroup[];
-  taxonomyLoading: boolean;
-  filters: ActiveFilters;
-  onCategoryChange: (slug: string | null) => void;
-  onSubcategoryChange: (slug: string | null) => void;
-  onSpecializationChange: (slug: string | null) => void;
-  onTagToggle: (tagSlug: string, groupKey: string, allowsMultiple: boolean) => void;
-  onDateChange: (field: 'startAfter' | 'startBefore', value: string) => void;
+export interface FilterSidebarProps {
+  selectedTags: string[];
+  onTagToggle: (slug: string, groupKey: string, allowsMultiple: boolean) => void;
+  priceMin: number;
+  priceMax: number;
+  onPriceChange: (min: number, max: number) => void;
+  onClose: () => void;
   onClearAll: () => void;
 }
 
-/* --- Sidebar tag groups to show ------------------------------------------- */
+/* --- Static filter group config ------------------------------------------- */
 
-const SIDEBAR_TAG_GROUP_KEYS = [
-  'skill_level',
-  'format',
-  'duration',
-  'audience',
-  'experience_style',
+export interface FilterOption {
+  label: string;
+  slug: string;
+}
+
+export interface FilterGroupConfig {
+  key: string;
+  label: string;
+  description: string;
+  allowsMultiple: boolean;
+  options: FilterOption[];
+}
+
+export const FILTER_GROUPS: FilterGroupConfig[] = [
+  {
+    key: 'skill_level',
+    label: 'Skill Level',
+    description: 'How much prior experience participants need.',
+    allowsMultiple: false,
+    options: [
+      { label: 'Beginner', slug: 'beginner' },
+      { label: 'Beginner-Friendly', slug: 'beginner-friendly' },
+      { label: 'Intermediate', slug: 'intermediate' },
+      { label: 'Advanced', slug: 'advanced' },
+      { label: 'All Levels', slug: 'all-levels' },
+    ],
+  },
+  {
+    key: 'format',
+    label: 'Format',
+    description: 'Whether the workshop is in-person, online, or both.',
+    allowsMultiple: false,
+    options: [
+      { label: 'In-Person', slug: 'in-person' },
+      { label: 'Virtual', slug: 'virtual' },
+      { label: 'Hybrid', slug: 'hybrid' },
+      { label: 'Self-Paced', slug: 'self-paced' },
+      { label: 'Live Instruction', slug: 'live-instruction' },
+    ],
+  },
+  {
+    key: 'duration',
+    label: 'Duration',
+    description: 'How long the workshop runs.',
+    allowsMultiple: false,
+    options: [
+      { label: 'Single Session', slug: 'single-session' },
+      { label: 'Multi-Day', slug: 'multi-day' },
+      { label: 'Weekend Workshop', slug: 'weekend-workshop' },
+      { label: 'Intensive', slug: 'intensive' },
+      { label: 'Retreat', slug: 'retreat' },
+      { label: 'Ongoing Series', slug: 'ongoing-series' },
+    ],
+  },
+  {
+    key: 'experience_style',
+    label: 'Experience Style',
+    description: 'The learning approach used.',
+    allowsMultiple: true,
+    options: [
+      { label: 'Hands-On', slug: 'hands-on' },
+      { label: 'Lecture-Based', slug: 'lecture-based' },
+      { label: 'Guided Practice', slug: 'guided-practice' },
+      { label: 'Critique-Based', slug: 'critique-based' },
+      { label: 'Collaborative', slug: 'collaborative' },
+      { label: 'Immersive', slug: 'immersive' },
+    ],
+  },
+  {
+    key: 'group_size',
+    label: 'Group Size',
+    description: 'The typical number of participants.',
+    allowsMultiple: false,
+    options: [
+      { label: '1-on-1', slug: '1-on-1' },
+      { label: 'Small Group', slug: 'small-group' },
+      { label: 'Large Group', slug: 'large-group' },
+    ],
+  },
+  {
+    key: 'environment',
+    label: 'Environment',
+    description: 'The setting — indoor, outdoor, studio, or on location.',
+    allowsMultiple: false,
+    options: [
+      { label: 'Indoor', slug: 'indoor' },
+      { label: 'Outdoor', slug: 'outdoor' },
+      { label: 'Studio-Based', slug: 'studio-based' },
+      { label: 'On-Location', slug: 'on-location' },
+      { label: 'Travel-Based', slug: 'travel-based' },
+    ],
+  },
+  {
+    key: 'goals_outcomes',
+    label: 'Goals & Outcomes',
+    description: 'What participants can expect to take away.',
+    allowsMultiple: true,
+    options: [
+      { label: 'Portfolio Building', slug: 'portfolio-building' },
+      { label: 'Skill Development', slug: 'skill-development' },
+      { label: 'Certification', slug: 'certification' },
+      { label: 'Creative Exploration', slug: 'creative-exploration' },
+      { label: 'Business Growth', slug: 'business-growth' },
+    ],
+  },
+  {
+    key: 'accessibility',
+    label: 'Accessibility',
+    description: 'Accommodations or features offered.',
+    allowsMultiple: true,
+    options: [
+      { label: 'Wheelchair Accessible', slug: 'wheelchair-accessible' },
+      { label: 'Captioned', slug: 'captioned' },
+      { label: 'ASL Available', slug: 'asl-available' },
+      { label: 'Low-Sensory', slug: 'low-sensory' },
+      { label: 'Accessible Materials', slug: 'accessible-materials' },
+    ],
+  },
+  {
+    key: 'booking_context',
+    label: 'Booking Context',
+    description: 'The type of group or occasion this workshop suits.',
+    allowsMultiple: false,
+    options: [
+      { label: 'Open Enrollment', slug: 'open-enrollment' },
+      { label: 'Private Group', slug: 'private-group' },
+      { label: 'Corporate Team-Building', slug: 'corporate-team-building' },
+      { label: 'Birthday Event', slug: 'birthday-event' },
+      { label: 'School Program', slug: 'school-program' },
+      { label: 'Festival Activity', slug: 'festival-activity' },
+    ],
+  },
 ];
 
-/* --- Active chips helpers ------------------------------------------------- */
+/* --- Pill button ----------------------------------------------------------- */
 
-function getChips(
-  filters: ActiveFilters,
-  categories: TaxonomyCategory[],
-  tagGroups: TaxonomyTagGroup[],
-): Array<{ key: string; label: string; onRemove: () => void }> {
-  const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
-
-  const cat = categories.find((c) => c.slug === filters.category);
-  if (cat) {
-    const sub = cat.subcategories.find((s) => s.slug === filters.subcategory);
-    const spec = sub?.specializations.find((sp) => sp.slug === filters.specialization);
-
-    chips.push({ key: `cat-${cat.slug}`, label: cat.name, onRemove: () => {} });
-    if (sub) chips.push({ key: `sub-${sub.slug}`, label: sub.name, onRemove: () => {} });
-    if (spec) chips.push({ key: `spec-${spec.slug}`, label: spec.name, onRemove: () => {} });
-  }
-
-  for (const tagSlug of filters.tags) {
-    let label = tagSlug;
-    for (const group of tagGroups) {
-      const tag = group.tags.find((t) => t.slug === tagSlug);
-      if (tag) { label = tag.name; break; }
-    }
-    chips.push({ key: `tag-${tagSlug}`, label, onRemove: () => {} });
-  }
-
-  if (filters.startAfter) {
-    chips.push({ key: 'start_after', label: `From: ${filters.startAfter}`, onRemove: () => {} });
-  }
-  if (filters.startBefore) {
-    chips.push({ key: 'start_before', label: `To: ${filters.startBefore}`, onRemove: () => {} });
-  }
-
-  return chips;
-}
-
-/* --- Collapsible group wrapper -------------------------------------------- */
-
-function FilterGroup({
-  groupKey,
+function Pill({
   label,
-  expanded,
-  onToggle,
-  children,
+  active,
+  onClick,
 }: {
-  groupKey: string;
   label: string;
-  expanded: boolean;
-  onToggle: (key: string) => void;
-  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="border-b border-border-gray last:border-b-0">
-      <button
-        type="button"
-        onClick={() => onToggle(groupKey)}
-        className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-surface transition-colors"
-      >
-        <span className="font-sans font-semibold text-sm text-dark">{label}</span>
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-medium-gray shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-medium-gray shrink-0" />
-        )}
-      </button>
-      {expanded && (
-        <div className="px-4 pb-4">
-          {children}
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? 'bg-[#0FA3B1] text-white border border-[#0FA3B1] rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer'
+          : 'border border-gray-200 text-gray-700 bg-white rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer hover:border-[#0FA3B1] hover:text-[#0FA3B1] transition-colors'
+      }
+    >
+      {label}
+    </button>
   );
 }
 
-/* --- Tag group filter ------------------------------------------------------ */
+/* --- Checkbox option ------------------------------------------------------- */
 
-function TagGroupFilter({
-  group,
-  selectedTags,
-  onTagToggle,
+function CheckboxOption({
+  label,
+  checked,
+  onClick,
 }: {
-  group: TaxonomyTagGroup;
-  selectedTags: string[];
-  onTagToggle: (slug: string, groupKey: string, allowsMultiple: boolean) => void;
+  label: string;
+  checked: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      {group.tags.map((tag) => {
-        const selected = selectedTags.includes(tag.slug);
-        return (
-          <label
-            key={tag.id}
-            className="flex items-center gap-2.5 cursor-pointer group/item"
-          >
-            <button
-              type="button"
-              role={group.allows_multiple ? 'checkbox' : 'radio'}
-              aria-checked={selected}
-              onClick={() => onTagToggle(tag.slug, group.key, group.allows_multiple)}
-              className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-                ${selected
-                  ? 'bg-primary border-primary'
-                  : 'bg-white border-border-gray group-hover/item:border-primary/40'
-                }
-                ${!group.allows_multiple ? 'rounded-full' : 'rounded'}
-              `}
-            >
-              {selected && group.allows_multiple && (
-                <svg viewBox="0 0 10 10" className="w-2.5 h-2.5" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1.5 5l2.5 2.5 4.5-5" />
-                </svg>
-              )}
-              {selected && !group.allows_multiple && (
-                <div className="w-2 h-2 bg-white rounded-full" />
-              )}
-            </button>
-            <span className={`font-sans text-sm transition-colors
-              ${selected ? 'text-dark font-medium' : 'text-medium-gray group-hover/item:text-dark'}
-            `}>
-              {tag.name}
-            </span>
-          </label>
-        );
-      })}
-    </div>
+    <label className="flex items-center gap-3 cursor-pointer py-1" onClick={onClick}>
+      <div
+        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
+          ${checked ? 'bg-[#0FA3B1] border-[#0FA3B1]' : 'border-gray-300 hover:border-[#0FA3B1]'}`}
+      >
+        {checked && <Check size={10} color="white" strokeWidth={3} />}
+      </div>
+      <span className="text-sm text-gray-700">{label}</span>
+    </label>
   );
 }
 
-/* --- FilterSidebar -------------------------------------------------------- */
+/* --- FilterSidebar --------------------------------------------------------- */
 
 export function FilterSidebar({
-  categories,
-  tagGroups,
-  taxonomyLoading,
-  filters,
-  onCategoryChange,
-  onSubcategoryChange,
-  onSpecializationChange,
+  selectedTags,
   onTagToggle,
-  onDateChange,
+  priceMin,
+  priceMax,
+  onPriceChange,
+  onClose,
   onClearAll,
 }: FilterSidebarProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(['category', 'skill_level']),
-  );
+  const activeGroupCount = FILTER_GROUPS.reduce((count, group) => {
+    const hasActive = group.options.some((o) => selectedTags.includes(o.slug));
+    return hasActive ? count + 1 : count;
+  }, 0);
 
-  function toggleGroup(key: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  const hasFilters =
-    !!filters.category ||
-    filters.tags.length > 0 ||
-    !!filters.startAfter ||
-    !!filters.startBefore;
-
-  const chips = getChips(filters, categories, tagGroups);
-
-  const sidebarTagGroups = SIDEBAR_TAG_GROUP_KEYS
-    .map((key) => tagGroups.find((g) => g.key === key))
-    .filter(Boolean) as TaxonomyTagGroup[];
-
-  const selectedCat = categories.find((c) => c.slug === filters.category);
+  const activeFilterCount =
+    activeGroupCount +
+    (FEATURE_FLAGS.PAYMENTS_ENABLED && (priceMin > 0 || priceMax < 2500) ? 1 : 0);
 
   return (
-    <div className="font-sans">
-      {/* Clear all */}
-      {hasFilters && (
-        <div className="px-4 py-3 border-b border-border-gray">
+    <>
+      {/* ── Header (sticky) ─────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#0FA3B1] text-white text-xs font-bold">
+              {activeFilterCount}
+            </span>
+          )}
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close filters">
+          <X size={20} className="text-gray-500 hover:text-gray-700" />
+        </button>
+      </div>
+
+      {/* ── Filter group sections ────────────────────────────────────── */}
+      <div className="px-6 py-5 space-y-6">
+
+        {FILTER_GROUPS.map((group) => (
+          <div key={group.key} className="mb-6">
+            <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-500 mb-1 font-mono">
+              {group.label}
+            </p>
+            <p className="text-xs text-gray-400 mb-3">{group.description}</p>
+
+            {group.allowsMultiple ? (
+              /* Multi-select: checkboxes */
+              <div>
+                {group.options.map((opt) => (
+                  <CheckboxOption
+                    key={opt.slug}
+                    label={opt.label}
+                    checked={selectedTags.includes(opt.slug)}
+                    onClick={() => onTagToggle(opt.slug, group.key, true)}
+                  />
+                ))}
+              </div>
+            ) : (
+              /* Single-select: pill buttons */
+              <div className="flex flex-row flex-wrap gap-2">
+                {group.options.map((opt) => (
+                  <Pill
+                    key={opt.slug}
+                    label={opt.label}
+                    active={selectedTags.includes(opt.slug)}
+                    onClick={() => onTagToggle(opt.slug, group.key, false)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* ── Price Range (hidden unless PAYMENTS_ENABLED) ─────────── */}
+        {FEATURE_FLAGS.PAYMENTS_ENABLED && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-500 mb-1 font-mono">
+                Price Range
+              </p>
+              <span className="text-xs font-semibold text-[#0FA3B1]">
+                ${priceMin} — ${priceMax}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">Filter by registration price.</p>
+            <input
+              type="range"
+              min={0}
+              max={2500}
+              step={25}
+              value={priceMin}
+              onChange={(e) => onPriceChange(Number(e.target.value), priceMax)}
+              className="w-full accent-[#0FA3B1]"
+              aria-label="Minimum price"
+            />
+            <input
+              type="range"
+              min={0}
+              max={2500}
+              step={25}
+              value={priceMax}
+              onChange={(e) => onPriceChange(priceMin, Number(e.target.value))}
+              className="w-full accent-[#0FA3B1]"
+              aria-label="Maximum price"
+            />
+          </div>
+        )}
+
+        {/* ── Clear all ────────────────────────────────────────────── */}
+        {activeFilterCount > 0 && (
           <button
             type="button"
             onClick={onClearAll}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-danger hover:text-danger/80 transition-colors"
+            className="w-full text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl py-2 transition-colors hover:border-gray-300"
           >
-            <X className="w-3.5 h-3.5" />
-            Clear all
+            Clear all filters
           </button>
-        </div>
-      )}
-
-      {/* Active chips */}
-      {chips.length > 0 && (
-        <div className="px-4 py-3 border-b border-border-gray flex flex-wrap gap-1.5">
-          {chips.map((chip) => (
-            <span
-              key={chip.key}
-              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full"
-            >
-              {chip.label}
-              <button
-                type="button"
-                onClick={() => {
-                  if (chip.key.startsWith('cat-')) onCategoryChange(null);
-                  else if (chip.key.startsWith('sub-')) onSubcategoryChange(null);
-                  else if (chip.key.startsWith('spec-')) onSpecializationChange(null);
-                  else if (chip.key.startsWith('tag-')) {
-                    const slug = chip.key.replace('tag-', '');
-                    const group = tagGroups.find((g) => g.tags.some((t) => t.slug === slug));
-                    if (group) onTagToggle(slug, group.key, group.allows_multiple);
-                  }
-                  else if (chip.key === 'start_after') onDateChange('startAfter', '');
-                  else if (chip.key === 'start_before') onDateChange('startBefore', '');
-                }}
-                className="text-primary/60 hover:text-primary transition-colors"
-                aria-label={`Remove ${chip.label} filter`}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Category filter */}
-      <FilterGroup
-        groupKey="category"
-        label="Category"
-        expanded={expanded.has('category')}
-        onToggle={toggleGroup}
-      >
-        {taxonomyLoading ? (
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-4 bg-gray-200 animate-pulse rounded w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {categories.map((cat) => {
-              const isSelected = filters.category === cat.slug;
-              return (
-                <div key={cat.id}>
-                  <button
-                    type="button"
-                    onClick={() => onCategoryChange(isSelected ? null : cat.slug)}
-                    className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-sm transition-colors
-                      ${isSelected
-                        ? 'text-primary font-semibold bg-primary/5 border-l-2 border-primary pl-1.5'
-                        : 'text-medium-gray hover:text-dark hover:bg-surface'
-                      }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSelected ? 'bg-primary' : 'bg-border-gray'}`} />
-                    {cat.name}
-                  </button>
-
-                  {/* Subcategories */}
-                  {isSelected && cat.subcategories.length > 0 && (
-                    <div className="ml-4 mt-0.5 space-y-0.5">
-                      {cat.subcategories.map((sub) => {
-                        const subSelected = filters.subcategory === sub.slug;
-                        return (
-                          <div key={sub.id}>
-                            <button
-                              type="button"
-                              onClick={() => onSubcategoryChange(subSelected ? null : sub.slug)}
-                              className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded text-xs transition-colors
-                                ${subSelected
-                                  ? 'text-primary font-semibold bg-primary/5 border-l-2 border-primary pl-1.5'
-                                  : 'text-medium-gray hover:text-dark hover:bg-surface'
-                                }`}
-                            >
-                              <span className={`w-1 h-1 rounded-full shrink-0 ${subSelected ? 'bg-primary' : 'bg-border-gray'}`} />
-                              {sub.name}
-                            </button>
-
-                            {/* Specializations */}
-                            {subSelected && sub.specializations.length > 0 && (
-                              <div className="ml-4 mt-0.5 space-y-0.5">
-                                {sub.specializations.map((spec) => {
-                                  const specSelected = filters.specialization === spec.slug;
-                                  return (
-                                    <button
-                                      key={spec.id}
-                                      type="button"
-                                      onClick={() => onSpecializationChange(specSelected ? null : spec.slug)}
-                                      className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded text-xs transition-colors
-                                        ${specSelected
-                                          ? 'text-primary font-medium bg-primary/5'
-                                          : 'text-medium-gray hover:text-dark hover:bg-surface'
-                                        }`}
-                                    >
-                                      <span className={`w-1 h-1 rounded-full shrink-0 ${specSelected ? 'bg-primary' : 'bg-border-gray'}`} />
-                                      {spec.name}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         )}
-      </FilterGroup>
 
-      {/* Tag group filters */}
-      {sidebarTagGroups.map((group) => (
-        <FilterGroup
-          key={group.key}
-          groupKey={group.key}
-          label={group.label}
-          expanded={expanded.has(group.key)}
-          onToggle={toggleGroup}
-        >
-          <TagGroupFilter
-            group={group}
-            selectedTags={filters.tags}
-            onTagToggle={onTagToggle}
-          />
-        </FilterGroup>
-      ))}
-
-      {/* Date range */}
-      <FilterGroup
-        groupKey="when"
-        label="When"
-        expanded={expanded.has('when')}
-        onToggle={toggleGroup}
-      >
-        <div className="space-y-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-medium-gray">From</label>
-            <input
-              type="date"
-              value={filters.startAfter}
-              onChange={(e) => onDateChange('startAfter', e.target.value)}
-              className="w-full h-9 px-2.5 text-sm text-dark bg-white border border-border-gray
-                         rounded-lg outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-medium-gray">To</label>
-            <input
-              type="date"
-              value={filters.startBefore}
-              min={filters.startAfter || undefined}
-              onChange={(e) => onDateChange('startBefore', e.target.value)}
-              className="w-full h-9 px-2.5 text-sm text-dark bg-white border border-border-gray
-                         rounded-lg outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          {(filters.startAfter || filters.startBefore) && (
-            <button
-              type="button"
-              onClick={() => { onDateChange('startAfter', ''); onDateChange('startBefore', ''); }}
-              className="text-xs text-medium-gray hover:text-dark transition-colors"
-            >
-              Clear dates
-            </button>
-          )}
-        </div>
-      </FilterGroup>
-    </div>
+      </div>
+    </>
   );
 }
