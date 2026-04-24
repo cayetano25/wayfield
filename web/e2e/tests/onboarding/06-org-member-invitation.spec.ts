@@ -91,6 +91,7 @@ test.describe('Org Member Invitation — acceptance page', () => {
     const { rawToken } = await createOrgInvitation(ownerToken, 'mismatch-target@e2e.wayfield.test')
 
     // Use the owner storage state (different email from invited address)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const ownerState = require('../../.auth/owner.json')
     if (ownerState.cookies?.length) await context.addCookies(ownerState.cookies)
     if (ownerState.origins?.length) await context.addInitScript(() => {

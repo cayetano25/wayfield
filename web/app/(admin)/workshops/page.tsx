@@ -77,6 +77,7 @@ export default function WorkshopsPage() {
   useEffect(() => {
     if (!currentOrg) return;
     loadData(currentOrg.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrg?.id]);
 
   const filtered = workshops.filter(

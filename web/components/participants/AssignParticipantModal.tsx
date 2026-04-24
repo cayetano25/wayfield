@@ -262,7 +262,7 @@ export function AssignParticipantModal({
                     This session is at capacity ({assignedCount}/{capacity}).
                   </p>
                   {canForceAssign ? (
-                    <p className="mt-0.5">Click "Assign Anyway" to override the limit.</p>
+                    <p className="mt-0.5">Click &ldquo;Assign Anyway&rdquo; to override the limit.</p>
                   ) : (
                     <p className="mt-0.5">
                       Only owners and admins can override the capacity limit.

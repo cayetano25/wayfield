@@ -7,7 +7,7 @@ interface StubMetricCardProps {
   icon: LucideIcon;
 }
 
-export function StubMetricCard({ label, availableOn: _availableOn, description, icon: Icon }: StubMetricCardProps) {
+export function StubMetricCard({ label, description, icon: Icon }: StubMetricCardProps) {
   return (
     <div className="bg-white rounded-xl border-[1.5px] border-dashed border-gray-300 p-6 relative flex flex-col">
       <span className="absolute top-4 right-4 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">

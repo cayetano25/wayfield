@@ -97,6 +97,7 @@ export function NotificationDetailSlideOver({ notification, workshopId, onClose 
       .then((data) => setDetail(data))
       .catch(() => {/* non-critical — base data already shown */})
       .finally(() => setDetailLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notification?.id, workshopId]);
 
   useEffect(() => {

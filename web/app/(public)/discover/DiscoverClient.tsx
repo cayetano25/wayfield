@@ -9,6 +9,8 @@ import type { DiscoverWorkshop, DiscoverResponse } from '@/lib/api/public';
 import { FilterSidebar, type ActiveFilters } from './components/FilterSidebar';
 import { WorkshopCard } from './components/WorkshopCard';
 import { SkeletonCard } from './components/SkeletonCard';
+import { DiscoverHero } from '@/components/discover/DiscoverHero';
+import type { FeaturedWorkshop } from '@/components/discover/DiscoverHero';
 
 /* --- Pagination helpers ---------------------------------------------------- */
 
@@ -50,6 +52,28 @@ export function DiscoverClient() {
   // --- Local UI state ---
   const [searchInput, setSearchInput] = useState(q);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // --- Featured workshop for hero ---
+  const [featuredWorkshop, setFeaturedWorkshop] = useState<FeaturedWorkshop | null>(null);
+
+  useEffect(() => {
+    discoverWorkshopsV2({ per_page: 1, sort: 'newest' }).then((res) => {
+      const w = res?.data?.[0];
+      if (!w || !w.public_slug) return;
+      setFeaturedWorkshop({
+        id: w.id,
+        title: w.title,
+        description: w.description,
+        imageUrl: w.hero_image_url ?? '',
+        instructorAvatars: w.first_leader?.profile_image_url
+          ? [w.first_leader.profile_image_url]
+          : [],
+        totalInstructors: w.leader_count,
+        startingPrice: 0,
+        publicSlug: w.public_slug,
+      });
+    });
+  }, []);
 
   // --- API state ---
   const [workshops, setWorkshops] = useState<DiscoverWorkshop[]>([]);
@@ -167,6 +191,15 @@ export function DiscoverClient() {
     pushParams({ [key]: value || null });
   }
 
+  function handleHeroSearch(query: string) {
+    const p = new URLSearchParams(searchParams.toString());
+    if (query) p.set('q', query);
+    else p.delete('q');
+    p.delete('page');
+    router.push(`/discover?${p.toString()}`);
+    setSearchInput(query);
+  }
+
   function handleClearAll() {
     router.push('/discover');
   }
@@ -189,6 +222,9 @@ export function DiscoverClient() {
 
   return (
     <div className="min-h-screen bg-surface">
+      {/* ── Hero ────────────────────────────────────────────────────────── */}
+      <DiscoverHero featuredWorkshop={featuredWorkshop} onSearch={handleHeroSearch} />
+
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-border-gray sticky top-14 z-30">
         <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-3">

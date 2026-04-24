@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AlertCircle, CalendarX } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useSessionSelection } from '@/lib/hooks/useSessionSelection';
 import type { SelectionDay } from '@/lib/types/session-selection';
 import { DayTabBar } from './components/DayTabBar';
@@ -104,38 +104,6 @@ function ErrorState({
           style={{ height: 40, backgroundColor: '#F3F4F6', color: '#374151', fontSize: 14 }}
         >
           Retry
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* -- Not registered state ------------------------------------------------- */
-
-function NotRegisteredState() {
-  const router = useRouter();
-  return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div
-        className="bg-white flex flex-col items-center text-center gap-4"
-        style={{ borderRadius: 12, padding: '40px 32px', maxWidth: 360 }}
-      >
-        <CalendarX size={36} style={{ color: '#9CA3AF' }} />
-        <div>
-          <p className="font-heading font-semibold" style={{ color: '#2E2E2E', marginBottom: 4 }}>
-            Not registered
-          </p>
-          <p className="font-sans" style={{ fontSize: 13, color: '#6B7280' }}>
-            You&apos;re not registered in this workshop.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => router.push('/my-workshops')}
-          className="font-sans font-semibold rounded-lg px-6"
-          style={{ height: 40, backgroundColor: '#0FA3B1', color: 'white', fontSize: 14 }}
-        >
-          Go to My Workshops →
         </button>
       </div>
     </div>

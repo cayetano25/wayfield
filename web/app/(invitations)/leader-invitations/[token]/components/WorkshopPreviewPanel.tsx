@@ -61,7 +61,7 @@ export function WorkshopPreviewPanel({ workshop, sessions, organizationName }: P
           </div>
           <div>
             <p style={{ fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '13px', color: '#6B7280' }}>
-              <strong style={{ color: '#2E2E2E' }}>{organizationName}</strong> — You'll be able to view workshops
+              <strong style={{ color: '#2E2E2E' }}>{organizationName}</strong> — You&apos;ll be able to view workshops
               and sessions once you join.
             </p>
           </div>

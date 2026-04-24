@@ -18,6 +18,23 @@ export function QRCodeModal({ joinCode, workshopTitle, isOpen, onClose }: QRCode
   const [fullScreen, setFullScreen] = useState(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
+  const enterFullScreen = useCallback(async () => {
+    setFullScreen(true);
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+      } catch {
+        // Wake lock not granted — not fatal
+      }
+    }
+  }, []);
+
+  const exitFullScreen = useCallback(() => {
+    setFullScreen(false);
+    wakeLockRef.current?.release();
+    wakeLockRef.current = null;
+  }, []);
+
   // Release wake lock and reset on modal close
   useEffect(() => {
     if (!isOpen) {
@@ -42,24 +59,7 @@ export function QRCodeModal({ joinCode, workshopTitle, isOpen, onClose }: QRCode
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, fullScreen, onClose]);
-
-  const enterFullScreen = useCallback(async () => {
-    setFullScreen(true);
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-      } catch {
-        // Wake lock not granted — not fatal
-      }
-    }
-  }, []);
-
-  const exitFullScreen = useCallback(() => {
-    setFullScreen(false);
-    wakeLockRef.current?.release();
-    wakeLockRef.current = null;
-  }, []);
+  }, [isOpen, fullScreen, onClose, exitFullScreen]);
 
   async function copyLink() {
     try {

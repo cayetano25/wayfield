@@ -255,7 +255,6 @@ export function useSessionSelection(workshopId: number) {
         removePending(sessionId);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [workshopId, selectedIds],
   );
 

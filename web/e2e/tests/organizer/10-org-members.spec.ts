@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { loginViaApi, apiPost, apiDelete, getOrgInvitationToken } from '../../helpers/api.helpers'
+import { loginViaApi, apiPost, getOrgInvitationToken } from '../../helpers/api.helpers'
 import { TEST_USERS } from '../../fixtures/auth.fixtures'
 
-// The seeded test org — matches E2ETestSeeder slug 'cascade-photo'
-const ORG_SLUG    = 'cascade-photo'
 const MEMBERS_URL = '/admin/organization/members'
 
 // ─── Members page structure ────────────────────────────────────────────────────
@@ -121,7 +119,6 @@ test.describe('Org invitation acceptance page', () => {
     email: string,
     role = 'staff',
   ): Promise<{ invitationId: number; rawToken: string }> {
-    const orgRes = await loginViaApi(TEST_USERS.owner.email, TEST_USERS.owner.password)
     // Get the seeded org ID
     const { id: orgId } = await fetch('http://localhost:8000/api/v1/me/organizations', {
       headers: { Authorization: `Bearer ${ownerToken}`, Accept: 'application/json' },
@@ -171,6 +168,7 @@ test.describe('Org invitation acceptance page', () => {
     const { rawToken } = await createOrgInvite(ownerToken, 'specific-staff@e2e.wayfield.test', 'staff')
 
     // Log in as the staff user (wrong email)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const staffStorageState = require('../../.auth/staff.json')
     await context.addCookies(staffStorageState.cookies ?? [])
 

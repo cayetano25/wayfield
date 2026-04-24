@@ -613,6 +613,7 @@ export default function DashboardPage() {
       fetchStats(currentOrg.id);
       fetchWorkshops(currentOrg.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrg?.id]);
 
   const isLoading = orgLoading || loadingStats;

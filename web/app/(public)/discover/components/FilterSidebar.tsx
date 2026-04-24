@@ -208,7 +208,6 @@ export function FilterSidebar({
     .filter(Boolean) as TaxonomyTagGroup[];
 
   const selectedCat = categories.find((c) => c.slug === filters.category);
-  const selectedSub = selectedCat?.subcategories.find((s) => s.slug === filters.subcategory);
 
   return (
     <div className="font-sans">

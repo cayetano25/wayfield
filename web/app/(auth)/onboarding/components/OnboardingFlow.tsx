@@ -66,7 +66,7 @@ export function OnboardingFlow() {
     setStep('4b')
   }
 
-  function handlePlanSelected(planCode: string, _cycle: BillingCycle) {
+  function handlePlanSelected(planCode: string, _: BillingCycle) {
     if (planCode === 'free') {
       router.push('/dashboard')
     }
