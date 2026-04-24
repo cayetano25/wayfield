@@ -9,9 +9,20 @@ use App\Models\SessionLeader;
 use App\Models\SessionSelection;
 use App\Models\User;
 use App\Models\Workshop;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+// Freeze time at 10:00 AM UTC so that now()->addHours(2/3/6) always resolves
+// to the same calendar day, preventing day-boundary failures near midnight.
+beforeEach(function () {
+    Carbon::setTestNow(Carbon::today('UTC')->setTime(10, 0, 0));
+});
+
+afterEach(function () {
+    Carbon::setTestNow(null);
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
