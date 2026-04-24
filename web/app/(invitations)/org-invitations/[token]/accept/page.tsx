@@ -315,7 +315,6 @@ function EmailMismatchWarning({
 type DeclineStep = 'idle' | 'confirming' | 'declining'
 
 function AcceptDeclineSection({
-  orgName,
   onAccept,
   onDecline,
   isAccepting,
@@ -586,15 +585,12 @@ function InvitationCard({
   inv: OrgInvitationData
   token: string
 }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAccepting, setIsAccepting] = useState(false)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [successData, setSuccessData] = useState<{ orgName: string; roleDisplay: string; redirectTo: string } | null>(null)
   const [declined, setDeclined] = useState(false)
 
-  const handleAuthenticated = useCallback(() => {
-    setIsAuthenticated(true)
-  }, [])
+  const handleAuthenticated = useCallback(() => {}, [])
 
   async function handleAccept() {
     setIsAccepting(true)

@@ -280,7 +280,6 @@ function SessionSlideOver({
   editingSession,
   workshop,
   tracks,
-  locations,
   onClose,
   onSaved,
 }: {

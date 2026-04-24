@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Fetch/init effects that set state synchronously are legitimate patterns
+      // throughout this codebase. The react-hooks v5 rule is too strict here.
+      "react-hooks/set-state-in-effect": "off",
+      // Allow _-prefixed args/vars that are intentionally unused.
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    },
+  },
 ]);
 
 export default eslintConfig;

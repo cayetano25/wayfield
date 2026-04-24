@@ -157,7 +157,7 @@ test.describe('QR modal — full-screen mode', () => {
       // Stub navigator.wakeLock
       Object.defineProperty(navigator, 'wakeLock', {
         value: {
-          request: async (_type: string) => {
+          request: async () => {
             (window as unknown as Record<string, boolean>).__wakeLockRequested = true;
             return { release: () => { (window as unknown as Record<string, boolean>).__wakeLockReleased = true; } };
           },
@@ -181,7 +181,7 @@ test.describe('QR modal — full-screen mode', () => {
       let sentinel: { release: () => void } | null = null;
       Object.defineProperty(navigator, 'wakeLock', {
         value: {
-          request: async (_type: string) => {
+          request: async () => {
             sentinel = {
               release: () => {
                 (window as unknown as Record<string, boolean>).__wakeLockReleased = true;

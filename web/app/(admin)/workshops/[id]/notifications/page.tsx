@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, ApiError } from '@/lib/api/client';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';

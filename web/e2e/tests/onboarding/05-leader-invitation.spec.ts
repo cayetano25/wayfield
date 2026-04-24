@@ -7,7 +7,6 @@ test.use({ storageState: 'e2e/.auth/guest.json' })
 test.describe('Leader Invitation Flow', () => {
 
   async function createLeaderInvite(ownerToken: string, email: string) {
-    const orgRes = await apiPost('/api/v1/me/organizations', {}, ownerToken)
     // simplified — get org ID from seeded data
     const inviteRes = await apiPost(
       `/api/v1/organizations/1/leaders/invitations`,

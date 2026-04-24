@@ -17,7 +17,6 @@ export function OnboardingProgress({ currentStep, totalSteps, stepLabels }: Onbo
         const step = (i + 1) as OnboardingStep
         const isCompleted = step < currentStep
         const isActive = step === currentStep
-        const isFuture = step > currentStep
 
         return (
           <div

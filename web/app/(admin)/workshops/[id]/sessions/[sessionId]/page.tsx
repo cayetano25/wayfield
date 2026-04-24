@@ -237,7 +237,7 @@ function ParticipantRow({
         )}
         {participant.assignment_notes && (
           <p className="text-xs text-medium-gray italic leading-relaxed">
-            "{participant.assignment_notes}"
+            &ldquo;{participant.assignment_notes}&rdquo;
           </p>
         )}
       </div>

@@ -52,13 +52,6 @@ test.describe('/j/[code] — valid join code', () => {
     );
   });
 
-  async function waitForWorkshopLoaded(page: Parameters<typeof test>[1] extends infer P ? P : never) {
-    // Wait for loading skeleton to finish and workshop content to appear
-    await expect(
-      (page as import('@playwright/test').Page).getByRole('heading', { name: 'Landscape Photography Workshop' }),
-    ).toBeVisible({ timeout: 10_000 });
-  }
-
   test('renders workshop title and Join button', async ({ page }) => {
     await page.goto('/j/ABC123');
     await expect(page.getByRole('heading', { name: 'Landscape Photography Workshop' })).toBeVisible({ timeout: 10_000 });

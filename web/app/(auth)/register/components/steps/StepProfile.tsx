@@ -50,12 +50,6 @@ const inputBaseStyle: React.CSSProperties = {
   border: '1px solid #E5E7EB',
 }
 
-const focusedInputStyle: React.CSSProperties = {
-  ...inputBaseStyle,
-  border: '1px solid #0FA3B1',
-  boxShadow: '0 0 0 3px rgba(15,163,177,0.12)',
-}
-
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif',

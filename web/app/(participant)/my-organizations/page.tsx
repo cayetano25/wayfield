@@ -94,24 +94,6 @@ function OrgCard({ membership }: { membership: OrgMembership }) {
   )
 }
 
-function LoadingSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          style={{
-            height:          80,
-            borderRadius:    12,
-            backgroundColor: '#E5E7EB',
-            animation:       'pulse 1.5s infinite',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
 export default function MyOrganizationsPage() {
   const nav    = useNavContext()
   const router = useRouter()

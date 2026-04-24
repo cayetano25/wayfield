@@ -16,19 +16,6 @@ function stripNonNumeric(value: string): string {
 }
 
 export function WorkshopInfoCard({ logistics, workshopId, publicSlug, publicPageEnabled }: WorkshopInfoCardProps) {
-  const hasContent = logistics && (
-    logistics.hotel_name ||
-    logistics.hotel_address_display ||
-    logistics.hotel_phone ||
-    logistics.hotel_notes ||
-    logistics.venue_address_display ||
-    logistics.location_name ||
-    logistics.parking_details ||
-    logistics.meeting_room_details ||
-    logistics.meetup_instructions ||
-    (logistics.location_lat != null && logistics.location_lng != null)
-  );
-
   const mapsUrl =
     logistics?.location_lat != null && logistics?.location_lng != null
       ? `https://maps.apple.com/?ll=${logistics.location_lat},${logistics.location_lng}&q=${encodeURIComponent(logistics.location_name ?? 'Workshop Location')}`

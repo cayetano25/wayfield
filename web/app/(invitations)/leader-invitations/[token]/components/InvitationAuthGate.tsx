@@ -260,7 +260,7 @@ function RegisterForm({
         Create your Wayfield account to accept
       </h2>
       <p style={{ fontFamily: 'var(--font-jakarta), Plus Jakarta Sans, sans-serif', fontSize: '14px', color: '#6B7280', marginBottom: '20px' }}>
-        You'll be set up in less than a minute.
+        You&apos;ll be set up in less than a minute.
       </p>
 
       <EmailPill label="Invited as" email={invitedEmail} />

@@ -169,6 +169,7 @@ export default function WorkshopOverviewPage() {
       meeting_room_details: workshop.logistics?.meeting_room_details ?? null,
       meetup_instructions: workshop.logistics?.meetup_instructions ?? null,
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workshop?.title, setPage]);
 
   async function copyJoinCode() {

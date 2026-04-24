@@ -14,7 +14,6 @@ import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
 import type { AdminUser } from '@/lib/auth/session';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 
@@ -1150,7 +1149,7 @@ function EmptyLeaders({ onInvite }: { onInvite: () => void }) {
       </div>
       <h3 className="font-heading text-lg font-semibold text-dark mb-2">No leaders yet</h3>
       <p className="text-sm text-medium-gray max-w-xs leading-relaxed mb-6">
-        Invite leaders to this workshop. They'll receive an email and complete their own profile after accepting.
+        Invite leaders to this workshop. They&apos;ll receive an email and complete their own profile after accepting.
       </p>
       <Button onClick={onInvite}>
         <Plus className="w-4 h-4" />
