@@ -19,6 +19,9 @@ class StripeConnectAccount extends Model
         'default_currency',
         'capabilities_json',
         'requirements_json',
+        'onboarding_completed_at',
+        'deauthorized_at',
+        'last_webhook_received_at',
     ];
 
     protected $casts = [

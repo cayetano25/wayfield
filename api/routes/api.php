@@ -8,7 +8,10 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\BillingController;
+use App\Http\Controllers\Api\V1\StripeConnectController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
+use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
+use App\Http\Controllers\Webhooks\StripeWebhookController as StripeConnectWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
@@ -412,6 +415,25 @@ Route::prefix('v1')->group(function () {
         Route::post('organizations/{organization}/api-keys', [ApiKeyController::class, 'store']);
         Route::delete('organizations/{organization}/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
 
+        // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────
+        Route::middleware('payments.enabled')
+            ->group(function () {
+                Route::post(
+                    'organizations/{organization}/stripe/connect',
+                    [StripeConnectController::class, 'initiate']
+                );
+                Route::post(
+                    'organizations/{organization}/stripe/refresh-link',
+                    [StripeConnectController::class, 'refreshLink']
+                );
+            });
+        // Status is readable without the payments gate so staff can see the
+        // current connection state even before payments are formally enabled.
+        Route::get(
+            'organizations/{organization}/stripe/status',
+            [StripeConnectController::class, 'status']
+        );
+
         // ─── System Announcements ─────────────────────────────────────────────
         Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
             ->name('system-announcements.index');
@@ -476,6 +498,19 @@ Route::prefix('v1')->group(function () {
             // Webhook visibility (Phase 9)
             Route::get('organizations/{organization}/webhooks', [PlatformWebhookController::class, 'index']);
 
+            // ─── Payment admin (super_admin and admin only) ───────────────────
+            Route::middleware('platform.admin:super_admin,admin')
+                ->group(function () {
+                    Route::post(
+                        'organizations/{organization}/enable-payments',
+                        [PlatformPaymentController::class, 'enablePayments']
+                    );
+                    Route::post(
+                        'organizations/{organization}/disable-payments',
+                        [PlatformPaymentController::class, 'disablePayments']
+                    );
+                });
+
             // System Announcements (Command Center)
             Route::get('system-announcements', [PlatformAnnouncementController::class, 'index']);
             Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
@@ -483,6 +518,12 @@ Route::prefix('v1')->group(function () {
             Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
         });
 });
+
+// ─── Stripe Connect webhooks (outside v1 prefix — no auth, signature-verified) ─
+Route::post('webhooks/stripe', [StripeConnectWebhookController::class, 'handle'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
+Route::post('webhooks/stripe/connect', [StripeConnectWebhookController::class, 'handleConnect'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
 // ─── Test-only routes (local / testing environments only) ────────────────────
 if (app()->environment(['testing', 'local'])) {
