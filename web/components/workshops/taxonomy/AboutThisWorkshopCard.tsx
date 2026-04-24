@@ -143,8 +143,8 @@ export function AboutThisWorkshopCard({
           <Info size={20} className="text-blue-500" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-[Sora]">About This Workshop</h2>
-          <p className="text-xs font-medium text-gray-500 mt-0.5 tracking-wide">
+          <h2 className="font-heading text-base font-semibold text-dark">About This Workshop</h2>
+          <p className="text-xs font-medium text-gray-500 mt-0.5">
             Classification
           </p>
         </div>

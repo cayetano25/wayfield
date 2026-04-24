@@ -204,8 +204,8 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
           <CalendarCheck size={20} className="text-[#E67E22]" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-[Sora]">Practical Details</h2>
-          <p className="text-xs font-medium text-gray-500 mt-0.5 tracking-wide">
+          <h2 className="font-heading text-base font-semibold text-dark">Practical Details</h2>
+          <p className="text-xs font-medium text-gray-500 mt-0.5">
             Logistics & Reach
           </p>
         </div>
