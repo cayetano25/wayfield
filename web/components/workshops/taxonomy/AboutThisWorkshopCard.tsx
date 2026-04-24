@@ -31,20 +31,20 @@ interface Props {
 }
 
 const SKILL_LEVEL_OPTIONS = [
-  { display: 'Beginner', tagName: 'Beginner' },
-  { display: 'Intermediate', tagName: 'Intermediate' },
-  { display: 'Advanced', tagName: 'Advanced' },
-  { display: 'All Levels', tagName: 'All Levels' },
+  { display: 'Beginner', tagName: 'beginner_friendly' },
+  { display: 'Intermediate', tagName: 'intermediate' },
+  { display: 'Advanced', tagName: 'advanced' },
+  { display: 'All Levels', tagName: 'all_levels' },
 ];
 
 const AUDIENCE_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
-  { display: 'Adults', tagName: 'Adults', Icon: User },
-  { display: 'Kids', tagName: 'Kids', Icon: BookOpen },
-  { display: 'Teens', tagName: 'Teens', Icon: GraduationCap },
-  { display: 'Professionals', tagName: 'Professionals', Icon: Briefcase },
-  { display: 'Creatives', tagName: 'Creatives', Icon: Palette },
-  { display: 'Hobbyists', tagName: 'Hobbyists', Icon: Compass },
-  { display: 'Seniors', tagName: 'Seniors', Icon: Heart },
+  { display: 'Adults', tagName: 'adults', Icon: User },
+  { display: 'Kids', tagName: 'kids', Icon: BookOpen },
+  { display: 'Teens', tagName: 'teens', Icon: GraduationCap },
+  { display: 'Professionals', tagName: 'professionals', Icon: Briefcase },
+  { display: 'Families', tagName: 'families', Icon: Palette },
+  { display: 'Hobbyists', tagName: 'hobbyists', Icon: Compass },
+  { display: 'Seniors', tagName: 'seniors', Icon: Heart },
 ];
 
 export function AboutThisWorkshopCard({
@@ -106,7 +106,7 @@ export function AboutThisWorkshopCard({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tagGroups.length]);
+  }, [tagGroups.length, tagIds.length]);
 
   function toggleSkillLevel(tagName: string) {
     const newSelected = selectedSkillLevel === tagName ? null : tagName;

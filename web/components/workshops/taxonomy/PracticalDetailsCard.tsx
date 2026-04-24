@@ -11,45 +11,44 @@ interface Props {
   onTagIdsChange: (ids: number[]) => void;
 }
 
-// display is the local state key; tagName is used to resolve the numeric tag ID
 const DURATION_OPTIONS = [
-  { display: 'Half Day', tagName: 'Single Session' },
-  { display: 'Full Day', tagName: 'Intensive' },
-  { display: 'Weekend', tagName: 'Weekend Workshop' },
-  { display: 'Multi-Day', tagName: 'Multi-Day' },
+  { display: 'Half Day', tagName: 'half_day' },
+  { display: 'Full Day', tagName: 'full_day' },
+  { display: 'Weekend', tagName: 'weekend' },
+  { display: 'Multi-Day', tagName: 'multi_day_3_5_days' },
 ];
 
-// '5–10' and '11–20' both map to the same tag; display is the unique key
 const GROUP_SIZE_OPTIONS = [
-  { display: '1–4', tagName: '1-on-1' },
-  { display: '5–10', tagName: 'Small Group' },
-  { display: '11–20', tagName: 'Small Group' },
-  { display: '20+', tagName: 'Large Group' },
+  { display: '1–4', tagName: 'solo_1on1' },
+  { display: '5–10', tagName: 'small_6_12' },
+  { display: '11–20', tagName: 'medium_13_25' },
+  { display: '20+', tagName: 'large_26_50' },
 ];
 
 const PRICE_MODEL_OPTIONS = [
-  { display: 'Free', tagName: 'Free' },
-  { display: 'Paid', tagName: 'Paid' },
+  { display: 'Free', tagName: 'free' },
+  { display: 'Paid', tagName: 'fixed_price' },
 ];
 
 const ACCESSIBILITY_OPTIONS = [
   { value: 'wheelchair_accessible', label: 'Wheelchair Accessible', description: 'Venue and all activities are wheelchair accessible' },
-  { value: 'step_free_access', label: 'Step-Free Access', description: 'No steps or stairs required throughout' },
-  { value: 'accessible_parking', label: 'Accessible Parking', description: 'Accessible parking available nearby' },
-  { value: 'captioned', label: 'Captioned', description: 'Live captions or captioned materials provided' },
-  { value: 'asl_available', label: 'ASL Interpretation', description: 'American Sign Language interpreter available' },
   { value: 'low_sensory', label: 'Low Sensory', description: 'Reduced noise, lighting, and sensory stimulation' },
-  { value: 'accessible_materials', label: 'Accessible Materials', description: 'Large print, digital, or alternative formats available' },
-  { value: 'seating_available', label: 'Seating Throughout', description: 'Seating available for all activities — no standing required' },
-  { value: 'service_animals', label: 'Service Animals Welcome', description: 'Service animals are welcome at this workshop' },
-  { value: 'beginner_friendly_terrain', label: 'Beginner-Friendly Terrain', description: 'Outdoor locations involve easy, flat terrain only' },
+  { value: 'neurodivergent_friendly', label: 'Neurodivergent-Friendly', description: 'Environment adapted for neurodivergent participants' },
+  { value: 'interpreter_available', label: 'Interpreter Available', description: 'Sign language or language interpretation available' },
+  { value: 'closed_captioning', label: 'Closed Captioning', description: 'Live captions or captioned materials provided' },
+  { value: 'service_animals_welcome', label: 'Service Animals Welcome', description: 'Service animals are welcome at this workshop' },
+  { value: 'child_care_available', label: 'Child Care Available', description: 'Child care available during the workshop' },
+  { value: 'sliding_scale_pricing', label: 'Sliding Scale Pricing', description: 'Flexible pricing based on ability to pay' },
+  { value: 'free_or_subsidized', label: 'Free or Subsidized', description: 'Workshop is free or subsidized for qualifying participants' },
+  { value: 'mobility_friendly', label: 'Mobility-Friendly', description: 'Accessible for participants with mobility limitations' },
+  { value: 'vision_accessible_materials', label: 'Vision-Accessible Materials', description: 'Large print, digital, or alternative formats available' },
 ];
 
 const SEASON_OPTIONS: { label: string; tagName: string; season: string; Icon: LucideIcon }[] = [
-  { label: 'Winter', tagName: 'Seasonal', season: 'winter', Icon: Snowflake },
-  { label: 'Spring', tagName: 'Seasonal', season: 'spring', Icon: CloudRain },
-  { label: 'Summer', tagName: 'Summer', season: 'summer', Icon: Sun },
-  { label: 'Autumn', tagName: 'Seasonal', season: 'autumn', Icon: Leaf },
+  { label: 'Winter', tagName: 'winter', season: 'winter', Icon: Snowflake },
+  { label: 'Spring', tagName: 'spring', season: 'spring', Icon: CloudRain },
+  { label: 'Summer', tagName: 'summer', season: 'summer', Icon: Sun },
+  { label: 'Autumn', tagName: 'fall_autumn', season: 'autumn', Icon: Leaf },
 ];
 
 export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Props) {
@@ -109,19 +108,18 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
       }
     }
 
-    // Seasonality — Summer is distinguishable; Seasonal (winter/spring/autumn) is not
     if (activeSeason === null) {
       const group = tagGroups.find((g) => g.key === 'seasonality');
       if (group) {
-        const summerTag = group.tags.find((t) => t.value === 'Summer');
-        if (summerTag && tagIds.includes(summerTag.id)) {
-          setActiveSeason('summer');
-        }
-        // Seasonal tag covers winter/spring/autumn — cannot distinguish which on load
+        const match = SEASON_OPTIONS.find((o) => {
+          const t = group.tags.find((t) => t.value === o.tagName);
+          return t && tagIds.includes(t.id);
+        });
+        if (match) setActiveSeason(match.season);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tagGroups.length]);
+  }, [tagGroups.length, tagIds.length]);
 
   function toggleDuration(display: string, tagName: string) {
     const newSelected = selectedDuration === display ? null : display;
@@ -181,18 +179,19 @@ export function PracticalDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Prop
   function toggleSeason(season: string, tagName: string) {
     const group = tagGroups.find((g) => g.key === 'seasonality');
     if (!group) return;
-    const groupTagIds = group.tags.map((t) => t.id);
-    const tag = group.tags.find((t) => t.value === tagName);
+
+    const seasonTagIds = SEASON_OPTIONS
+      .map((opt) => group.tags.find((t) => t.value === opt.tagName)?.id)
+      .filter((id): id is number => id !== undefined);
 
     if (activeSeason === season) {
       setActiveSeason(null);
-      onTagIdsChange(tagIds.filter((id) => !groupTagIds.includes(id)));
+      onTagIdsChange(tagIds.filter((id) => !seasonTagIds.includes(id)));
     } else {
       setActiveSeason(season);
-      if (tag) {
-        const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
-        onTagIdsChange([...withoutGroup, tag.id]);
-      }
+      const tag = group.tags.find((t) => t.value === tagName);
+      const withoutSeasons = tagIds.filter((id) => !seasonTagIds.includes(id));
+      onTagIdsChange(tag ? [...withoutSeasons, tag.id] : withoutSeasons);
     }
   }
 

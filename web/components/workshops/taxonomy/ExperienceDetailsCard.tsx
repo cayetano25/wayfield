@@ -22,31 +22,32 @@ interface Props {
   onTagIdsChange: (ids: number[]) => void;
 }
 
+// Maps to the 'format' tag group (key: 'format'), multi-select
 const LEARNING_FORMAT_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
-  { display: 'Field Shooting', tagName: 'Hands-On', Icon: Camera },
-  { display: 'Editing', tagName: 'Immersive', Icon: Pencil },
-  { display: 'Classroom', tagName: 'Lecture-Based', Icon: School },
-  { display: 'Critique', tagName: 'Critique-Based', Icon: MessageCircle },
-  { display: 'Mentorship', tagName: 'Collaborative', Icon: Users },
+  { display: 'Hands-On', tagName: 'hands_on', Icon: Camera },
+  { display: 'Lecture', tagName: 'lecture_discussion', Icon: School },
+  { display: 'Critique', tagName: 'critique_feedback', Icon: MessageCircle },
+  { display: 'Demo & Watch', tagName: 'demo_watch', Icon: Pencil },
+  { display: 'One-on-One', tagName: 'one_on_one', Icon: Users },
 ];
 
 const ENVIRONMENT_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
-  { display: 'Outdoor (Nature)', tagName: 'Outdoor', Icon: Leaf },
-  { display: 'Outdoor (Urban)', tagName: 'On-Location', Icon: Building2 },
-  { display: 'Indoor (Studio)', tagName: 'Indoor', Icon: Home },
+  { display: 'Outdoors (Nature)', tagName: 'nature_wilderness', Icon: Leaf },
+  { display: 'Outdoors (Urban)', tagName: 'urban_setting', Icon: Building2 },
+  { display: 'Indoors (Studio)', tagName: 'studio', Icon: Home },
 ];
 
+// Maps to the 'experience_style' tag group (key: 'experience_style'), single-select
 const EXPERIENCE_STYLE_RADIO_OPTIONS = [
-  { display: 'Structured', tagName: 'Lecture-Based' },
-  { display: 'Guided + Flexible', tagName: 'Guided Practice' },
-  { display: 'Exploratory', tagName: 'Hands-On' },
+  { display: 'Structured & Focused', tagName: 'structured_focused' },
+  { display: 'Creative & Experimental', tagName: 'creative_experimental' },
+  { display: 'Relaxed & Casual', tagName: 'relaxed_casual' },
 ];
-const EXPERIENCE_STYLE_RADIO_TAG_NAMES = EXPERIENCE_STYLE_RADIO_OPTIONS.map((o) => o.tagName);
 
 const PACE_OPTIONS = [
-  { display: 'Relaxed', tagName: 'Introductory' },
-  { display: 'Moderate', tagName: 'Standard Pace' },
-  { display: 'Intensive', tagName: 'Fast-Paced' },
+  { display: 'Relaxed', tagName: 'go_at_your_own_pace' },
+  { display: 'Moderate', tagName: 'instructor_led_pacing' },
+  { display: 'Intensive', tagName: 'fast_paced' },
 ];
 
 export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Props) {
@@ -59,23 +60,16 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
   useEffect(() => {
     if (!tagGroups.length || tagIds.length === 0) return;
 
-    const esGroup = tagGroups.find((g) => g.key === 'experience_style');
-    if (esGroup) {
-      if (selectedLearningFormats.length === 0) {
+    if (selectedLearningFormats.length === 0) {
+      const formatGroup = tagGroups.find((g) => g.key === 'format');
+      if (formatGroup) {
         const matches = LEARNING_FORMAT_OPTIONS
           .filter((o) => {
-            const t = esGroup.tags.find((t) => t.value === o.tagName);
+            const t = formatGroup.tags.find((t) => t.value === o.tagName);
             return t && tagIds.includes(t.id);
           })
           .map((o) => o.tagName);
         if (matches.length) setSelectedLearningFormats(matches);
-      }
-      if (selectedExperienceStyle === null) {
-        const match = EXPERIENCE_STYLE_RADIO_OPTIONS.find((o) => {
-          const t = esGroup.tags.find((t) => t.value === o.tagName);
-          return t && tagIds.includes(t.id);
-        });
-        if (match) setSelectedExperienceStyle(match.tagName);
       }
     }
 
@@ -90,6 +84,17 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       }
     }
 
+    if (selectedExperienceStyle === null) {
+      const esGroup = tagGroups.find((g) => g.key === 'experience_style');
+      if (esGroup) {
+        const match = EXPERIENCE_STYLE_RADIO_OPTIONS.find((o) => {
+          const t = esGroup.tags.find((t) => t.value === o.tagName);
+          return t && tagIds.includes(t.id);
+        });
+        if (match) setSelectedExperienceStyle(match.tagName);
+      }
+    }
+
     if (selectedPace === null) {
       const paceGroup = tagGroups.find((g) => g.key === 'pace');
       if (paceGroup) {
@@ -101,7 +106,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tagGroups.length]);
+  }, [tagGroups.length, tagIds.length]);
 
   function toggleLearningFormat(tagName: string) {
     const isSelected = selectedLearningFormats.includes(tagName);
@@ -109,7 +114,7 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
       isSelected ? prev.filter((n) => n !== tagName) : [...prev, tagName],
     );
     const tag = tagGroups
-      .find((g) => g.key === 'experience_style')
+      .find((g) => g.key === 'format')
       ?.tags.find((t) => t.value === tagName);
     if (!tag) return;
     onTagIdsChange(isSelected ? tagIds.filter((id) => id !== tag.id) : [...tagIds, tag.id]);
@@ -135,15 +140,13 @@ export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Pro
     setSelectedExperienceStyle(newSelected);
     const group = tagGroups.find((g) => g.key === 'experience_style');
     if (!group) return;
-    const radioIds = EXPERIENCE_STYLE_RADIO_TAG_NAMES
-      .map((n) => group.tags.find((t) => t.value === n)?.id)
-      .filter((id): id is number => id !== undefined);
-    const withoutRadios = tagIds.filter((id) => !radioIds.includes(id));
+    const groupTagIds = group.tags.map((t) => t.id);
+    const withoutGroup = tagIds.filter((id) => !groupTagIds.includes(id));
     if (newSelected) {
       const tag = group.tags.find((t) => t.value === newSelected);
-      onTagIdsChange(tag ? [...withoutRadios, tag.id] : withoutRadios);
+      onTagIdsChange(tag ? [...withoutGroup, tag.id] : withoutGroup);
     } else {
-      onTagIdsChange(withoutRadios);
+      onTagIdsChange(withoutGroup);
     }
   }
 
