@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\Api\V1\CartController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PublicWorkshopDiscoveryController;
 use App\Http\Controllers\Api\V1\TaxonomyController;
 use App\Http\Controllers\Api\V1\ApiKeyController;
@@ -436,6 +438,17 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'showForWorkshop']);
         Route::post('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'storeForWorkshop']);
         Route::put('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'updateForWorkshop']);
+
+        // ─── Cart & Checkout (Step 4A) ────────────────────────────────────────
+        Route::get('cart/{organization}', [CartController::class, 'show']);
+        Route::post('cart/{organization}/items', [CartController::class, 'addItem']);
+        Route::delete('cart/{organization}/items/{cartItem}', [CartController::class, 'removeItem']);
+        Route::post('cart/{organization}/checkout', [CartController::class, 'checkout']);
+
+        // ─── Orders (Step 4A) ─────────────────────────────────────────────────
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::get('organizations/{organization}/orders', [OrderController::class, 'orgIndex']);
 
         // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────
         Route::middleware('payments.enabled')

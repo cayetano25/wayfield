@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Domain\Payments\Services\CheckoutService;
 use App\Domain\Payments\Services\StripeConnectService;
 use App\Models\StripeEvent;
 use Illuminate\Bus\Queueable;
@@ -23,7 +24,7 @@ class ProcessStripeConnectWebhookJob implements ShouldQueue
         private readonly int $stripeEventId,
     ) {}
 
-    public function handle(StripeConnectService $service): void
+    public function handle(StripeConnectService $service, CheckoutService $checkoutService): void
     {
         $record = StripeEvent::find($this->stripeEventId);
 
@@ -55,11 +56,22 @@ class ProcessStripeConnectWebhookJob implements ShouldQueue
                 $type === 'capability.updated'
                     => $service->handleCapabilityUpdatedWebhook($payload),
 
-                // payment_intent and charge.refund events are placeholders for Steps 4 and 6.
-                str_starts_with($type, 'payment_intent.')
-                || str_starts_with($type, 'charge.dispute.')
+                $type === 'payment_intent.succeeded'
+                    => $checkoutService->handlePaymentIntentSucceeded($payload),
+
+                $type === 'payment_intent.payment_failed'
+                    => $checkoutService->handlePaymentIntentFailed($payload),
+
+                // charge.refund and dispute events deferred to Step 6.
+                str_starts_with($type, 'charge.dispute.')
                 || str_starts_with($type, 'charge.refund.')
                     => Log::info('ProcessStripeConnectWebhookJob: event deferred to later step', [
+                        'type' => $type,
+                        'event_id' => $payload['id'] ?? null,
+                    ]),
+
+                str_starts_with($type, 'payment_intent.')
+                    => Log::info('ProcessStripeConnectWebhookJob: unhandled payment_intent event', [
                         'type' => $type,
                         'event_id' => $payload['id'] ?? null,
                     ]),
