@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   CheckCircle,
@@ -12,9 +12,23 @@ import {
   AlertCircle,
   ShoppingBag,
   Clock,
+  X,
+  ChevronDown,
+  RotateCcw,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { getOrder, type OrderSummary } from '@/lib/api/cart';
+import {
+  createRefundRequest,
+  getOrderRefundRequests,
+  REASON_CODES,
+  type RefundRequest,
+  type RefundReasonCode,
+} from '@/lib/api/refunds';
 import { formatCents } from '@/lib/utils/currency';
+import { ApiError } from '@/lib/api/client';
+
+/* ─── Sub-components (unchanged from before) ──────────────────────────── */
 
 function SuccessAnimation() {
   return (
@@ -149,22 +163,529 @@ function WhatsNextCard({
   );
 }
 
+/* ─── Refund request modal ─────────────────────────────────────────────── */
+
+type RefundStep = 'form' | 'success' | 'closed';
+
+function RefundModal({
+  open,
+  order,
+  onClose,
+  onSubmitted,
+}: {
+  open: boolean;
+  order: OrderSummary;
+  onClose: () => void;
+  onSubmitted: (req: RefundRequest) => void;
+}) {
+  const [step, setStep] = useState<RefundStep>('form');
+  const [reasonCode, setReasonCode] = useState<RefundReasonCode | ''>('');
+  const [reasonText, setReasonText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [submittedReq, setSubmittedReq] = useState<RefundRequest | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setStep('form');
+      setReasonCode('');
+      setReasonText('');
+      setErrorMsg(null);
+      setSubmittedReq(null);
+    }
+  }, [open]);
+
+  async function handleSubmit() {
+    if (!reasonCode) {
+      setErrorMsg('Please select a reason.');
+      return;
+    }
+    if (reasonCode === 'other' && !reasonText.trim()) {
+      setErrorMsg('Please describe your reason.');
+      return;
+    }
+    setErrorMsg(null);
+    setSubmitting(true);
+    try {
+      const req = await createRefundRequest(order.order_number, {
+        reason_code: reasonCode,
+        reason_text: reasonText.trim() || undefined,
+        requested_amount_cents: order.total_cents,
+      });
+      setSubmittedReq(req);
+      setStep('success');
+      onSubmitted(req);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        const body = err.message ?? '';
+        if (body.includes('commitment') || body.includes('commitment_date_passed')) {
+          setErrorMsg(
+            'Refunds are no longer available for this workshop due to committed logistics costs.',
+          );
+        } else if (body.includes('already pending')) {
+          setErrorMsg('A refund request for this order is already pending organizer review.');
+        } else {
+          setErrorMsg(err.message || 'Could not submit refund request.');
+        }
+      } else {
+        setErrorMsg('Something went wrong. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') onClose();
+  }
+
+  if (!open) return null;
+
+  const isOther = reasonCode === 'other';
+  const autoEligible = submittedReq?.auto_eligible ?? false;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+      onKeyDown={handleKeyDown}
+    >
+      {/* Overlay */}
+      <div
+        style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(46,46,46,0.4)', backdropFilter: 'blur(2px)' }}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 440,
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+          boxShadow: '0 24px 64px rgba(46,46,46,0.18)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '20px 20px 0',
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: 'Sora, sans-serif',
+              fontWeight: 700,
+              fontSize: 18,
+              color: '#111827',
+              margin: 0,
+            }}
+          >
+            {step === 'success' ? (autoEligible ? 'Refund Approved' : 'Request Submitted') : 'Request a Refund'}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: 6,
+              borderRadius: 8,
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              color: '#9CA3AF',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {/* ── FORM STEP ── */}
+          {step === 'form' && (
+            <>
+              {/* Amount display */}
+              <div
+                style={{
+                  borderRadius: 12,
+                  backgroundColor: '#F9FAFB',
+                  padding: '16px',
+                  textAlign: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 4px' }}>You&apos;ll receive</p>
+                <p
+                  style={{
+                    fontFamily: 'Sora, sans-serif',
+                    fontWeight: 700,
+                    fontSize: 32,
+                    color: '#111827',
+                    margin: '0 0 4px',
+                  }}
+                >
+                  {formatCents(order.total_cents)}
+                </p>
+                <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>
+                  Pending organizer review
+                </p>
+              </div>
+
+              {/* Reason selector */}
+              <div style={{ marginBottom: 14 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: 6,
+                  }}
+                >
+                  Reason <span style={{ color: '#E94F37' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={reasonCode}
+                    onChange={(e) => {
+                      setReasonCode(e.target.value as RefundReasonCode | '');
+                      setErrorMsg(null);
+                    }}
+                    style={{
+                      width: '100%',
+                      height: 42,
+                      paddingLeft: 12,
+                      paddingRight: 32,
+                      fontSize: 14,
+                      color: reasonCode ? '#111827' : '#9CA3AF',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 10,
+                      appearance: 'none',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">Select a reason…</option>
+                    {REASON_CODES.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    color="#9CA3AF"
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  />
+                </div>
+              </div>
+
+              {/* Optional reason text */}
+              <div style={{ marginBottom: 14 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: 6,
+                  }}
+                >
+                  Additional details{' '}
+                  <span style={{ fontWeight: 400, color: '#9CA3AF' }}>
+                    {isOther ? '(required)' : '(optional)'}
+                  </span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={reasonText}
+                  onChange={(e) => {
+                    setReasonText(e.target.value);
+                    setErrorMsg(null);
+                  }}
+                  placeholder="Share any additional context…"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: 14,
+                    color: '#111827',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 10,
+                    outline: 'none',
+                    resize: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  }}
+                />
+              </div>
+
+              {/* Error */}
+              {errorMsg && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    backgroundColor: '#FEF2F2',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    marginBottom: 16,
+                  }}
+                >
+                  <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ fontSize: 13, color: '#DC2626', margin: 0, lineHeight: 1.5 }}>
+                    {errorMsg}
+                  </p>
+                </div>
+              )}
+
+              {/* Policy reminder */}
+              <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 20px', lineHeight: 1.6 }}>
+                Refund eligibility is determined per the workshop&apos;s refund policy. Once submitted,
+                the organizer will review your request and you&apos;ll receive an email with their decision.
+              </p>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderRadius: 12,
+                    border: '1px solid #E5E7EB',
+                    backgroundColor: '#F9FAFB',
+                    color: '#374151',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderRadius: 12,
+                    border: 'none',
+                    backgroundColor: submitting ? '#9CA3AF' : '#0FA3B1',
+                    color: '#ffffff',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {submitting ? (
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    'Submit Request'
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── SUCCESS STEP ── */}
+          {step === 'success' && submittedReq && (
+            <>
+              <div style={{ textAlign: 'center', padding: '8px 0 24px' }}>
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    backgroundColor: autoEligible ? '#DCFCE7' : '#F0FDFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px',
+                  }}
+                >
+                  {autoEligible
+                    ? <CheckCircle size={32} color="#16A34A" />
+                    : <Clock size={32} color="#0FA3B1" />
+                  }
+                </div>
+
+                {autoEligible ? (
+                  <>
+                    <p
+                      style={{
+                        fontFamily: 'Sora, sans-serif',
+                        fontWeight: 700,
+                        fontSize: 20,
+                        color: '#111827',
+                        margin: '0 0 8px',
+                      }}
+                    >
+                      Refund approved
+                    </p>
+                    <p style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, margin: 0 }}>
+                      Your refund of{' '}
+                      <strong style={{ color: '#111827' }}>
+                        {formatCents(submittedReq.requested_amount_cents)}
+                      </strong>{' '}
+                      has been approved and submitted to your bank. Allow{' '}
+                      <strong style={{ color: '#111827' }}>3–5 business days</strong>.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontFamily: 'Sora, sans-serif',
+                        fontWeight: 700,
+                        fontSize: 20,
+                        color: '#111827',
+                        margin: '0 0 8px',
+                      }}
+                    >
+                      Request submitted
+                    </p>
+                    <p style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, margin: 0 }}>
+                      Your request has been submitted. The organizer will review it and you&apos;ll
+                      be notified of their decision by email.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  width: '100%',
+                  height: 44,
+                  borderRadius: 12,
+                  border: 'none',
+                  backgroundColor: '#0FA3B1',
+                  color: '#ffffff',
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                Done
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Existing refund request status banner ───────────────────────────── */
+
+function RefundStatusBanner({ requests }: { requests: RefundRequest[] }) {
+  if (requests.length === 0) return null;
+
+  const latest = requests[0];
+  const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+    pending:      { bg: '#FFFBEB', text: '#92400E', border: '#FDE68A' },
+    auto_approved:{ bg: '#F0FDF4', text: '#14532D', border: '#BBF7D0' },
+    approved:     { bg: '#F0FDF4', text: '#14532D', border: '#BBF7D0' },
+    denied:       { bg: '#FEF2F2', text: '#7F1D1D', border: '#FECACA' },
+  };
+  const colors = statusColors[latest.status] ?? statusColors['pending'];
+  const statusLabel: Record<string, string> = {
+    pending: 'Pending organizer review',
+    auto_approved: 'Refund approved',
+    approved: 'Refund approved',
+    denied: 'Refund denied',
+  };
+
+  return (
+    <div
+      style={{
+        borderRadius: 12,
+        border: `1px solid ${colors.border}`,
+        backgroundColor: colors.bg,
+        padding: '12px 16px',
+        marginBottom: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <RotateCcw size={16} color={colors.text} style={{ flexShrink: 0 }} />
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: colors.text, margin: 0 }}>
+          {statusLabel[latest.status] ?? 'Refund request'}
+        </p>
+        {latest.status === 'pending' && (
+          <p style={{ fontSize: 12, color: colors.text, margin: '2px 0 0', opacity: 0.8 }}>
+            {formatCents(latest.requested_amount_cents)} requested ·{' '}
+            {new Date(latest.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
+        )}
+        {(latest.status === 'approved' || latest.status === 'auto_approved') && (
+          <p style={{ fontSize: 12, color: colors.text, margin: '2px 0 0', opacity: 0.8 }}>
+            {formatCents(latest.approved_amount_cents ?? latest.requested_amount_cents)} · Allow 3–5 business days
+          </p>
+        )}
+        {latest.status === 'denied' && latest.review_notes && (
+          <p style={{ fontSize: 12, color: colors.text, margin: '2px 0 0', opacity: 0.8 }}>
+            {latest.review_notes}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main page ────────────────────────────────────────────────────────── */
+
 export default function OrderConfirmationPage() {
   const params = useParams();
-  const router = useRouter();
   const orderNumber = params.orderNumber as string;
 
   const [order, setOrder] = useState<OrderSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [existingRequests, setExistingRequests] = useState<RefundRequest[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadOrder() {
       try {
-        const data = await getOrder(orderNumber);
-        if (!cancelled) setOrder(data);
+        const [data, requests] = await Promise.all([
+          getOrder(orderNumber),
+          getOrderRefundRequests(orderNumber).catch(() => [] as RefundRequest[]),
+        ]);
+        if (!cancelled) {
+          setOrder(data);
+          setExistingRequests(requests);
+        }
       } catch {
         if (!cancelled) setError('Order not found. Please check your email for confirmation.');
       } finally {
@@ -253,6 +774,17 @@ export default function OrderConfirmationPage() {
   const hasDeposit = order.is_deposit_order && order.balance_due_date != null;
   const hasVirtual = order.items.some((i) => i.item_type === 'addon_session');
 
+  const canRequestRefund =
+    (order.status === 'completed' || order.status === 'partially_refunded') &&
+    order.total_cents > 0 &&
+    !existingRequests.some((r) => r.status === 'pending');
+
+  const hasPendingRequest = existingRequests.some((r) => r.status === 'pending');
+
+  function handleRefundSubmitted(req: RefundRequest) {
+    setExistingRequests((prev) => [req, ...prev]);
+  }
+
   return (
     <>
       <style>{`
@@ -262,6 +794,7 @@ export default function OrderConfirmationPage() {
           80%  { transform: scale(0.95); }
           100% { transform: scale(1); }
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       <div
@@ -292,6 +825,9 @@ export default function OrderConfirmationPage() {
             A confirmation email is on its way to you.
           </p>
         </div>
+
+        {/* Existing refund request status */}
+        <RefundStatusBanner requests={existingRequests} />
 
         {/* Order summary card */}
         <div
@@ -527,8 +1063,51 @@ export default function OrderConfirmationPage() {
           >
             Browse More Workshops
           </Link>
+
+          {/* Request Refund */}
+          {canRequestRefund && (
+            <button
+              type="button"
+              onClick={() => setRefundModalOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                width: '100%',
+                padding: '11px 0',
+                borderRadius: 12,
+                backgroundColor: 'transparent',
+                color: '#6B7280',
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontWeight: 500,
+                fontSize: 13,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={13} />
+              Request a refund
+            </button>
+          )}
+
+          {hasPendingRequest && !canRequestRefund && (
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#9CA3AF', margin: '4px 0 0' }}>
+              A refund request is pending organizer review.
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Refund modal */}
+      {order && (
+        <RefundModal
+          open={refundModalOpen}
+          order={order}
+          onClose={() => setRefundModalOpen(false)}
+          onSubmitted={handleRefundSubmitted}
+        />
+      )}
     </>
   );
 }
