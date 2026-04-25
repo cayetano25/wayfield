@@ -87,6 +87,7 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
           <PaymentStatusBadge
             status={workshop.payment_status as PaymentStatus}
             balanceDueDate={workshop.balance_due_date}
+            orderNumber={workshop.order_number}
           />
         </div>
       )}

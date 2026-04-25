@@ -86,10 +86,22 @@ export interface OrderSummary {
   is_deposit_order: boolean;
   deposit_paid_at: string | null;
   balance_due_date: string | null;
+  balance_amount_cents: number | null;
   balance_paid_at: string | null;
   completed_at: string | null;
   created_at: string;
   items: OrderItem[];
+}
+
+export interface BalancePaymentIntent {
+  client_secret: string;
+  stripe_publishable_key: string;
+  amount_cents: number;
+  deposit_amount_cents: number;
+  balance_due_date: string | null;
+  workshop_title: string | null;
+  order_number: string;
+  days_until_expiry: number;
 }
 
 export function getCart(organizationId: number): Promise<Cart> {
@@ -113,4 +125,8 @@ export function checkoutCart(organizationId: number): Promise<CheckoutResult> {
 
 export function getOrder(orderNumber: string): Promise<OrderSummary> {
   return apiGet(`/orders/${orderNumber}`);
+}
+
+export function getBalancePaymentIntent(orderNumber: string): Promise<BalancePaymentIntent> {
+  return apiGet(`/orders/${orderNumber}/balance-payment-intent`);
 }
