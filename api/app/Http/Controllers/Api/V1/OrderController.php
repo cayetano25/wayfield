@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Payments\Models\Order;
+use App\Domain\Payments\Services\BalancePaymentService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Organization;
@@ -99,6 +100,61 @@ class OrderController extends Controller
                 'per_page'     => $orders->perPage(),
                 'total'        => $orders->total(),
             ],
+        ]);
+    }
+
+    /**
+     * GET /api/v1/orders/{order}/balance-payment-intent
+     *
+     * Creates (or retrieves) a Stripe PaymentIntent for the outstanding balance.
+     * Used by the /balance-payment/{order_number} page when balance_auto_charge = false
+     * or when the participant wants to pay early.
+     *
+     * Auth: order owner only.
+     * Returns 422 if balance is already paid or order is cancelled.
+     */
+    public function balancePaymentIntent(Request $request, Order $order, BalancePaymentService $service): JsonResponse
+    {
+        if ($order->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        if (! $order->is_deposit_order) {
+            return response()->json(['error' => 'no_balance', 'message' => 'This order does not have a balance payment.'], 422);
+        }
+
+        if ($order->balance_paid_at !== null) {
+            return response()->json(['error' => 'already_paid', 'message' => 'Balance has already been paid.'], 422);
+        }
+
+        if (in_array($order->status, ['cancelled', 'fully_refunded'], true)) {
+            return response()->json(['error' => 'grace_period_expired', 'message' => 'The grace period for this balance payment has expired.'], 422);
+        }
+
+        // 3-day grace window after the due date.
+        $graceCutoff = \Carbon\Carbon::parse($order->balance_due_date)->addDays(3)->endOfDay();
+        if (now()->isAfter($graceCutoff)) {
+            return response()->json(['error' => 'grace_period_expired', 'message' => 'The grace period for this balance payment has expired.'], 422);
+        }
+
+        $intentData = $service->prepareBalanceIntent($order);
+
+        $order->loadMissing('items.workshop');
+        $workshopTitle = $order->items
+            ->where('item_type', 'workshop_registration')
+            ->first()
+            ?->workshop
+            ?->title;
+
+        return response()->json([
+            'client_secret'          => $intentData['client_secret'],
+            'stripe_publishable_key' => $intentData['stripe_publishable_key'],
+            'amount_cents'           => $intentData['amount_cents'],
+            'deposit_amount_cents'   => (int) $order->total_cents,
+            'balance_due_date'       => $order->balance_due_date?->toDateString(),
+            'workshop_title'         => $workshopTitle,
+            'order_number'           => $order->order_number,
+            'days_until_expiry'      => max(0, (int) now()->diffInDays($graceCutoff, false)),
         ]);
     }
 

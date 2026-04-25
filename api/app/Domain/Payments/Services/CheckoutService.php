@@ -30,6 +30,7 @@ class CheckoutService
     public function __construct(
         private readonly OrderNumberService $orderNumberService,
         private readonly FeeCalculationService $feeCalculationService,
+        private readonly BalancePaymentService $balancePaymentService,
     ) {
         $this->stripe = new StripeClient(config('stripe.secret_key'));
     }
@@ -176,6 +177,7 @@ class CheckoutService
 
             if ($order->is_deposit_order) {
                 $order->update(['deposit_paid_at' => now()]);
+                $this->balancePaymentService->scheduleBalanceJobs($order);
             }
 
             $this->queueConfirmationNotifications($order);
@@ -432,35 +434,41 @@ class CheckoutService
     ): Order {
         $orderNumber = $this->orderNumberService->generateOrderNumber();
 
-        $isDeposit = CartItem::query()
+        $depositItem = CartItem::query()
             ->where('cart_id', $cart->id)
             ->where('is_deposit', true)
-            ->exists();
+            ->first();
 
-        $balanceDueDate = null;
-        if ($isDeposit) {
-            $balanceDueDate = CartItem::query()
-                ->where('cart_id', $cart->id)
-                ->where('is_deposit', true)
-                ->value('balance_due_date');
+        $isDeposit          = $depositItem !== null;
+        $balanceDueDate     = $depositItem?->balance_due_date;
+        $balanceAmountCents = $depositItem?->balance_amount_cents;
+        $balanceAutoCharge  = true;
+
+        if ($isDeposit && $depositItem?->workshop_id) {
+            $pricing           = WorkshopPricing::query()
+                ->where('workshop_id', $depositItem->workshop_id)
+                ->first();
+            $balanceAutoCharge = $pricing?->balance_auto_charge ?? true;
         }
 
         return Order::create([
-            'order_number'         => $orderNumber,
-            'user_id'              => $user->id,
-            'organization_id'      => $cart->organization_id,
-            'cart_id'              => $cart->id,
-            'status'               => $status,
-            'payment_method'       => $paymentMethod,
-            'subtotal_cents'       => $cart->subtotal_cents,
-            'wayfield_fee_cents'   => $fees?->wayFieldFeeCents ?? 0,
-            'stripe_fee_cents'     => $fees?->stripeFeeCents ?? 0,
-            'total_cents'          => $fees?->amountCents ?? $cart->subtotal_cents,
+            'order_number'           => $orderNumber,
+            'user_id'                => $user->id,
+            'organization_id'        => $cart->organization_id,
+            'cart_id'                => $cart->id,
+            'status'                 => $status,
+            'payment_method'         => $paymentMethod,
+            'subtotal_cents'         => $cart->subtotal_cents,
+            'wayfield_fee_cents'     => $fees?->wayFieldFeeCents ?? 0,
+            'stripe_fee_cents'       => $fees?->stripeFeeCents ?? 0,
+            'total_cents'            => $fees?->amountCents ?? $cart->subtotal_cents,
             'organizer_payout_cents' => $fees?->organizerPayoutCents ?? 0,
-            'currency'             => $cart->currency,
-            'take_rate_pct'        => $fees?->takeRatePct ?? 0,
-            'is_deposit_order'     => $isDeposit,
-            'balance_due_date'     => $balanceDueDate,
+            'currency'               => $cart->currency,
+            'take_rate_pct'          => $fees?->takeRatePct ?? 0,
+            'is_deposit_order'       => $isDeposit,
+            'balance_due_date'       => $balanceDueDate,
+            'balance_amount_cents'   => $balanceAmountCents,
+            'balance_auto_charge'    => $balanceAutoCharge,
         ]);
     }
 

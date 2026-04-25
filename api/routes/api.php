@@ -445,9 +445,10 @@ Route::prefix('v1')->group(function () {
         Route::delete('cart/{organization}/items/{cartItem}', [CartController::class, 'removeItem']);
         Route::post('cart/{organization}/checkout', [CartController::class, 'checkout']);
 
-        // ─── Orders (Step 4A) ─────────────────────────────────────────────────
+        // ─── Orders (Step 4A / 5A) ───────────────────────────────────────────
         Route::get('orders', [OrderController::class, 'index']);
         Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::get('orders/{order}/balance-payment-intent', [OrderController::class, 'balancePaymentIntent']);
         Route::get('organizations/{organization}/orders', [OrderController::class, 'orgIndex']);
 
         // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────

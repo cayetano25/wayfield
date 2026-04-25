@@ -11,3 +11,9 @@ Artisan::command('inspire', function () {
 
 // Mark expired active carts as abandoned every hour.
 Schedule::job(CartExpiryJob::class)->hourly()->name('cart-expiry');
+
+// Process due scheduled payment jobs (balance reminders, charges, expiries, etc.).
+Schedule::command('payments:process-scheduled-jobs')
+    ->everyFiveMinutes()
+    ->name('process-scheduled-payment-jobs')
+    ->withoutOverlapping();
