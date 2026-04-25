@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\RefundPolicyController;
+use App\Http\Controllers\Api\V1\RefundRequestController;
 use App\Http\Controllers\Api\V1\SessionPricingController;
 use App\Http\Controllers\Api\V1\StripeConnectController;
 use App\Http\Controllers\Api\V1\WorkshopPricingController;
@@ -450,6 +451,14 @@ Route::prefix('v1')->group(function () {
         Route::get('orders/{order}', [OrderController::class, 'show']);
         Route::get('orders/{order}/balance-payment-intent', [OrderController::class, 'balancePaymentIntent']);
         Route::get('organizations/{organization}/orders', [OrderController::class, 'orgIndex']);
+
+        // ─── Refunds & Disputes (Step 6A) ────────────────────────────────────
+        Route::post('orders/{order}/refund-requests', [RefundRequestController::class, 'store']);
+        Route::get('orders/{order}/refund-requests', [RefundRequestController::class, 'indexForOrder']);
+        Route::get('organizations/{organization}/refund-requests', [RefundRequestController::class, 'indexForOrganization']);
+        Route::post('refund-requests/{refundRequest}/approve', [RefundRequestController::class, 'approve']);
+        Route::post('refund-requests/{refundRequest}/deny', [RefundRequestController::class, 'deny']);
+        Route::post('refund-requests/{refundRequest}/issue-credit', [RefundRequestController::class, 'issueCredit']);
 
         // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────
         Route::middleware('payments.enabled')

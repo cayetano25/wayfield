@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Domain\Payments\Services\CheckoutService;
+use App\Domain\Payments\Services\DisputeService;
+use App\Domain\Payments\Services\RefundService;
 use App\Domain\Payments\Services\StripeConnectService;
 use App\Models\StripeEvent;
 use Illuminate\Bus\Queueable;
@@ -24,7 +26,12 @@ class ProcessStripeConnectWebhookJob implements ShouldQueue
         private readonly int $stripeEventId,
     ) {}
 
-    public function handle(StripeConnectService $service, CheckoutService $checkoutService): void
+    public function handle(
+        StripeConnectService $service,
+        CheckoutService $checkoutService,
+        RefundService $refundService,
+        DisputeService $disputeService,
+    ): void
     {
         $record = StripeEvent::find($this->stripeEventId);
 
@@ -62,13 +69,17 @@ class ProcessStripeConnectWebhookJob implements ShouldQueue
                 $type === 'payment_intent.payment_failed'
                     => $checkoutService->handlePaymentIntentFailed($payload),
 
-                // charge.refund and dispute events deferred to Step 6.
-                str_starts_with($type, 'charge.dispute.')
-                || str_starts_with($type, 'charge.refund.')
-                    => Log::info('ProcessStripeConnectWebhookJob: event deferred to later step', [
-                        'type' => $type,
-                        'event_id' => $payload['id'] ?? null,
-                    ]),
+                $type === 'charge.refund.updated'
+                    => $refundService->handleRefundUpdated($payload),
+
+                $type === 'charge.dispute.created'
+                    => $disputeService->handleDisputeCreated($payload),
+
+                $type === 'charge.dispute.updated'
+                    => $disputeService->handleDisputeUpdated($payload),
+
+                $type === 'charge.dispute.closed'
+                    => $disputeService->handleDisputeClosed($payload),
 
                 str_starts_with($type, 'payment_intent.')
                     => Log::info('ProcessStripeConnectWebhookJob: unhandled payment_intent event', [
