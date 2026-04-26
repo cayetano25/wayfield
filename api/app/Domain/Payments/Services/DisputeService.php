@@ -10,9 +10,11 @@ use App\Domain\Payments\Models\ScheduledPaymentJob;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Jobs\Payments\ProcessDisputeClosedJob;
 use App\Jobs\Payments\ProcessDisputeCreatedJob;
+use App\Mail\Payments\DisputeOpenedMail;
 use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class DisputeService
 {
@@ -84,6 +86,16 @@ class DisputeService
                 . 'Please log into your Stripe dashboard to respond. Include your registration confirmation, communications with the participant, and any relevant event details.',
             'status'            => 'queued',
         ]);
+
+        // N-34: email to org owners/admins
+        $orgAdmins = $order->organization->users()
+            ->wherePivotIn('role', ['owner', 'admin'])
+            ->wherePivot('is_active', true)
+            ->get();
+
+        foreach ($orgAdmins as $admin) {
+            Mail::to($admin->email)->queue(new DisputeOpenedMail($dispute, $order, $admin));
+        }
 
         // N-35: in-app to Wayfield platform admins (dispatched via job)
         ProcessDisputeCreatedJob::dispatch($dispute->id);

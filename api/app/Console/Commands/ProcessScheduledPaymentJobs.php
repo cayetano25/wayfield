@@ -7,7 +7,16 @@ namespace App\Console\Commands;
 use App\Domain\Payments\Models\ScheduledPaymentJob;
 use App\Jobs\ProcessBalanceChargeJob;
 use App\Jobs\ProcessBalancePaymentExpiryJob;
+use App\Jobs\ProcessCommitmentDatePassedJob;
+use App\Jobs\ProcessMinimumAttendanceCheckJob;
+use App\Jobs\ProcessWaitlistWindowExpiryJob;
 use App\Jobs\SendBalanceReminderEmailJob;
+use App\Jobs\SendCommitmentDateReminderJob;
+use App\Jobs\SendDisputeEvidenceReminderJob;
+use App\Jobs\SendOnboardingIncompleteReminderJob;
+use App\Jobs\SendPreSessionJoinLinkJob;
+use App\Jobs\SendPreWorkshopReminderJob;
+use App\Jobs\SendWaitlistWindowReminderJob;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -142,6 +151,36 @@ class ProcessScheduledPaymentJobs extends Command
 
             'balance_payment_expiry'
                 => ProcessBalancePaymentExpiryJob::dispatch($entityId),
+
+            'waitlist_window_expiry'
+                => ProcessWaitlistWindowExpiryJob::dispatch($entityId),
+
+            'waitlist_window_reminder'
+                => SendWaitlistWindowReminderJob::dispatch($entityId),
+
+            'pre_workshop_7day'
+                => SendPreWorkshopReminderJob::dispatch($entityId, 'N-19'),
+
+            'pre_workshop_24hour'
+                => SendPreWorkshopReminderJob::dispatch($entityId, 'N-20'),
+
+            'pre_session_1hour'
+                => SendPreSessionJoinLinkJob::dispatch($entityId),
+
+            'commitment_date_reminder'
+                => SendCommitmentDateReminderJob::dispatch($entityId, (string) $job->notification_code),
+
+            'commitment_date_passed'
+                => ProcessCommitmentDatePassedJob::dispatch($entityId),
+
+            'minimum_attendance_check'
+                => ProcessMinimumAttendanceCheckJob::dispatch($entityId),
+
+            'dispute_evidence_reminder'
+                => SendDisputeEvidenceReminderJob::dispatch($entityId),
+
+            'stripe_onboarding_incomplete_reminder'
+                => SendOnboardingIncompleteReminderJob::dispatch($entityId),
 
             default => $this->warnUnimplemented($job),
         };

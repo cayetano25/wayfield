@@ -2,6 +2,7 @@
 
 namespace App\Mail\Payments;
 
+use App\Domain\Payments\Models\RefundPolicy;
 use App\Domain\Payments\Models\RefundRequest;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -19,27 +20,35 @@ class RefundRequestReceivedOrganizerMail extends Mailable implements ShouldQueue
     public function __construct(
         public readonly RefundRequest $refundRequest,
         public readonly User $recipient,
+        public readonly ?RefundPolicy $refundPolicy = null,
     ) {}
 
     public function envelope(): Envelope
     {
-        $orderNumber = $this->refundRequest->order?->order_number ?? '';
+        $workshopTitle = $this->refundRequest->order?->items->first()?->workshop_title ?? 'a workshop';
 
         return new Envelope(
-            subject: "Refund request received for order {$orderNumber}",
+            subject: "Refund request for {$workshopTitle} — action required",
         );
     }
 
     public function content(): Content
     {
+        $order         = $this->refundRequest->order;
+        $workshopId    = $order?->items->first()?->workshop_id;
+        $workshopTitle = $order?->items->first()?->workshop_title ?? 'your workshop';
+        $reviewUrl     = config('app.frontend_url')
+            . ($workshopId ? "/admin/workshops/{$workshopId}/orders?tab=refunds" : '/admin/refunds');
+
         return new Content(
-            view: 'mail.payments.refund-request-received-organizer',
+            view: 'mail.payments.refund-request-received',
             with: [
                 'refundRequest' => $this->refundRequest,
-                'order'         => $this->refundRequest->order,
+                'order'         => $order,
                 'recipient'     => $this->recipient,
-                'reviewUrl'     => config('app.frontend_url')
-                    . '/admin/refunds/' . $this->refundRequest->id,
+                'workshopTitle' => $workshopTitle,
+                'refundPolicy'  => $this->refundPolicy,
+                'reviewUrl'     => $reviewUrl,
             ],
         );
     }

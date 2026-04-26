@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\RefundPolicyController;
 use App\Http\Controllers\Api\V1\RefundRequestController;
 use App\Http\Controllers\Api\V1\SessionPricingController;
 use App\Http\Controllers\Api\V1\StripeConnectController;
+use App\Http\Controllers\Api\V1\SesWebhookController;
+use App\Http\Controllers\Api\V1\WaitlistPaymentController;
 use App\Http\Controllers\Api\V1\WorkshopPricingController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
@@ -446,6 +448,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('cart/{organization}/items/{cartItem}', [CartController::class, 'removeItem']);
         Route::post('cart/{organization}/checkout', [CartController::class, 'checkout']);
 
+        // ─── Waitlist payment window (Step 7A) ───────────────────────────────
+        Route::get('workshops/{workshop:public_slug}/waitlist-payment-intent', [WaitlistPaymentController::class, 'show']);
+
         // ─── Orders (Step 4A / 5A) ───────────────────────────────────────────
         Route::get('orders', [OrderController::class, 'index']);
         Route::get('orders/{order}', [OrderController::class, 'show']);
@@ -568,6 +573,10 @@ Route::prefix('v1')->group(function () {
 Route::post('webhooks/stripe', [StripeConnectWebhookController::class, 'handle'])
     ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 Route::post('webhooks/stripe/connect', [StripeConnectWebhookController::class, 'handleConnect'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
+
+// ─── AWS SES delivery tracking via SNS (no auth — signature-verified inside) ─
+Route::post('webhooks/ses', [SesWebhookController::class, 'handle'])
     ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
 // ─── Test-only routes (local / testing environments only) ────────────────────
