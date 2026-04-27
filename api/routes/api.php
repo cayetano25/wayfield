@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\Api\V1\CartController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PublicWorkshopDiscoveryController;
 use App\Http\Controllers\Api\V1\TaxonomyController;
 use App\Http\Controllers\Api\V1\ApiKeyController;
@@ -8,7 +10,16 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\BillingController;
+use App\Http\Controllers\Api\V1\RefundPolicyController;
+use App\Http\Controllers\Api\V1\RefundRequestController;
+use App\Http\Controllers\Api\V1\SessionPricingController;
+use App\Http\Controllers\Api\V1\StripeConnectController;
+use App\Http\Controllers\Api\V1\SesWebhookController;
+use App\Http\Controllers\Api\V1\WaitlistPaymentController;
+use App\Http\Controllers\Api\V1\WorkshopPricingController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
+use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
+use App\Http\Controllers\Webhooks\StripeWebhookController as StripeConnectWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
 use App\Http\Controllers\Api\V1\ExternalApiController;
@@ -412,6 +423,67 @@ Route::prefix('v1')->group(function () {
         Route::post('organizations/{organization}/api-keys', [ApiKeyController::class, 'store']);
         Route::delete('organizations/{organization}/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
 
+        // ─── Pricing & Refund Policies (Step 3A) ─────────────────────────────
+        Route::get('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'show']);
+        Route::post('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'store']);
+        Route::put('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'update']);
+        Route::get('workshops/{workshop}/pricing/preview', [WorkshopPricingController::class, 'preview']);
+
+        Route::get('sessions/{session}/pricing', [SessionPricingController::class, 'show']);
+        Route::post('sessions/{session}/pricing', [SessionPricingController::class, 'store']);
+        Route::put('sessions/{session}/pricing', [SessionPricingController::class, 'update']);
+        Route::delete('sessions/{session}/pricing', [SessionPricingController::class, 'destroy']);
+
+        Route::get('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'showForOrganization']);
+        Route::post('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'storeForOrganization']);
+        Route::put('organizations/{organization}/refund-policy', [RefundPolicyController::class, 'updateForOrganization']);
+
+        Route::get('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'showForWorkshop']);
+        Route::post('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'storeForWorkshop']);
+        Route::put('workshops/{workshop}/refund-policy', [RefundPolicyController::class, 'updateForWorkshop']);
+
+        // ─── Cart & Checkout (Step 4A) ────────────────────────────────────────
+        Route::get('cart/{organization}', [CartController::class, 'show']);
+        Route::post('cart/{organization}/items', [CartController::class, 'addItem']);
+        Route::delete('cart/{organization}/items/{cartItem}', [CartController::class, 'removeItem']);
+        Route::post('cart/{organization}/checkout', [CartController::class, 'checkout']);
+
+        // ─── Waitlist payment window (Step 7A) ───────────────────────────────
+        Route::get('workshops/{workshop:public_slug}/waitlist-payment-intent', [WaitlistPaymentController::class, 'show']);
+
+        // ─── Orders (Step 4A / 5A) ───────────────────────────────────────────
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::get('orders/{order}/balance-payment-intent', [OrderController::class, 'balancePaymentIntent']);
+        Route::get('organizations/{organization}/orders', [OrderController::class, 'orgIndex']);
+
+        // ─── Refunds & Disputes (Step 6A) ────────────────────────────────────
+        Route::post('orders/{order}/refund-requests', [RefundRequestController::class, 'store']);
+        Route::get('orders/{order}/refund-requests', [RefundRequestController::class, 'indexForOrder']);
+        Route::get('organizations/{organization}/refund-requests', [RefundRequestController::class, 'indexForOrganization']);
+        Route::post('refund-requests/{refundRequest}/approve', [RefundRequestController::class, 'approve']);
+        Route::post('refund-requests/{refundRequest}/deny', [RefundRequestController::class, 'deny']);
+        Route::post('refund-requests/{refundRequest}/issue-credit', [RefundRequestController::class, 'issueCredit']);
+
+        // ─── Stripe Connect (Step 2A — payment onboarding) ───────────────────
+        Route::middleware('payments.enabled')
+            ->group(function () {
+                Route::post(
+                    'organizations/{organization}/stripe/connect',
+                    [StripeConnectController::class, 'initiate']
+                );
+                Route::post(
+                    'organizations/{organization}/stripe/refresh-link',
+                    [StripeConnectController::class, 'refreshLink']
+                );
+            });
+        // Status is readable without the payments gate so staff can see the
+        // current connection state even before payments are formally enabled.
+        Route::get(
+            'organizations/{organization}/stripe/status',
+            [StripeConnectController::class, 'status']
+        );
+
         // ─── System Announcements ─────────────────────────────────────────────
         Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
             ->name('system-announcements.index');
@@ -476,6 +548,19 @@ Route::prefix('v1')->group(function () {
             // Webhook visibility (Phase 9)
             Route::get('organizations/{organization}/webhooks', [PlatformWebhookController::class, 'index']);
 
+            // ─── Payment admin (super_admin and admin only) ───────────────────
+            Route::middleware('platform.admin:super_admin,admin')
+                ->group(function () {
+                    Route::post(
+                        'organizations/{organization}/enable-payments',
+                        [PlatformPaymentController::class, 'enablePayments']
+                    );
+                    Route::post(
+                        'organizations/{organization}/disable-payments',
+                        [PlatformPaymentController::class, 'disablePayments']
+                    );
+                });
+
             // System Announcements (Command Center)
             Route::get('system-announcements', [PlatformAnnouncementController::class, 'index']);
             Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
@@ -483,6 +568,16 @@ Route::prefix('v1')->group(function () {
             Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
         });
 });
+
+// ─── Stripe Connect webhooks (outside v1 prefix — no auth, signature-verified) ─
+Route::post('webhooks/stripe', [StripeConnectWebhookController::class, 'handle'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
+Route::post('webhooks/stripe/connect', [StripeConnectWebhookController::class, 'handleConnect'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
+
+// ─── AWS SES delivery tracking via SNS (no auth — signature-verified inside) ─
+Route::post('webhooks/ses', [SesWebhookController::class, 'handle'])
+    ->withoutMiddleware(['auth:sanctum', 'tenant.auth']);
 
 // ─── Test-only routes (local / testing environments only) ────────────────────
 if (app()->environment(['testing', 'local'])) {

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Domain\Payments\Models\RefundPolicy;
+use App\Domain\Payments\Models\WorkshopPricing;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -137,5 +139,15 @@ class Workshop extends Model
     {
         // Explicit FK names — 'tag_id' not Laravel's guessed 'taxonomy_tag_id'
         return $this->belongsToMany(TaxonomyTag::class, 'workshop_tags', 'workshop_id', 'tag_id');
+    }
+
+    public function pricing(): HasOne
+    {
+        return $this->hasOne(WorkshopPricing::class);
+    }
+
+    public function refundPolicy(): HasOne
+    {
+        return $this->hasOne(RefundPolicy::class)->where('scope', 'workshop');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Payments\Models\Order;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\Registration;
@@ -251,6 +252,15 @@ class ParticipantDashboardController extends Controller
                 ->count()
             : 0;
 
+        // Fetch the most recent non-cancelled order for this user+workshop for payment status.
+        $order = Order::query()
+            ->where('user_id', $userId)
+            ->where('organization_id', $workshop->organization_id)
+            ->whereHas('items', fn ($q) => $q->where('item_type', 'workshop_registration')->where('workshop_id', $workshop->id))
+            ->whereNotIn('status', ['cancelled', 'fully_refunded'])
+            ->latest()
+            ->first();
+
         return [
             'workshop_id' => $workshop->id,
             'title' => $workshop->title,
@@ -263,6 +273,9 @@ class ParticipantDashboardController extends Controller
             'sessions_count' => $selectedSessionIds->count(),
             'checked_in_count' => $checkedInCount,
             'total_sessions' => $selectedSessionIds->count(),
+            'payment_status' => $order ? $order->getPaymentStatusLabel() : null,
+            'balance_due_date' => $order?->balance_due_date?->toDateString(),
+            'order_number' => $order?->order_number,
         ];
     }
 

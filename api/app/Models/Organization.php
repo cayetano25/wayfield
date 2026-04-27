@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Domain\Payments\Models\Cart;
+use App\Domain\Payments\Models\Order;
+use App\Domain\Payments\Models\RefundPolicy;
+use App\Domain\Payments\Models\StripeConnectAccount;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -147,6 +151,26 @@ class Organization extends Model
     public function hasBillingAccess(User $user): bool
     {
         return in_array($this->memberRole($user), ['owner', 'billing_admin'], true);
+    }
+
+    public function stripeConnectAccount(): HasOne
+    {
+        return $this->hasOne(StripeConnectAccount::class);
+    }
+
+    public function refundPolicy(): HasOne
+    {
+        return $this->hasOne(RefundPolicy::class)->where('scope', 'organization');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function carts(): HasMany
+    {
+        return $this->hasMany(Cart::class);
     }
 
     /**

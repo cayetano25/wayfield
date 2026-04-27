@@ -4,12 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Clock } from 'lucide-react';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
+import { PaymentStatusBadge } from '@/components/workshops/pricing/PaymentStatusBadge';
 import { apiPost } from '@/lib/api/client';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import type { ParticipantOtherWorkshop } from '@/lib/types/participant';
+import type { PaymentStatus } from '@/components/workshops/pricing/PaymentStatusBadge';
 
 /* --- Helpers ----------------------------------------------------------- */
 
@@ -77,6 +79,17 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
         <p className="font-sans mb-2" style={{ fontSize: 12, color: '#6B7280' }}>
           {formatDateRange(workshop.start_date, workshop.end_date)}
         </p>
+      )}
+
+      {/* Payment status badge */}
+      {workshop.payment_status && workshop.payment_status !== 'Free' && (
+        <div className="mb-2">
+          <PaymentStatusBadge
+            status={workshop.payment_status as PaymentStatus}
+            balanceDueDate={workshop.balance_due_date}
+            orderNumber={workshop.order_number}
+          />
+        </div>
       )}
 
       {/* Bottom: session count + check-in rate + view details */}

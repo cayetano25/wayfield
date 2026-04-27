@@ -10,9 +10,13 @@ import { UserMenu }           from './UserMenu'
 import { GuestActions }       from './GuestActions'
 import { MobileMenu }         from './MobileMenu'
 import { NotificationBell }   from '@/components/notifications/NotificationBell'
+import { CartIcon }           from '@/components/cart/CartIcon'
+import { CartDrawer }         from '@/components/cart/CartDrawer'
+import { useOptionalCart }    from '@/contexts/CartContext'
 
 export function AppTopNav() {
   const nav                         = useNavContext()
+  const cart                        = useOptionalCart()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -99,9 +103,10 @@ export function AppTopNav() {
               />
             )}
 
-            {/* Authenticated user — notification bell + user menu */}
+            {/* Authenticated user — cart + notification bell + user menu */}
             {!nav.isLoading && nav.isAuthenticated && nav.user && (
               <div className="flex items-center gap-2">
+                {cart && <CartIcon />}
                 <NotificationBell isAuthenticated={nav.isAuthenticated} />
                 <UserMenu user={nav.user} />
               </div>
@@ -146,6 +151,9 @@ export function AppTopNav() {
           onClose={() => setMobileOpen(false)}
         />
       )}
+
+      {/* -- CART DRAWER — only when CartProvider is present ---------- */}
+      {cart && <CartDrawer />}
     </>
   )
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Payments\Models\OrderItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,6 +43,11 @@ class Registration extends Model
     public function selections(): HasMany
     {
         return $this->hasMany(SessionSelection::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function isActive(): bool

@@ -10,6 +10,8 @@ const TABS = [
   { label: 'Participants',  slug: 'participants' },
   { label: 'Attendance',    slug: 'attendance' },
   { label: 'Notifications', slug: 'notifications' },
+  { label: 'Pricing',       slug: 'pricing' },
+  { label: 'Orders',        slug: 'orders' },
 ];
 
 export function WorkshopTabs() {

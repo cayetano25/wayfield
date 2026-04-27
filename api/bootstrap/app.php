@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsurePlatformToken;
 use App\Http\Middleware\EnsureTenantToken;
 use App\Http\Middleware\EnsureTenantUser;
+use App\Http\Middleware\RequirePaymentsEnabled;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'feature' => CheckFeatureAccess::class,
             'auth.api_key' => AuthenticateApiKey::class,
             'onboarding.complete' => EnsureOnboardingComplete::class,
+            'payments.enabled'    => RequirePaymentsEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
