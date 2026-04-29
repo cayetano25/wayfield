@@ -3,40 +3,44 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessStripeBillingWebhookJob;
 use App\Jobs\ProcessStripeConnectWebhookJob;
 use App\Models\StripeEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 
 /**
- * Handles Stripe platform and Connect webhook endpoints.
+ * Canonical handler for all Stripe webhook endpoints.
  *
- * POST /api/webhooks/stripe         — platform billing events (delegates to billing handler)
- * POST /api/webhooks/stripe/connect — Connect account events for payment system
+ * POST /api/webhooks/stripe         — platform billing events (subscription, invoice, checkout)
+ * POST /api/webhooks/stripe/connect — Connect account events for the payment system
  *
- * All processing is async: the handler records the event and dispatches a job,
- * then returns 200 immediately regardless of processing outcome.
+ * Both methods return 200 immediately and process asynchronously via queued jobs.
+ * The legacy routes /api/v1/billing/webhook and /api/v1/stripe/webhook are deprecated
+ * and return 200 with a deprecation warning only.
  */
 class StripeWebhookController extends Controller
 {
     /**
      * POST /api/webhooks/stripe
-     * Verifies with STRIPE_WEBHOOK_SECRET.
-     * Currently delegates to the existing billing webhook for subscription events.
-     * Defined here so the route path is owned by this controller.
+     * Canonical handler for all Wayfield platform billing events.
+     * Verifies signature with STRIPE_WEBHOOK_SECRET, deduplicates via Cache,
+     * then dispatches ProcessStripeBillingWebhookJob for async processing.
      */
-    public function handle(Request $request): JsonResponse
+    public function handle(Request $request): Response
     {
         $payload   = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
         $secret    = config('stripe.webhook_secret');
 
         if (! $secret) {
-            Log::warning('StripeWebhookController: STRIPE_WEBHOOK_SECRET is not configured');
-            return response()->json(['received' => true]);
+            Log::critical('StripeWebhookController: STRIPE_WEBHOOK_SECRET is not configured');
+            return response('Configuration error', 500);
         }
 
         try {
@@ -44,36 +48,32 @@ class StripeWebhookController extends Controller
         } catch (SignatureVerificationException $e) {
             Log::warning('StripeWebhookController: signature verification failed', [
                 'error' => $e->getMessage(),
+                'route' => 'platform_billing',
             ]);
-            return response()->json(['error' => 'Invalid signature'], 400);
+            return response('Signature verification failed', 400);
+        } catch (\Exception $e) {
+            Log::error('StripeWebhookController: invalid payload', ['error' => $e->getMessage()]);
+            return response('Invalid payload', 400);
         }
 
-        $record = StripeEvent::firstOrCreate(
-            ['stripe_event_id' => $event->id],
-            [
-                'event_type'   => $event->type,
-                'livemode'     => (bool) ($event->livemode ?? false),
-                'payload_json' => json_decode($payload, true),
-            ],
-        );
-
-        if (! $record->isProcessed()) {
-            // Billing events (subscription, invoice) are handled by the existing
-            // StripeWebhookController in Api/V1. This endpoint is a pass-through
-            // for any new billing events routed here in future.
-            Log::info('StripeWebhookController: billing event received', [
-                'type'     => $event->type,
+        if ($this->alreadyReceived($event->id)) {
+            Log::info('StripeWebhookController: event already received', [
                 'event_id' => $event->id,
+                'type'     => $event->type,
             ]);
+            return response('Already processed', 200);
         }
 
-        return response()->json(['received' => true]);
+        ProcessStripeBillingWebhookJob::dispatch($event->toArray());
+        $this->markReceived($event->id, $event->type);
+
+        return response('Received', 200);
     }
 
     /**
      * POST /api/webhooks/stripe/connect
-     * Verifies with STRIPE_CONNECT_WEBHOOK_SECRET.
-     * Enqueues a job for all Connect account events — never processes synchronously.
+     * Handles Stripe Connect account events for the payment system.
+     * Verifies with STRIPE_CONNECT_WEBHOOK_SECRET and enqueues ProcessStripeConnectWebhookJob.
      */
     public function handleConnect(Request $request): JsonResponse
     {
@@ -121,5 +121,22 @@ class StripeWebhookController extends Controller
 
         // Always return 200 so Stripe stops retrying even if the job fails later.
         return response()->json(['received' => true]);
+    }
+
+    // ── Idempotency helpers ────────────────────────────────────────────────────
+
+    private function alreadyReceived(string $eventId): bool
+    {
+        return Cache::has("stripe_billing_event_{$eventId}");
+    }
+
+    private function markReceived(string $eventId, string $eventType): void
+    {
+        // Cache for 24 hours — Stripe's retry window.
+        Cache::put(
+            "stripe_billing_event_{$eventId}",
+            ['type' => $eventType, 'received_at' => now()->toIso8601String()],
+            now()->addHours(24),
+        );
     }
 }

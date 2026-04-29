@@ -13,6 +13,7 @@ return new class extends Migration
             $table->enum('job_type', [
                 'balance_charge',
                 'balance_reminder',
+                'balance_payment_expiry',
                 'commitment_date_reminder',
                 'commitment_date_passed',
                 'waitlist_window_expiry',
@@ -24,6 +25,7 @@ return new class extends Migration
                 'stripe_onboarding_incomplete_reminder',
                 'cart_expiry',
                 'minimum_attendance_check',
+                'payment_requires_action_reminder',
             ])->notNull();
             $table->string('notification_code', 10)->nullable();
             $table->string('related_entity_type', 100)->notNull();

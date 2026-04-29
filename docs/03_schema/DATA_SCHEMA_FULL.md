@@ -1392,3 +1392,39 @@ Replaced by: Table 41 `admin_users`
 - leader messaging constrained by session assignment, time window, plan gate
 - private data must not leak in public or unrelated role surfaces
 - billing_admin has no access to workshops, sessions, participants, or reports
+
+
+## 40. platform_take_rates
+## 41. stripe_connect_accounts
+## 42. payment_feature_flags
+## 43. workshop_pricing
+## 44. session_pricing
+## 45. refund_policies
+## 46. carts
+## 47. cart_items
+## 48. orders
+## 49. order_items
+## 50. payment_intents
+## 51. refund_requests
+## 52. refund_transactions
+## 53. platform_credits
+## 54. waitlist_promotion_payments
+## 55. scheduled_payment_jobs
+## 56. email_logs
+## 57. disputes
+
+Core relationship additions:
+- workshops → workshop_pricing (one-to-one)
+- sessions → session_pricing (one-to-one, addon/invite_only only)
+- organizations → stripe_connect_accounts (one-to-one)
+- organizations → refund_policies (one-to-one, org scope)
+- workshops → refund_policies (one-to-one, workshop scope)
+- users → carts → cart_items
+- users → orders → order_items → registrations
+- orders → payment_intents
+- orders → refund_requests → refund_transactions
+- users → platform_credits
+- orders → disputes
+- registrations → waitlist_promotion_payments
+- all notification/payment events → scheduled_payment_jobs
+- all outbound emails → email_logs

@@ -125,17 +125,22 @@ test('checkout returns 422 when no Stripe price is configured for the plan', fun
     $response->assertJsonFragment(['error' => 'stripe_not_configured']);
 });
 
-// ─── POST /api/v1/billing/webhook ────────────────────────────────────────────
+// ─── POST /api/webhooks/stripe (canonical billing webhook) ───────────────────
 
 test('webhook with invalid signature returns 400', function () {
-    config(['services.stripe.webhook_secret' => 'whsec_test_secret']);
+    config(['stripe.webhook_secret' => 'whsec_test_secret']);
 
-    $response = $this->postJson('/api/v1/billing/webhook', [], [
-        'Stripe-Signature' => 'invalid_signature',
-    ]);
+    $response = $this->call(
+        'POST',
+        '/api/webhooks/stripe',
+        [],
+        [],
+        [],
+        ['HTTP_Stripe-Signature' => 'invalid_signature', 'CONTENT_TYPE' => 'application/json'],
+        json_encode(['id' => 'evt_test', 'type' => 'invoice.upcoming']),
+    );
 
     $response->assertStatus(400);
-    $response->assertJsonFragment(['error' => 'Invalid signature']);
 });
 
 test('webhook checkout.session.completed updates subscription plan_code', function () {
@@ -147,11 +152,12 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
         ->create();
 
     $webhookSecret = 'whsec_test_secret_'.uniqid();
-    config(['services.stripe.webhook_secret' => $webhookSecret]);
+    config(['stripe.webhook_secret' => $webhookSecret]);
 
     $payload = json_encode([
         'id' => 'evt_test_'.uniqid(),
         'type' => 'checkout.session.completed',
+        'livemode' => false,
         'data' => [
             'object' => [
                 'id' => 'cs_test_'.uniqid(),
@@ -174,7 +180,7 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
 
     $response = $this->call(
         'POST',
-        '/api/v1/billing/webhook',
+        '/api/webhooks/stripe',
         [],
         [],
         [],

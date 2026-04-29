@@ -59,6 +59,7 @@ export function WorkshopPricingSection({
   // Pricing form state
   const [isPaid, setIsPaid] = useState(false);
   const [basePriceCents, setBasePriceCents] = useState(0);
+  const [basePriceInput, setBasePriceInput] = useState('');
   const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmountCents, setDepositAmountCents] = useState(0);
   const [balanceDueDate, setBalanceDueDate] = useState('');
@@ -85,8 +86,9 @@ export function WorkshopPricingSection({
       if (pricingRes.status === 'fulfilled') {
         const p = pricingRes.value;
         setHasExisting(true);
-        setIsPaid(p.is_paid);
+        setIsPaid(p.is_paid ?? false);
         setBasePriceCents(p.base_price_cents ?? 0);
+        setBasePriceInput(p.base_price_cents > 0 ? (p.base_price_cents / 100).toFixed(2) : '');
         setDepositEnabled(p.deposit_enabled ?? false);
         setDepositAmountCents(p.deposit_amount_cents ?? 0);
         setBalanceDueDate(p.balance_due_date ?? '');
@@ -180,7 +182,6 @@ export function WorkshopPricingSection({
 
   /* ── Render ── */
 
-  const baseDollars = basePriceCents > 0 ? (basePriceCents / 100).toFixed(2) : '';
 
   if (loading) {
     return (
@@ -233,20 +234,24 @@ export function WorkshopPricingSection({
             <div className="relative flex items-center">
               <span className="absolute left-4 text-gray-400 font-medium select-none">$</span>
               <input
-                type="number"
-                min="0"
-                step="1"
+                type="text"
+                inputMode="decimal"
                 className={`w-full pl-8 pr-4 py-3 border rounded-xl text-gray-900
                   font-semibold text-lg focus:border-[#0FA3B1] focus:ring-1 focus:ring-[#0FA3B1]
                   ${priceError ? 'border-red-400' : 'border-gray-300'}`}
-                placeholder="0"
-                value={baseDollars}
+                placeholder="0.00"
+                value={basePriceInput}
                 onChange={(e) => {
-                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                  const raw = e.target.value;
+                  if (!/^[0-9]*\.?[0-9]*$/.test(raw)) return;
+                  setBasePriceInput(raw);
                   const parsed = parseFloat(raw);
                   const cents = isNaN(parsed) ? 0 : Math.round(parsed * 100);
                   setBasePriceCents(cents);
                   if (priceError && cents > 0) setPriceError(null);
+                }}
+                onBlur={() => {
+                  if (basePriceCents > 0) setBasePriceInput((basePriceCents / 100).toFixed(2));
                 }}
               />
             </div>

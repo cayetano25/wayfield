@@ -1,10 +1,11 @@
 <?php
 
+use App\Jobs\ProcessStripeBillingWebhookJob;
 use App\Models\AuditLog;
 use App\Models\Organization;
-use App\Models\StripeEvent;
 use App\Models\Subscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -25,13 +26,13 @@ function signedWebhook(array $eventData, string $secret): array
 }
 
 /**
- * POST to /api/v1/stripe/webhook with a raw body and Stripe-Signature header.
+ * POST to the canonical webhook endpoint /api/webhooks/stripe.
  */
 function webhookPost(string $payload, string $signature): \Illuminate\Testing\TestResponse
 {
     return test()->call(
         'POST',
-        '/api/v1/stripe/webhook',
+        '/api/webhooks/stripe',
         [],
         [],
         [],
@@ -43,7 +44,7 @@ function webhookPost(string $payload, string $signature): \Illuminate\Testing\Te
 function webhookSecret(): string
 {
     $secret = 'whsec_test_' . uniqid();
-    config(['services.stripe.webhook_secret' => $secret]);
+    config(['stripe.webhook_secret' => $secret]);
     return $secret;
 }
 
@@ -67,34 +68,32 @@ test('valid signed event returns 200', function () {
     $secret = webhookSecret();
 
     [$payload, $sig] = signedWebhook([
-        'id'   => 'evt_test_valid',
-        'type' => 'invoice.upcoming',
-        'data' => ['object' => []],
+        'id'       => 'evt_test_valid',
+        'type'     => 'invoice.upcoming',
+        'livemode' => false,
+        'data'     => ['object' => []],
     ], $secret);
 
-    webhookPost($payload, $sig)->assertOk()->assertJson(['received' => true]);
+    webhookPost($payload, $sig)->assertOk();
 });
 
 test('invalid signature returns 400', function () {
     webhookSecret();
 
-    $payload = json_encode(['id' => 'evt_test', 'type' => 'invoice.upcoming', 'data' => ['object' => []]]);
+    $payload = json_encode(['id' => 'evt_test', 'type' => 'invoice.upcoming', 'livemode' => false, 'data' => ['object' => []]]);
 
-    webhookPost($payload, 't=1234567890,v1=badsignature')
-        ->assertStatus(400)
-        ->assertJson(['error' => 'Invalid signature']);
+    webhookPost($payload, 't=1234567890,v1=badsignature')->assertStatus(400);
 });
 
 // ─── Idempotency ─────────────────────────────────────────────────────────────
 
 test('processing the same event twice is idempotent', function () {
-    $secret    = webhookSecret();
+    $secret     = webhookSecret();
     $customerId = 'cus_idempotent';
-    $subId      = 'sub_idempotent';
     $org        = orgWithStripeCustomer($customerId);
 
     Subscription::factory()->forOrganization($org->id)->active()->create([
-        'stripe_subscription_id' => $subId,
+        'stripe_subscription_id' => 'sub_idempotent',
         'stripe_status'          => 'active',
     ]);
 
@@ -116,40 +115,28 @@ test('processing the same event twice is idempotent', function () {
 
     [$payload, $sig] = signedWebhook($eventData, $secret);
 
-    // First call processes the event
+    // First call: dispatches job (sync queue), job runs, audit log created, cache set.
     webhookPost($payload, $sig)->assertOk();
     expect(AuditLog::where('action', 'payment_failed')->count())->toBe(1);
 
-    // Second call — same event ID — is a no-op
+    // Second call: cache hit — returns 200 without re-dispatching.
     webhookPost($payload, $sig)->assertOk();
     expect(AuditLog::where('action', 'payment_failed')->count())->toBe(1);
-    expect(StripeEvent::where('stripe_event_id', $eventId)->count())->toBe(1);
 });
 
 // ─── customer.subscription.updated ───────────────────────────────────────────
 
-test('subscription.updated syncs local subscription record', function () {
+test('subscription.updated dispatches ProcessStripeBillingWebhookJob', function () {
+    // This event triggers handleSubscriptionUpsert which calls \Stripe\Subscription::retrieve
+    // — a real Stripe API call that will fail in the test environment. We use Queue::fake()
+    // to verify the job is dispatched without actually executing it.
+    Queue::fake();
+
     $secret     = webhookSecret();
     $customerId = 'cus_sub_updated';
     $subId      = 'sub_sub_updated';
-    $org        = orgWithStripeCustomer($customerId);
+    orgWithStripeCustomer($customerId);
 
-    $sub = Subscription::factory()->forOrganization($org->id)->free()->active()->create([
-        'stripe_subscription_id' => $subId,
-        'stripe_status'          => 'trialing',
-    ]);
-
-    // We mock Stripe::Subscription::retrieve so we don't hit the real API.
-    // The controller re-retrieves the sub with expansion — we intercept that by
-    // overriding the stripe_customer_id path with a known org and verifying
-    // the subscription row gets synced. Since we can't call real Stripe in tests
-    // we verify the org lookup fires and the handler does not throw.
-    //
-    // For a full integration test point the webhook at real Stripe CLI.
-    // Here we confirm the handler runs, the event is stored, and 200 is returned.
-
-    // Stub StripeService::syncSubscriptionToDatabase by ensuring the org exists
-    // and the handler path completes to processed_at set.
     $eventData = [
         'id'       => 'evt_sub_updated_' . uniqid(),
         'type'     => 'customer.subscription.updated',
@@ -159,38 +146,15 @@ test('subscription.updated syncs local subscription record', function () {
                 'id'       => $subId,
                 'customer' => $customerId,
                 'status'   => 'active',
-                'items'    => [
-                    'data' => [
-                        [
-                            'price' => [
-                                'id'        => 'price_starter_monthly',
-                                'recurring' => ['interval' => 'month'],
-                            ],
-                        ],
-                    ],
-                ],
-                'current_period_start' => now()->subMonth()->timestamp,
-                'current_period_end'   => now()->addMonth()->timestamp,
-                'cancel_at_period_end' => false,
-                'canceled_at'          => null,
-                'default_payment_method' => null,
             ],
         ],
     ];
 
     [$payload, $sig] = signedWebhook($eventData, $secret);
 
-    // StripeService::syncSubscriptionToDatabase calls \Stripe\Subscription::retrieve
-    // which will fail in test env (no real API key). We catch this gracefully:
-    // the handler records an error_message on the StripeEvent row but returns 200.
-    $response = webhookPost($payload, $sig);
-    $response->assertOk()->assertJson(['received' => true]);
+    webhookPost($payload, $sig)->assertOk();
 
-    // Event was stored in stripe_events
-    $this->assertDatabaseHas('stripe_events', [
-        'stripe_event_id' => $eventData['id'],
-        'event_type'      => 'customer.subscription.updated',
-    ]);
+    Queue::assertPushed(ProcessStripeBillingWebhookJob::class);
 });
 
 // ─── invoice.payment_failed ──────────────────────────────────────────────────
@@ -248,7 +212,7 @@ test('payment_failed for unknown customer still returns 200', function () {
 
     [$payload, $sig] = signedWebhook($eventData, $secret);
 
-    webhookPost($payload, $sig)->assertOk()->assertJson(['received' => true]);
+    webhookPost($payload, $sig)->assertOk();
 });
 
 // ─── invoice.payment_succeeded ───────────────────────────────────────────────
@@ -297,11 +261,12 @@ test('payment_succeeded sets subscription to active and writes audit log', funct
 
 // ─── customer.subscription.deleted ───────────────────────────────────────────
 
-test('subscription.deleted cancels local subscription', function () {
-    $secret = webhookSecret();
-    $subId  = 'sub_deleted_' . uniqid();
-    $org    = Organization::factory()->create(['stripe_customer_id' => 'cus_deleted']);
-    $sub    = activeSubscription($org->id, $subId);
+test('subscription.deleted cancels local subscription and resets plan to free', function () {
+    $secret     = webhookSecret();
+    $subId      = 'sub_deleted_' . uniqid();
+    $customerId = 'cus_deleted_' . uniqid();
+    $org        = Organization::factory()->create(['stripe_customer_id' => $customerId]);
+    $sub        = activeSubscription($org->id, $subId);
 
     $eventData = [
         'id'       => 'evt_sub_deleted_' . uniqid(),
@@ -310,7 +275,7 @@ test('subscription.deleted cancels local subscription', function () {
         'data'     => [
             'object' => [
                 'id'       => $subId,
-                'customer' => 'cus_deleted',
+                'customer' => $customerId,
                 'status'   => 'canceled',
             ],
         ],
@@ -324,6 +289,7 @@ test('subscription.deleted cancels local subscription', function () {
     expect($sub->status)->toBe('canceled');
     expect($sub->stripe_status)->toBe('canceled');
     expect($sub->ends_at)->not->toBeNull();
+    expect($sub->plan_code)->toBe('free');
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,
@@ -345,12 +311,14 @@ test('unhandled event type returns 200 without error', function () {
 
     [$payload, $sig] = signedWebhook($eventData, $secret);
 
-    webhookPost($payload, $sig)->assertOk()->assertJson(['received' => true]);
+    webhookPost($payload, $sig)->assertOk();
 });
 
-// ─── StripeEvent log ─────────────────────────────────────────────────────────
+// ─── Job dispatch ─────────────────────────────────────────────────────────────
 
-test('every valid event is recorded in stripe_events table', function () {
+test('every valid event dispatches ProcessStripeBillingWebhookJob', function () {
+    Queue::fake();
+
     $secret = webhookSecret();
     $id     = 'evt_logged_' . uniqid();
 
@@ -363,10 +331,37 @@ test('every valid event is recorded in stripe_events table', function () {
 
     webhookPost($payload, $sig)->assertOk();
 
-    $this->assertDatabaseHas('stripe_events', [
-        'stripe_event_id' => $id,
-        'event_type'      => 'invoice.upcoming',
-    ]);
+    Queue::assertPushed(ProcessStripeBillingWebhookJob::class);
+});
 
-    expect(StripeEvent::where('stripe_event_id', $id)->first()->processed_at)->not->toBeNull();
+// ─── Legacy route deprecation ────────────────────────────────────────────────
+
+test('legacy /api/v1/stripe/webhook returns 200 with deprecation response', function () {
+    $response = test()->call(
+        'POST',
+        '/api/v1/stripe/webhook',
+        [],
+        [],
+        [],
+        ['CONTENT_TYPE' => 'application/json'],
+        json_encode(['id' => 'evt_legacy', 'type' => 'invoice.upcoming']),
+    );
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('Deprecated');
+});
+
+test('legacy /api/v1/billing/webhook returns 200 with deprecation response', function () {
+    $response = test()->call(
+        'POST',
+        '/api/v1/billing/webhook',
+        [],
+        [],
+        [],
+        ['CONTENT_TYPE' => 'application/json'],
+        json_encode(['id' => 'evt_legacy', 'type' => 'checkout.session.completed']),
+    );
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('Deprecated');
 });

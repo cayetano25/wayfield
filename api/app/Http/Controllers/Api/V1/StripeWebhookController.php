@@ -19,59 +19,14 @@ class StripeWebhookController extends Controller
 {
     public function __construct(private readonly StripeService $stripeService) {}
 
-    public function handle(Request $request): JsonResponse
+    public function handle(Request $request): \Illuminate\Http\Response
     {
-        $payload   = $request->getContent();
-        $sigHeader = $request->header('Stripe-Signature');
-
-        try {
-            $event = Webhook::constructEvent(
-                $payload,
-                $sigHeader,
-                config('services.stripe.webhook_secret'),
-            );
-        } catch (SignatureVerificationException $e) {
-            Log::warning('Stripe webhook signature failed', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Invalid signature'], 400);
-        }
-
-        // Idempotency — skip if already processed
-        $record = StripeEvent::firstOrCreate(
-            ['stripe_event_id' => $event->id],
-            [
-                'event_type'   => $event->type,
-                'livemode'     => (bool) ($event->livemode ?? false),
-                'payload_json' => json_decode($payload, true),
-            ],
-        );
-
-        if ($record->isProcessed()) {
-            Log::info('Stripe webhook already processed', ['event_id' => $event->id, 'type' => $event->type]);
-            return response()->json(['received' => true]);
-        }
-
-        try {
-            match ($event->type) {
-                'customer.subscription.created',
-                'customer.subscription.updated'  => $this->handleSubscriptionUpsert($event->data->object),
-                'customer.subscription.deleted'  => $this->handleSubscriptionDeleted($event->data->object),
-                'invoice.payment_succeeded'      => $this->handlePaymentSucceeded($event->data->object),
-                'invoice.payment_failed'         => $this->handlePaymentFailed($event->data->object),
-                'invoice.upcoming'               => Log::info('Stripe invoice.upcoming received', ['event_id' => $event->id]),
-                default                          => Log::info('Stripe webhook received (unhandled)', ['type' => $event->type, 'event_id' => $event->id]),
-            };
-
-            $record->update(['processed_at' => now()]);
-        } catch (\Throwable $e) {
-            $record->update(['error_message' => $e->getMessage()]);
-            Log::error('Stripe webhook handler failed', [
-                'event_id' => $event->id,
-                'type'     => $event->type,
-                'error'    => $e->getMessage(),
-            ]);
-        }
-
-        return response()->json(['received' => true]);
+        Log::warning('DEPRECATED: Stripe billing webhook received at legacy route', [
+            'route'      => '/api/v1/stripe/webhook',
+            'event_type' => json_decode($request->getContent(), true)['type'] ?? 'unknown',
+            'action'     => 'Update Stripe dashboard to use /api/webhooks/stripe',
+        ]);
+        return response('Deprecated endpoint — update Stripe dashboard', 200);
     }
 
     // -------------------------------------------------------------------------

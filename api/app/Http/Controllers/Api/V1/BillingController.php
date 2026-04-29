@@ -16,6 +16,7 @@ use App\Models\Workshop;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Stripe\BillingPortal\Session as StripeBillingSession;
 use Stripe\Checkout\Session as StripeCheckoutSession;
@@ -250,30 +251,14 @@ class BillingController extends Controller
     // This route is excluded from auth:sanctum and tenant.auth middleware.
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function webhook(Request $request): JsonResponse
+    public function webhook(Request $request): \Illuminate\Http\Response
     {
-        $payload = $request->getContent();
-        $sigHeader = $request->header('Stripe-Signature');
-
-        try {
-            $event = Webhook::constructEvent(
-                $payload,
-                $sigHeader,
-                config('services.stripe.webhook_secret'),
-            );
-        } catch (SignatureVerificationException) {
-            return response()->json(['error' => 'Invalid signature'], 400);
-        }
-
-        match ($event->type) {
-            'checkout.session.completed' => $this->handleCheckoutCompleted($event->data->object),
-            'customer.subscription.updated' => $this->handleSubscriptionUpdated($event->data->object),
-            'customer.subscription.deleted' => $this->handleSubscriptionDeleted($event->data->object),
-            'invoice.payment_failed' => $this->handlePaymentFailed($event->data->object),
-            default => null,
-        };
-
-        return response()->json(['received' => true]);
+        Log::warning('DEPRECATED: Stripe billing webhook received at legacy route', [
+            'route'      => '/api/v1/billing/webhook',
+            'event_type' => json_decode($request->getContent(), true)['type'] ?? 'unknown',
+            'action'     => 'Update Stripe dashboard to use /api/webhooks/stripe',
+        ]);
+        return response('Deprecated endpoint — update Stripe dashboard', 200);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

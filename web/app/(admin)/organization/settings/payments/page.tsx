@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { notFound, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   CheckCircle,
@@ -201,11 +201,7 @@ export default function OrganizationPaymentsPage() {
     loadStatus();
   }, [loadStatus]);
 
-  // Called synchronously during render — Next.js intercepts the thrown error
-  // and shows the nearest not-found page when payments are disabled for this org.
-  if (!loading && status && !status.payments_enabled_for_org) {
-    notFound();
-  }
+  const paymentsNotEnabled = !loading && status && !status.payments_enabled_for_org;
 
   // ── Action handlers ────────────────────────────────────────────────────────
 
@@ -282,6 +278,19 @@ export default function OrganizationPaymentsPage() {
       {/* ── Loading ── */}
       {loading && <LoadingSkeleton />}
 
+      {/* ── Payments not enabled for this org ── */}
+      {paymentsNotEnabled && (
+        <div className="max-w-lg rounded-2xl border border-border-gray bg-white p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <CreditCard className="text-gray-400" size={24} />
+          </div>
+          <p className="font-semibold text-gray-900 mb-1">Payments not available</p>
+          <p className="text-sm text-medium-gray">
+            Payments haven&apos;t been enabled for your organization yet. Contact Wayfield support to get started.
+          </p>
+        </div>
+      )}
+
       {/* ── No permission ── */}
       {!loading && forbidden && (
         <div className="max-w-lg rounded-2xl border border-border-gray bg-white p-8 text-center">
@@ -292,7 +301,7 @@ export default function OrganizationPaymentsPage() {
       )}
 
       {/* ── STATE 1: Not Connected ─────────────────────────────────────────── */}
-      {!loading && !forbidden && isNotConnected && (
+      {!loading && !forbidden && !paymentsNotEnabled && isNotConnected && (
         <div className="max-w-lg">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 mb-6">
             <div className="flex items-center gap-4 mb-4">
@@ -365,7 +374,7 @@ export default function OrganizationPaymentsPage() {
       )}
 
       {/* ── STATE 2: Onboarding Incomplete ────────────────────────────────── */}
-      {!loading && !forbidden && isIncomplete && (
+      {!loading && !forbidden && !paymentsNotEnabled && isIncomplete && (
         <div className="max-w-lg">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 mb-4">
             <div className="flex items-center gap-3 mb-4">
@@ -429,7 +438,7 @@ export default function OrganizationPaymentsPage() {
       )}
 
       {/* ── STATE 3: Connected & Active ───────────────────────────────────── */}
-      {!loading && !forbidden && isActive && (
+      {!loading && !forbidden && !paymentsNotEnabled && isActive && (
         <div className="max-w-lg space-y-4">
           {/* Status card */}
           <div className="rounded-2xl border border-green-200 bg-green-50 p-5">

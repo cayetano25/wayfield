@@ -502,18 +502,20 @@ export default function WorkshopOrdersPage() {
   const [denyTarget, setDenyTarget] = useState<RefundRequest | null>(null);
   const [creditTarget, setCreditTarget] = useState<RefundRequest | null>(null);
 
+  useEffect(() => {
+    apiGet<Workshop>(`/workshops/${id}`)
+      .then((ws) => setWorkshop(ws as Workshop))
+      .catch(() => {});
+  }, [id]);
+
   const load = useCallback(async () => {
     if (!currentOrg) return;
     setLoading(true);
     try {
-      const [ws, res] = await Promise.all([
-        workshop ? Promise.resolve(workshop) : apiGet<Workshop>(`/workshops/${id}`),
-        getOrgRefundRequests(currentOrg.id, {
-          status: statusFilter || undefined,
-          page,
-        }),
-      ]);
-      setWorkshop(ws as Workshop);
+      const res = await getOrgRefundRequests(currentOrg.id, {
+        status: statusFilter || undefined,
+        page,
+      });
       setRequests(res.data);
       setLastPage(res.meta.last_page);
     } catch {
@@ -521,7 +523,7 @@ export default function WorkshopOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrg, id, statusFilter, page, workshop]);
+  }, [currentOrg, statusFilter, page]);
 
   useEffect(() => { load(); }, [load]);
 

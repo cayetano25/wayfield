@@ -8,6 +8,7 @@ import {
   Building2,
   Users,
   CreditCard,
+  Wallet,
   BarChart3,
   HelpCircle,
   X,
@@ -29,6 +30,7 @@ const orgItems: NavItem[] = [
   { href: '/organization/settings', label: 'Settings', icon: Building2 },
   { href: '/organization/members', label: 'Members', icon: Users },
   { href: '/organization/billing', label: 'Billing', icon: CreditCard },
+  { href: '/organization/settings/payments', label: 'Payments', icon: Wallet },
 ];
 
 const bottomItems: NavItem[] = [
@@ -67,8 +69,10 @@ export function Sidebar({ onClose }: SidebarProps) {
   const role = currentOrg?.role ?? '';
   const canSeeBilling = BILLING_ROLES.includes(role);
 
+  const EXACT_MATCH_HREFS = new Set(['/dashboard', '/organization/settings']);
+
   function isActive(href: string): boolean {
-    if (href === '/dashboard') return pathname === '/dashboard';
+    if (EXACT_MATCH_HREFS.has(href)) return pathname === href;
     return pathname.startsWith(href);
   }
 

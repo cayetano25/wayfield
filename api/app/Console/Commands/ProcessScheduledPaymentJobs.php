@@ -16,6 +16,7 @@ use App\Jobs\SendDisputeEvidenceReminderJob;
 use App\Jobs\SendOnboardingIncompleteReminderJob;
 use App\Jobs\SendPreSessionJoinLinkJob;
 use App\Jobs\SendPreWorkshopReminderJob;
+use App\Jobs\SendPaymentRequiresActionReminderJob;
 use App\Jobs\SendWaitlistWindowReminderJob;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -181,6 +182,9 @@ class ProcessScheduledPaymentJobs extends Command
 
             'stripe_onboarding_incomplete_reminder'
                 => SendOnboardingIncompleteReminderJob::dispatch($entityId),
+
+            'payment_requires_action_reminder'
+                => SendPaymentRequiresActionReminderJob::dispatch($entityId),
 
             default => $this->warnUnimplemented($job),
         };

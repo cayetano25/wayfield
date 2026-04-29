@@ -14,7 +14,7 @@ export function Toggle({ checked, onChange, label, disabled = false }: TogglePro
         <input
           type="checkbox"
           className="sr-only"
-          checked={checked}
+          checked={checked ?? false}
           onChange={(e) => onChange(e.target.checked)}
           disabled={disabled}
         />

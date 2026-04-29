@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertTriangle, Lock } from 'lucide-react';
 import { Toggle } from '@/components/ui/Toggle';
 import { formatCents, calcFees } from '@/lib/utils/currency';
@@ -35,7 +36,9 @@ export function DepositConfig({
   takeRate,
   depositAmountError,
 }: DepositConfigProps) {
-  const depositDollars = depositAmountCents > 0 ? (depositAmountCents / 100).toFixed(2) : '';
+  const [depositInput, setDepositInput] = useState(
+    depositAmountCents > 0 ? (depositAmountCents / 100).toFixed(2) : '',
+  );
 
   const depositExceedsBase = depositAmountCents >= basePriceCents && basePriceCents > 0;
 
@@ -96,16 +99,22 @@ export function DepositConfig({
           <div className="relative flex items-center mb-1">
             <span className="absolute left-4 text-gray-400 select-none">$</span>
             <input
-              type="number"
-              min="1"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900
                 focus:border-[#0FA3B1] focus:ring-1 focus:ring-[#0FA3B1] bg-white"
               placeholder="0.00"
-              value={depositDollars}
+              value={depositInput}
               onChange={(e) => {
-                const raw = parseFloat(e.target.value);
-                onDepositAmountChange(isNaN(raw) ? 0 : Math.round(raw * 100));
+                const raw = e.target.value;
+                if (!/^[0-9]*\.?[0-9]*$/.test(raw)) return;
+                setDepositInput(raw);
+                const parsed = parseFloat(raw);
+                onDepositAmountChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
+              }}
+              onBlur={() => {
+                const cents = depositAmountCents;
+                if (cents > 0) setDepositInput((cents / 100).toFixed(2));
               }}
             />
           </div>

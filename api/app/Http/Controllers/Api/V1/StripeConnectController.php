@@ -164,8 +164,7 @@ class StripeConnectController extends Controller
 
     private function buildReturnUrl(Organization $organization): string
     {
-        return config('app.frontend_url')
-            .'/admin/organizations/'.$organization->id.'/settings/payments?stripe_return=1';
+        return config('app.frontend_url').'/organization/settings/payments?stripe_return=1';
     }
 
     private function buildRefreshUrl(Organization $organization): string
