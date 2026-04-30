@@ -41,6 +41,10 @@ class PublicWorkshopResource extends JsonResource
             'public_page_is_indexable' => (bool) $this->public_page_is_indexable,
             'canonical_url' => $this->resolveCanonicalUrl(),
 
+            'seo_title'       => $this->seo_title,
+            'seo_description' => $this->seo_description,
+            'seo_image_url'   => $this->seo_image_url ?? $this->header_image_url,
+
             // Social metadata for OG / Twitter Card tags.
             // Falls back through the summary chain when dedicated fields are absent.
             'social_share_title' => $this->social_share_title ?? $this->title,
@@ -78,6 +82,13 @@ class PublicWorkshopResource extends JsonResource
             'leaders' => $this->whenLoaded(
                 'confirmedLeaders',
                 fn () => PublicLeaderResource::collection($this->confirmedLeaders)
+            ),
+
+            'categories' => $this->whenLoaded('categories', fn () =>
+                $this->categories->map(fn ($c) => [
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                ])->values()->all()
             ),
 
             // Taxonomy: category, subcategory, specialization, and cross-cutting tags.

@@ -86,6 +86,7 @@ test('public leader resource never exposes private fields', function () {
         'first_name',
         'last_name',
         'display_name',
+        'slug',              // safe: public URL identifier, no PII
         'profile_image_url',
         'bio',
         'website_url',

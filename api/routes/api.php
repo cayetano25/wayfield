@@ -58,8 +58,12 @@ use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\PublicCategoryController;
 use App\Http\Controllers\Api\V1\PublicDiscoverController;
+use App\Http\Controllers\Api\V1\PublicLeaderController;
+use App\Http\Controllers\Api\V1\PublicOrganizerController;
 use App\Http\Controllers\Api\V1\PublicWorkshopController;
+use App\Http\Controllers\Api\V1\SitemapController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\V1\ReportingController;
@@ -109,8 +113,25 @@ Route::prefix('v1')->group(function () {
 
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
+        // Workshop listing (taxonomy-aware discovery) and detail
         Route::get('workshops', [PublicWorkshopDiscoveryController::class, 'index']);
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
+
+        // Categories
+        Route::get('categories', [PublicCategoryController::class, 'index']);
+        Route::get('categories/{categorySlug}', [PublicCategoryController::class, 'show']);
+        Route::get('categories/{categorySlug}/locations/{locationSlug}', [PublicCategoryController::class, 'byLocation']);
+
+        // Leaders and organizers
+        Route::get('leaders/{slug}', [PublicLeaderController::class, 'show']);
+        Route::get('organizers/{slug}', [PublicOrganizerController::class, 'show']);
+
+        // Sitemaps
+        Route::get('sitemap/workshops', [SitemapController::class, 'workshops']);
+        Route::get('sitemap/categories', [SitemapController::class, 'categories']);
+        Route::get('sitemap/leaders', [SitemapController::class, 'leaders']);
+
+        // Legacy discovery route kept for backwards compatibility
         Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
 
