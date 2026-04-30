@@ -251,7 +251,7 @@ export function DiscoverClient() {
       }
     }
     if (resetPage) p.delete('page');
-    router.push(`/discover?${p.toString()}`);
+    router.push(`/workshops?${p.toString()}`);
   }
 
   // --- Tag toggle (used by slide-out FilterSidebar) -------------------------
@@ -281,7 +281,7 @@ export function DiscoverClient() {
     if (query) p.set('q', query);
     else p.delete('q');
     p.delete('page');
-    router.push(`/discover?${p.toString()}`);
+    router.push(`/workshops?${p.toString()}`);
   }
 
   // --- Clear all (sidebar + URL) -------------------------------------------
@@ -295,14 +295,14 @@ export function DiscoverClient() {
     setLocationQuery('');
     setPriceMin(0);
     setPriceMax(2500);
-    router.push('/discover');
+    router.push('/workshops');
   }
 
   // --- Pagination -----------------------------------------------------------
   function handlePageChange(newPage: number) {
     const p = new URLSearchParams(searchParams.toString());
     p.set('page', String(newPage));
-    router.push(`/discover?${p.toString()}`);
+    router.push(`/workshops?${p.toString()}`);
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -402,7 +402,7 @@ export function DiscoverClient() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => router.push(`/discover?${searchParams.toString()}`)}
+                  onClick={() => router.push(`/workshops?${searchParams.toString()}`)}
                   className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-[#0FA3B1] text-white text-sm font-semibold hover:bg-[#0c8a96] transition-colors"
                 >
                   Retry

@@ -22,7 +22,7 @@ export function CategoryFilter({ activeCategory, currentParams }: CategoryFilter
     // Reset to page 1 when changing category
     params.delete('page');
     const qs = params.toString();
-    router.push(`/discover${qs ? `?${qs}` : ''}`);
+    router.push(`/workshops${qs ? `?${qs}` : ''}`);
   }
 
   return (

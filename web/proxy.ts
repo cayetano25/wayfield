@@ -3,7 +3,6 @@ import { getPostLoginRedirect, type UserWithContexts } from '@/lib/utils/routing
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
-  '/workshops',
   '/organization',
   '/reports',
   '/onboarding',
@@ -44,7 +43,7 @@ export function proxy(req: NextRequest) {
   // Exception: if the redirect destination is /verify-email, let the user through to
   // /login so they can sign out or use a different account rather than being stuck.
   if (isAuthRoute && hasToken) {
-    const destination = user ? getPostLoginRedirect(user) : '/discover';
+    const destination = user ? getPostLoginRedirect(user) : '/workshops';
     if (destination !== '/verify-email') {
       const url = req.nextUrl.clone();
       url.pathname = destination;
@@ -93,7 +92,6 @@ export function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/workshops/:path*',
     '/organization/:path*',
     '/reports/:path*',
     '/onboarding/:path*',
