@@ -31,7 +31,8 @@ const mockLeader = {
 describe('buildWorkshopsListingMetadata', () => {
   it('returns correct title', () => {
     const meta = buildWorkshopsListingMetadata();
-    expect(meta.title).toBe('Photography Workshops | Wayfield');
+    // Updated: no longer "Photography Workshops" — that's for category pages
+    expect(meta.title).toBe('Workshops | Wayfield');
   });
 
   it('returns canonical URL for first page', () => {
@@ -42,6 +43,23 @@ describe('buildWorkshopsListingMetadata', () => {
   it('returns paginated canonical URL for subsequent pages', () => {
     const meta = buildWorkshopsListingMetadata(2);
     expect((meta.alternates as any)?.canonical).toBe('https://wayfield.app/workshops?page=2');
+  });
+
+  it('returns category title when categoryName is provided', () => {
+    const meta = buildWorkshopsListingMetadata(undefined, 'Photography', 'photography');
+    expect(meta.title).toBe('Photography Workshops | Wayfield');
+  });
+
+  it('sets canonical to category page when category is active', () => {
+    const meta = buildWorkshopsListingMetadata(undefined, 'Photography', 'photography');
+    expect((meta.alternates as any)?.canonical).toBe(
+      'https://wayfield.app/workshops/photography'
+    );
+  });
+
+  it('sets canonical to /workshops when no category is active', () => {
+    const meta = buildWorkshopsListingMetadata();
+    expect((meta.alternates as any)?.canonical).toBe('https://wayfield.app/workshops');
   });
 });
 
