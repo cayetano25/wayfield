@@ -1,6 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
@@ -137,10 +138,12 @@ function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
     <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col gap-3 shadow-sm">
       <div className="flex items-center gap-3">
         {leader.profile_image_url ? (
-          <img
+          <Image
             src={leader.profile_image_url}
-            alt={`${leader.first_name} ${leader.last_name}`}
-            className="w-12 h-12 rounded-full object-cover border border-border-gray"
+            alt={`${leader.first_name} ${leader.last_name}, Workshop Leader`}
+            width={48}
+            height={48}
+            className="rounded-full object-cover border border-border-gray"
           />
         ) : (
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
@@ -457,10 +460,13 @@ export default async function PublicWorkshopPage(
       {/* Hero */}
       <div className="relative overflow-hidden" style={{ minHeight: '420px' }}>
         {workshop.hero_image_url ? (
-          <img
+          <Image
             src={workshop.hero_image_url}
-            alt={workshop.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            alt={`${workshop.title} workshop`}
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
           />
         ) : null}
         <div

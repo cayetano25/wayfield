@@ -212,12 +212,13 @@ export function DiscoverHero({ featuredWorkshop = null, onSearch }: Props) {
                         {/* Instructor avatar stack */}
                         <div className="flex -space-x-2">
                           {featuredWorkshop.instructorAvatars.slice(0, 3).map((avatar, i) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               key={i}
                               src={avatar}
                               alt=""
-                              className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                              width={28}
+                              height={28}
+                              className="rounded-full border-2 border-white object-cover"
                             />
                           ))}
                           {featuredWorkshop.totalInstructors > 3 && (

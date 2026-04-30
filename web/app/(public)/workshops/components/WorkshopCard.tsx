@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Monitor, Layers, Users, Calendar } from 'lucide-react';
 import type { DiscoverWorkshop, DiscoverWorkshopTag } from '@/lib/api/public';
@@ -97,10 +98,12 @@ export function WorkshopCard({ workshop }: WorkshopCardProps) {
       {/* Image */}
       <div className="relative h-44 overflow-hidden shrink-0">
         {workshop.hero_image_url ? (
-          <img
+          <Image
             src={workshop.hero_image_url}
-            alt={workshop.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            alt={`${workshop.title} workshop`}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
         ) : (
           <div

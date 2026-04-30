@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import type { SessionLeader } from '@/lib/types/leader';
 
 interface LeaderAvatarProps {
@@ -10,14 +11,14 @@ interface LeaderAvatarProps {
 }
 
 const sizeClasses = {
-  sm: { box: 'w-8 h-8',   text: 'text-[12px]' },
-  md: { box: 'w-14 h-14', text: 'text-[18px]' },
-  lg: { box: 'w-20 h-20', text: 'text-[24px]' },
+  sm: { box: 'w-8 h-8',   text: 'text-[12px]', px: 32  },
+  md: { box: 'w-14 h-14', text: 'text-[18px]', px: 56  },
+  lg: { box: 'w-20 h-20', text: 'text-[24px]', px: 80  },
 } as const;
 
 export function LeaderAvatar({ leader, size = 'md', className = '' }: LeaderAvatarProps) {
   const [imgFailed, setImgFailed] = useState(false);
-  const { box, text } = sizeClasses[size];
+  const { box, text, px } = sizeClasses[size];
 
   const initials = `${leader.first_name[0] ?? ''}${leader.last_name[0] ?? ''}`.toUpperCase();
   const base = `${box} rounded-full overflow-hidden shrink-0 ${className}`;
@@ -25,9 +26,11 @@ export function LeaderAvatar({ leader, size = 'md', className = '' }: LeaderAvat
   if (leader.profile_image_url && !imgFailed) {
     return (
       <div className={base}>
-        <img
+        <Image
           src={leader.profile_image_url}
-          alt={`${leader.first_name} ${leader.last_name}`}
+          alt={`${leader.first_name} ${leader.last_name}, Workshop Leader`}
+          width={px}
+          height={px}
           className="w-full h-full object-cover"
           onError={() => setImgFailed(true)}
         />

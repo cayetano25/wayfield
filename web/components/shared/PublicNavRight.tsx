@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, Backpack, LogOut } from 'lucide-react';
@@ -13,10 +14,12 @@ function UserAvatar({ user }: { user: AdminUser }) {
   const initials = `${user.first_name[0] ?? ''}${user.last_name[0] ?? ''}`.toUpperCase();
   if (user.profile_image_url) {
     return (
-      <img
+      <Image
         src={user.profile_image_url}
         alt={`${user.first_name} ${user.last_name}`}
-        className="w-8 h-8 rounded-full object-cover shrink-0"
+        width={32}
+        height={32}
+        className="rounded-full object-cover shrink-0"
       />
     );
   }
@@ -47,7 +50,7 @@ function UserMenuDropdown({
     >
       <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
         {user.profile_image_url ? (
-          <img src={user.profile_image_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+          <Image src={user.profile_image_url} alt="" width={36} height={36} className="rounded-full object-cover shrink-0" />
         ) : (
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
             style={{ background: 'linear-gradient(135deg, #0FA3B1 0%, #0074A6 100%)' }}>
