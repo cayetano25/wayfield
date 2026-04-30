@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { Button } from '@/components/ui/Button';
@@ -83,6 +83,8 @@ interface WorkshopFormProps {
   /** When provided, shows the header image uploader (edit mode only). */
   workshopId?: number;
   initialHeaderImageUrl?: string | null;
+  /** When provided, shows the read-only workshop URL (edit mode only). */
+  publicSlug?: string | null;
 }
 
 const TYPE_OPTIONS: { value: 'session_based' | 'event_based'; label: string; description: string }[] = [
@@ -107,6 +109,7 @@ export function WorkshopForm({
   onCancel,
   workshopId,
   initialHeaderImageUrl = null,
+  publicSlug = null,
 }: WorkshopFormProps) {
   const { categories, tagGroups, isLoading: taxonomyLoading } = useTaxonomy();
 
@@ -128,6 +131,7 @@ export function WorkshopForm({
   });
   const [locationExpanded, setLocationExpanded] = useState(false);
   const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(initialHeaderImageUrl);
+  const [copied, setCopied] = useState(false);
 
   function set(field: keyof WorkshopFormValues, value: string | boolean) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -387,7 +391,7 @@ export function WorkshopForm({
 
       {/* Public page */}
       <div className="bg-white rounded-xl border border-border-gray shadow-[0px_12px_32px_rgba(46,46,46,0.06)]">
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 space-y-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="font-heading text-base font-semibold text-dark">Public Workshop Page</h2>
@@ -400,6 +404,35 @@ export function WorkshopForm({
               onChange={(checked) => set('public_page_enabled', checked)}
             />
           </div>
+          {publicSlug && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Workshop URL
+              </label>
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500">
+                <span className="text-gray-400 select-none">
+                  {typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? ''}/w/
+                </span>
+                <span className="font-mono text-gray-700 font-medium">{publicSlug}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? '';
+                    navigator.clipboard.writeText(`${base}/w/${publicSlug}`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Copy workshop URL"
+                >
+                  {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                This URL is permanent and cannot be changed after the workshop is created.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

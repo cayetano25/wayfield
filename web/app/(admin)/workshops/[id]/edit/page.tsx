@@ -23,6 +23,7 @@ interface WorkshopDetail {
   end_date: string;
   timezone: string;
   public_page_enabled: boolean;
+  public_slug: string | null;
   header_image_url: string | null;
   taxonomy?: WorkshopTaxonomyDetail | null;
 }
@@ -125,6 +126,7 @@ export default function EditWorkshopPage() {
           tag_ids: workshop.taxonomy?.tags?.map((t) => t.id) ?? [],
         }}
         workshopId={workshop.id}
+        publicSlug={workshop.public_slug}
         initialHeaderImageUrl={workshop.header_image_url}
         errors={errors}
         submitting={submitting}
