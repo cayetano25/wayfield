@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Domain\Payments\Models\Order;
 use App\Domain\Payments\Services\PriceResolutionService;
+use App\Models\WorkshopFavorite;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -103,6 +105,14 @@ class PublicWorkshopResource extends JsonResource
 
             // Pricing display — safe for public consumption (no internal tier IDs).
             'pricing' => app(PriceResolutionService::class)->buildPublicPricingDisplay($this->resource),
+
+            'is_favorited' => auth()->check()
+                ? WorkshopFavorite::where('user_id', auth()->id())
+                      ->where('workshop_id', $this->id)
+                      ->exists()
+                : false,
+
+            'participant_status' => $this->resolveParticipantStatus(),
         ];
     }
 
@@ -134,6 +144,36 @@ class PublicWorkshopResource extends JsonResource
                 'value'       => $tag->value,
                 'label'       => $tag->label,
             ])->values()->all(),
+        ];
+    }
+
+    private function resolveParticipantStatus(): ?array
+    {
+        if (! auth()->check()) {
+            return null;
+        }
+
+        $registration = $this->registrations()
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $registration) {
+            return null;
+        }
+
+        $order = Order::where('user_id', auth()->id())
+            ->whereHas('items', fn ($q) => $q->where('workshop_id', $this->id))
+            ->whereIn('status', ['completed', 'partially_refunded'])
+            ->orderByDesc('completed_at')
+            ->first();
+
+        return [
+            'registration_status' => $registration->registration_status,
+            'payment_status'      => $order?->getPaymentStatusLabel() ?? 'free',
+            'is_paid'             => $order !== null,
+            'order_number'        => $order?->order_number,
+            'is_deposit_only'     => $order?->isDepositOnly() ?? false,
+            'balance_due_date'    => $order?->balance_due_date?->toDateString(),
         ];
     }
 

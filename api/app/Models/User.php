@@ -146,6 +146,16 @@ class User extends Authenticatable
         return $this->hasMany(WaitlistPromotionPayment::class);
     }
 
+    public function favoriteWorkshops(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Workshop::class,
+            'workshop_favorites',
+            'user_id',
+            'workshop_id'
+        )->withTimestamps(false);
+    }
+
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;
