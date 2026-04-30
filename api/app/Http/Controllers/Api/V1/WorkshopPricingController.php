@@ -31,10 +31,10 @@ class WorkshopPricingController extends Controller
         $pricing = WorkshopPricing::where('workshop_id', $workshop->id)->first();
 
         if ($pricing === null) {
-            return response()->json(['message' => 'No pricing configured for this workshop.'], 404);
+            return response()->json(['data' => null]);
         }
 
-        return response()->json(new WorkshopPricingResource($pricing));
+        return response()->json(['data' => new WorkshopPricingResource($pricing)]);
     }
 
     /**
@@ -59,7 +59,7 @@ class WorkshopPricingController extends Controller
             ['workshop_id' => $workshop->id],
         ));
 
-        return response()->json(new WorkshopPricingResource($pricing), 201);
+        return response()->json(['data' => new WorkshopPricingResource($pricing)], 201);
     }
 
     /**
@@ -81,7 +81,7 @@ class WorkshopPricingController extends Controller
 
         $pricing->update($request->validated());
 
-        return response()->json(new WorkshopPricingResource($pricing->fresh()));
+        return response()->json(['data' => new WorkshopPricingResource($pricing->fresh())]);
     }
 
     /**

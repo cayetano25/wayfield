@@ -247,7 +247,7 @@ test('checkout:tier order item applied_tier_label is present in order show respo
     $result = app(CheckoutService::class)->checkout($cart, $user);
 
     $this->actingAs($user)
-        ->getJson("/api/v1/orders/{$result->order->id}")
+        ->getJson("/api/v1/orders/{$result->order->order_number}")
         ->assertOk()
         ->assertJsonFragment(['applied_tier_label' => 'Early Bird']);
 });
