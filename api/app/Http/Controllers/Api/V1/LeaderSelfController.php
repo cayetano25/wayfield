@@ -59,6 +59,8 @@ class LeaderSelfController extends Controller
                 'id'                => $leader->id,
                 'bio'               => $leader->bio,
                 'website_url'       => $leader->website_url,
+                'social_instagram'  => $leader->social_instagram,
+                'social_twitter'    => $leader->social_twitter,
                 'phone_number'      => $leader->phone_number,
                 'address_line_1'    => $leader->address_line_1,
                 'address_line_2'    => $leader->address_line_2,

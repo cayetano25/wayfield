@@ -24,7 +24,9 @@ class UpdateLeaderProfileRequest extends FormRequest
             'city'           => ['nullable', 'string', 'max:100'],
             'state_or_region' => ['nullable', 'string', 'max:100'],
             'postal_code'    => ['nullable', 'string', 'max:30'],
-            'country'        => ['nullable', 'string', 'max:100'],
+            'country'        => ['nullable', 'string', 'max:2'],
+            'social_instagram' => ['nullable', 'string', 'max:100'],
+            'social_twitter'   => ['nullable', 'string', 'max:100'],
             // Structured address (Phase 16)
             'address'                    => ['sometimes', 'nullable', 'array'],
             'address.country_code'       => ['required_with:address', 'size:2'],

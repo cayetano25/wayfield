@@ -24,6 +24,8 @@ class Leader extends Model
         'bio',
         'profile_image_url',
         'website_url',
+        'social_instagram',
+        'social_twitter',
         'email',
         'phone_number',
         'address_line_1',

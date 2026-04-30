@@ -26,6 +26,8 @@ class UpdateLeaderProfileAction
             'bio',
             'profile_image_url',
             'website_url',
+            'social_instagram',
+            'social_twitter',
             'phone_number',
             'city',
             'state_or_region',

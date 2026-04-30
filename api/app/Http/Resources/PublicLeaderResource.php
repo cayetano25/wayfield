@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\AddressFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,8 +30,14 @@ class PublicLeaderResource extends JsonResource
             'profile_image_url' => $this->profile_image_url,
             'bio'               => $this->bio,
             'website_url'       => $this->website_url,
-            'city'              => $this->city,
-            'state_or_region'   => $this->state_or_region,
+            'city'               => $this->city,
+            'state_or_region'    => $this->state_or_region,
+            'formatted_location' => AddressFormatter::formatCityRegion(
+                $this->city,
+                $this->state_or_region,
+                $this->country
+            ),
+            'country_name'       => AddressFormatter::countryName($this->country),
             // Confirmed, publicly visible workshops only — no private workshop data.
             'confirmed_workshops' => $this->when(
                 $this->relationLoaded('workshopLeaders'),
