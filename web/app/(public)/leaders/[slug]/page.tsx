@@ -16,7 +16,9 @@ export const dynamicParams = true;
 export async function generateStaticParams() {
   try {
     const leaders = await getSitemapLeaders();
-    return leaders.map((l) => ({ slug: l.slug }));
+    return leaders
+      .map((l) => ({ slug: l.slug }))
+      .filter((p): p is { slug: string } => typeof p.slug === 'string');
   } catch {
     return [];
   }

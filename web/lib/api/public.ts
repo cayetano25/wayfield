@@ -325,7 +325,7 @@ export interface PaginatedResponse<T> {
 }
 
 export interface SitemapWorkshop {
-  slug: string;
+  public_slug: string;
   updated_at: string;
   priority: number;
 }

@@ -18,8 +18,11 @@ export const dynamicParams = true;
 export async function generateStaticParams() {
   try {
     const workshops = await getSitemapWorkshops();
-    // Param name is `id` — routes are /workshops/[id] where id holds the slug value
-    return workshops.map((w) => ({ id: w.slug }));
+    // The backend returns the slug as `public_slug`; `slug` is the sitemap alias.
+    // Filter out any undefined entries — dynamicParams=true handles them on-demand.
+    return workshops
+      .map((w) => ({ id: w.public_slug }))
+      .filter((p): p is { id: string } => typeof p.id === 'string');
   } catch {
     // If backend is unavailable at build time, fall back to empty.
     // dynamicParams = true means pages still render on first request.
