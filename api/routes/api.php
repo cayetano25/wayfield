@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\CartController;
+use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\OrderHistoryController;
+use App\Http\Controllers\Api\V1\ReceiptController;
 use App\Http\Controllers\Api\V1\PublicWorkshopDiscoveryController;
 use App\Http\Controllers\Api\V1\TaxonomyController;
 use App\Http\Controllers\Api\V1\ApiKeyController;
@@ -16,6 +19,7 @@ use App\Http\Controllers\Api\V1\SessionPricingController;
 use App\Http\Controllers\Api\V1\StripeConnectController;
 use App\Http\Controllers\Api\V1\SesWebhookController;
 use App\Http\Controllers\Api\V1\WaitlistPaymentController;
+use App\Http\Controllers\Api\V1\WorkshopPriceTierController;
 use App\Http\Controllers\Api\V1\WorkshopPricingController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
@@ -109,6 +113,9 @@ Route::prefix('v1')->group(function () {
         Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
         Route::get('discover', [PublicDiscoverController::class, 'index']);
     });
+
+    // Price tiers current — public-eligible; auth is optional for organizer enrichment.
+    Route::get('workshops/{workshop}/price-tiers/current', [WorkshopPriceTierController::class, 'current']);
 
     // ─── Plans (public — no auth required) ───────────────────────────────────
     Route::get('plans', [PlansController::class, 'index']);
@@ -369,6 +376,13 @@ Route::prefix('v1')->group(function () {
         Route::get('me/notification-preferences', [NotificationPreferenceController::class, 'show']);
         Route::put('me/notification-preferences', [NotificationPreferenceController::class, 'update']);
 
+        // ─── Participant order history (Step 2) ───────────────────────────────
+        Route::get('me/orders', [OrderHistoryController::class, 'orders']);
+        Route::post('me/orders/{orderNumber}/resend-receipt', [OrderHistoryController::class, 'resendReceipt']);
+        Route::get('me/orders/{orderNumber}/receipt', [ReceiptController::class, 'download'])
+            ->name('api.me.orders.receipt');
+        Route::get('me/orders/{orderNumber}', [OrderHistoryController::class, 'show']);
+
         // ─── Offline Sync (Phase 7) ───────────────────────────────────────────
         Route::get('workshops/{workshop}/sync-version', [OfflineSyncController::class, 'syncVersion']);
         Route::get('workshops/{workshop}/sync-package', [OfflineSyncController::class, 'syncPackage']);
@@ -429,6 +443,13 @@ Route::prefix('v1')->group(function () {
         Route::put('workshops/{workshop}/pricing', [WorkshopPricingController::class, 'update']);
         Route::get('workshops/{workshop}/pricing/preview', [WorkshopPricingController::class, 'preview']);
 
+        // ─── Price Tiers ─────────────────────────────────────────────────────
+        Route::get('workshops/{workshop}/price-tiers', [WorkshopPriceTierController::class, 'index']);
+        Route::post('workshops/{workshop}/price-tiers', [WorkshopPriceTierController::class, 'store']);
+        Route::patch('workshops/{workshop}/price-tiers/{tier}', [WorkshopPriceTierController::class, 'update']);
+        Route::delete('workshops/{workshop}/price-tiers/{tier}', [WorkshopPriceTierController::class, 'destroy']);
+        Route::put('workshops/{workshop}/price-tiers/order', [WorkshopPriceTierController::class, 'reorder']);
+
         Route::get('sessions/{session}/pricing', [SessionPricingController::class, 'show']);
         Route::post('sessions/{session}/pricing', [SessionPricingController::class, 'store']);
         Route::put('sessions/{session}/pricing', [SessionPricingController::class, 'update']);
@@ -447,6 +468,27 @@ Route::prefix('v1')->group(function () {
         Route::post('cart/{organization}/items', [CartController::class, 'addItem']);
         Route::delete('cart/{organization}/items/{cartItem}', [CartController::class, 'removeItem']);
         Route::post('cart/{organization}/checkout', [CartController::class, 'checkout']);
+
+        // ─── Cart coupon (participant apply / remove) ─────────────────────────
+        Route::middleware('payments.enabled')->group(function () {
+            Route::post('cart/{organization}/coupon', [CartController::class, 'applyCoupon']);
+            Route::delete('cart/{organization}/coupon', [CartController::class, 'removeCoupon']);
+        });
+
+        // ─── Coupons — organizer management ──────────────────────────────────
+        Route::middleware('payments.enabled')->group(function () {
+            Route::get('organizations/{organization}/coupons/analytics', [CouponController::class, 'analytics']);
+            Route::post('organizations/{organization}/coupons/bulk-generate', [CouponController::class, 'bulkGenerate']);
+            Route::get('organizations/{organization}/coupons/export', [CouponController::class, 'export']);
+            Route::get('organizations/{organization}/coupons', [CouponController::class, 'index']);
+            Route::post('organizations/{organization}/coupons', [CouponController::class, 'store']);
+            Route::get('organizations/{organization}/coupons/{coupon}', [CouponController::class, 'show']);
+            Route::patch('organizations/{organization}/coupons/{coupon}', [CouponController::class, 'update']);
+            Route::delete('organizations/{organization}/coupons/{coupon}', [CouponController::class, 'destroy']);
+            Route::get('organizations/{organization}/coupons/{coupon}/redemptions', [CouponController::class, 'redemptions']);
+            Route::get('workshops/{workshop}/coupons', [CouponController::class, 'indexForWorkshop']);
+            Route::get('workshops/{workshop}/coupon-redemptions', [CouponController::class, 'workshopRedemptions']);
+        });
 
         // ─── Waitlist payment window (Step 7A) ───────────────────────────────
         Route::get('workshops/{workshop:public_slug}/waitlist-payment-intent', [WaitlistPaymentController::class, 'show']);

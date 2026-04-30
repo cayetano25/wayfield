@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   AlertTriangle,
+  CheckCircle,
   ChevronDown,
   ChevronUp,
   Lock,
   Loader2,
-  CheckCircle,
+  Tag,
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -18,10 +19,17 @@ import {
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js';
-import { getCart, checkoutCart, type Cart, type CheckoutResult } from '@/lib/api/cart';
+import {
+  getCart,
+  checkoutCart,
+  type Cart,
+  type CartCouponData,
+  type CheckoutResult,
+} from '@/lib/api/cart';
 import { apiGet } from '@/lib/api/client';
 import { useCart } from '@/contexts/CartContext';
 import { formatCents } from '@/lib/utils/currency';
+import { CouponInput } from '@/components/checkout/CouponInput';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +46,21 @@ interface WorkshopPricing {
   balance_due_date: string | null;
 }
 
+type CheckoutStage = 'summary' | 'initiating' | 'payment_form';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const CART_ORG_KEY = 'wayfield_cart_org';
+
+function getPersistedCartOrg(): { id: number; slug: string } | null {
+  try {
+    const raw = localStorage.getItem(CART_ORG_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { id: number; slug: string };
+  } catch {
+    return null;
+  }
+}
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
@@ -49,7 +71,7 @@ function formatDate(dateStr: string | null | undefined): string {
   });
 }
 
-// ─── Order Summary (shared between free + paid layouts) ───────────────────────
+// ─── Order Summary ────────────────────────────────────────────────────────────
 
 function OrderSummarySection({
   cart,
@@ -63,7 +85,7 @@ function OrderSummarySection({
   const [refundOpen, setRefundOpen] = useState(false);
   const fees = cart.fee_breakdown;
   const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = cart.subtotal_cents + totalFees;
+  const total = cart.discounted_total_cents + totalFees;
 
   return (
     <div>
@@ -109,6 +131,11 @@ function OrderSummarySection({
                   ? 'Add-on session'
                   : 'Workshop registration'}
               </p>
+              {item.is_tier_price && item.applied_tier_label && (
+                <p style={{ fontSize: 13, color: '#0FA3B1', margin: '4px 0 0', fontWeight: 500 }}>
+                  {item.applied_tier_label} price
+                </p>
+              )}
               {item.is_deposit && item.balance_amount_cents != null && (
                 <p
                   style={{
@@ -157,6 +184,24 @@ function OrderSummarySection({
             <span>Subtotal</span>
             <span>{formatCents(cart.subtotal_cents)}</span>
           </div>
+          {cart.discount_cents > 0 && cart.coupon && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                color: '#16A34A',
+                fontWeight: 500,
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Tag size={12} />
+                {cart.coupon.code}
+              </span>
+              <span>— {formatCents(cart.discount_cents)}</span>
+            </div>
+          )}
           {fees && (
             <div
               style={{
@@ -222,7 +267,7 @@ function OrderSummarySection({
         </div>
       )}
 
-      {/* Refund policy collapsed */}
+      {/* Refund policy */}
       <div style={{ marginTop: 16 }}>
         <button
           onClick={() => setRefundOpen((v) => !v)}
@@ -263,7 +308,7 @@ function OrderSummarySection({
   );
 }
 
-// ─── Stripe payment form ───────────────────────────────────────────────────────
+// ─── Stripe confirm form ───────────────────────────────────────────────────────
 
 function StripePaymentForm({
   total,
@@ -292,7 +337,6 @@ function StripePaymentForm({
     });
 
     if (error) {
-      // Stripe provides user-friendly, specific error messages
       setErrorMessage(error.message ?? 'Payment failed. Please try again.');
       setIsProcessing(false);
       return;
@@ -302,20 +346,14 @@ function StripePaymentForm({
       onSuccess();
       router.push(`/orders/${orderNumber}?status=success`);
     } else {
-      // Stripe handles redirects automatically for 3DS etc.
       setIsProcessing(false);
     }
   };
 
   return (
     <div style={{ marginTop: 24 }}>
-      <PaymentElement
-        options={{
-          layout: 'tabs',
-        }}
-      />
+      <PaymentElement options={{ layout: 'tabs' }} />
 
-      {/* Inline error */}
       {errorMessage && (
         <p
           role="alert"
@@ -374,7 +412,7 @@ function StripePaymentForm({
             Processing…
           </>
         ) : (
-          <>Pay {total === 0 ? 'Free' : formatCents(total)}</>
+          <>Pay {formatCents(total)}</>
         )}
       </button>
 
@@ -397,140 +435,85 @@ function StripePaymentForm({
   );
 }
 
-// ─── Free checkout button ──────────────────────────────────────────────────────
-
-function FreeCheckoutButton({
-  organizationId,
-  onDone,
-}: {
-  organizationId: number;
-  onDone: (orderNumber: string) => void;
-}) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleComplete = async () => {
-    setIsProcessing(true);
-    setError(null);
-    try {
-      const result = await checkoutCart(organizationId);
-      if (!result.requires_payment) {
-        onDone(result.order_number);
-      }
-    } catch (e: unknown) {
-      setError('Something went wrong. Please try again.');
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <div style={{ marginTop: 24 }}>
-      {error && (
-        <p
-          role="alert"
-          style={{
-            fontSize: 14,
-            color: '#DC2626',
-            marginBottom: 12,
-            padding: '10px 14px',
-            backgroundColor: '#FEF2F2',
-            borderRadius: 8,
-            border: '1px solid #FECACA',
-          }}
-        >
-          {error}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={handleComplete}
-        disabled={isProcessing}
-        aria-busy={isProcessing}
-        style={{
-          width: '100%',
-          padding: '16px 0',
-          borderRadius: 12,
-          backgroundColor: isProcessing ? '#D1D5DB' : '#0FA3B1',
-          color: '#ffffff',
-          fontWeight: 700,
-          fontSize: 16,
-          border: 'none',
-          cursor: isProcessing ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          fontFamily: 'Plus Jakarta Sans, sans-serif',
-        }}
-      >
-        {isProcessing ? (
-          <>
-            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-            Completing…
-          </>
-        ) : (
-          <>
-            <CheckCircle size={18} />
-            Complete Registration
-          </>
-        )}
-      </button>
-      <p
-        style={{
-          textAlign: 'center',
-          fontSize: 12,
-          color: '#9CA3AF',
-          marginTop: 12,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 4,
-        }}
-      >
-        <Lock size={11} />
-        Secure checkout
-      </p>
-    </div>
-  );
-}
-
 // ─── Main checkout page ───────────────────────────────────────────────────────
 
 export default function CheckoutPage() {
   const params = useParams<{ organizationSlug: string }>();
   const organizationSlug = params.organizationSlug;
   const router = useRouter();
-  const { clearCart } = useCart();
+  const cartContext = useCart();
+  const { clearCart } = cartContext;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [org, setOrg] = useState<OrgInfo | null>(null);
   const [pricingData, setPricingData] = useState<WorkshopPricing | null>(null);
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResult | null>(null);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
+  const [checkoutStage, setCheckoutStage] = useState<CheckoutStage>('summary');
   const [isLoadingCart, setIsLoadingCart] = useState(true);
-  const [isInitiatingCheckout, setIsInitiatingCheckout] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  // client_secret lives only in React state — never in localStorage or sessionStorage
+  // client_secret lives only in React state — never persisted to storage
   const clientSecretRef = useRef<string | null>(null);
 
-  // Load cart and org info
+  // Load cart and org on mount.
+  // The cart endpoint returns organization_name/slug, so we resolve org info from the cart
+  // rather than a separate by-slug lookup (no such public endpoint exists).
   useEffect(() => {
     async function load() {
       setIsLoadingCart(true);
       try {
-        // Resolve org by slug
-        const orgData = await apiGet<OrgInfo>(`/organizations/by-slug/${organizationSlug}`);
-        setOrg(orgData);
+        // Resolve org ID. Priority:
+        //   1. CartContext (if already loaded — unlikely on first render due to async race)
+        //   2. localStorage (synchronously available; written when item is added to cart)
+        //   3. /me/organizations API (fallback for org members)
+        let orgId: number | null = null;
 
-        const cartData = await getCart(orgData.id);
+        const ctxOrgId = cartContext.cart?.organization_id ?? null;
+        const ctxOrgSlug = cartContext.cart?.organization_slug ?? null;
+        if (ctxOrgSlug === organizationSlug && ctxOrgId != null) {
+          orgId = ctxOrgId;
+        }
+
+        if (orgId == null) {
+          const persisted = getPersistedCartOrg();
+          if (persisted?.slug === organizationSlug) {
+            orgId = persisted.id;
+          }
+        }
+
+        if (orgId == null) {
+          try {
+            const orgs = await apiGet<Array<{ id: number; slug: string; name: string }>>('/me/organizations');
+            const match = orgs.find((o) => o.slug === organizationSlug);
+            if (match) orgId = match.id;
+          } catch {
+            // ignore — participant won't have org membership
+          }
+        }
+
+        if (orgId == null) {
+          setPageError('Could not load your cart. Please try again.');
+          return;
+        }
+
+        const cartData = await getCart(orgId);
         setCart(cartData);
+
+        if (cartData.organization_name && cartData.organization_slug) {
+          setOrg({
+            id: cartData.organization_id,
+            name: cartData.organization_name,
+            slug: cartData.organization_slug,
+          });
+        } else {
+          setOrg({ id: cartData.organization_id, name: 'Workshop', slug: organizationSlug });
+        }
 
         if (cartData.items.length === 0) {
           router.replace('/my-workshops');
           return;
         }
 
-        // Load pricing for commitment date info (first workshop item)
         const workshopItem = cartData.items.find((i) => i.item_type === 'workshop_registration');
         if (workshopItem?.workshop_id) {
           try {
@@ -549,50 +532,80 @@ export default function CheckoutPage() {
       }
     }
     load();
-  }, [organizationSlug, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationSlug]);
 
-  // Initiate checkout once cart is loaded
-  useEffect(() => {
-    if (!cart || !org || isInitiatingCheckout || checkoutResult) return;
-    if (cart.items.length === 0) return;
-
-    async function initiateCheckout() {
-      setIsInitiatingCheckout(true);
-      try {
-        const result = await checkoutCart(org!.id);
-        setCheckoutResult(result);
-
-        if (result.requires_payment) {
-          // Store client_secret only in memory — never persisted
-          clientSecretRef.current = result.client_secret;
-
-          // Initialize Stripe with the connected account
-          const stripe = loadStripe(result.stripe_publishable_key);
-          setStripePromise(stripe);
-        }
-      } catch (e: unknown) {
-        const msg =
-          e instanceof Error ? e.message : 'Could not initiate checkout. Please try again.';
-        setPageError(msg);
-      } finally {
-        setIsInitiatingCheckout(false);
+  // Coupon applied — optimistic cart update; if payment form was open, reset it
+  const handleCouponApplied = useCallback(
+    (coupon: CartCouponData) => {
+      setCart((prev) =>
+        prev
+          ? {
+              ...prev,
+              discount_cents: coupon.discount_cents,
+              discounted_total_cents: coupon.discounted_total_cents,
+              coupon,
+            }
+          : null,
+      );
+      if (checkoutStage === 'payment_form') {
+        setCheckoutResult(null);
+        setStripePromise(null);
+        clientSecretRef.current = null;
+        setCheckoutStage('summary');
       }
-    }
-    initiateCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart, org]);
-
-  const handleFreeSuccess = useCallback(
-    (orderNumber: string) => {
-      clearCart();
-      router.push(`/orders/${orderNumber}?status=success`);
     },
-    [clearCart, router],
+    [checkoutStage],
   );
+
+  // Coupon removed — optimistic cart reset; if payment form was open, reset it
+  const handleCouponRemoved = useCallback(() => {
+    setCart((prev) =>
+      prev
+        ? {
+            ...prev,
+            discount_cents: 0,
+            discounted_total_cents: prev.subtotal_cents,
+            coupon: null,
+          }
+        : null,
+    );
+    if (checkoutStage === 'payment_form') {
+      setCheckoutResult(null);
+      setStripePromise(null);
+      clientSecretRef.current = null;
+      setCheckoutStage('summary');
+    }
+  }, [checkoutStage]);
+
+  // Initiate checkout — called on "Pay" button click
+  const initiatePayment = useCallback(async () => {
+    if (!org || !cart) return;
+    setCheckoutStage('initiating');
+    setPageError(null);
+    try {
+      const result = await checkoutCart(org.id);
+      setCheckoutResult(result);
+
+      if (!result.requires_payment) {
+        clearCart();
+        router.push(`/orders/${result.order_number}?status=success`);
+        return;
+      }
+
+      clientSecretRef.current = result.client_secret;
+      setStripePromise(loadStripe(result.stripe_publishable_key));
+      setCheckoutStage('payment_form');
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : 'Could not initiate checkout. Please try again.';
+      setPageError(msg);
+      setCheckoutStage('summary');
+    }
+  }, [cart, clearCart, org, router]);
 
   const handlePaidSuccess = useCallback(() => {
     clearCart();
-    // router.push happens inside StripePaymentForm
   }, [clearCart]);
 
   // ── Loading ──
@@ -606,17 +619,13 @@ export default function CheckoutPage() {
           justifyContent: 'center',
         }}
       >
-        <Loader2
-          size={32}
-          color="#0FA3B1"
-          style={{ animation: 'spin 1s linear infinite' }}
-        />
+        <Loader2 size={32} color="#0FA3B1" style={{ animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
 
   // ── Error ──
-  if (pageError) {
+  if (pageError && !cart) {
     return (
       <div
         style={{
@@ -650,8 +659,8 @@ export default function CheckoutPage() {
 
   const fees = cart.fee_breakdown;
   const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = cart.subtotal_cents + totalFees;
-  const isFree = total === 0;
+  const total = cart.discounted_total_cents + totalFees;
+  const isFree = cart.discounted_total_cents === 0;
   const clientSecret = clientSecretRef.current;
 
   const stripeAppearance = {
@@ -665,13 +674,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: '0 auto',
-        padding: '32px 16px 64px',
-      }}
-    >
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 16px 64px' }}>
       <div
         style={{
           display: 'flex',
@@ -680,9 +683,17 @@ export default function CheckoutPage() {
           flexWrap: 'wrap',
         }}
       >
-        {/* ── Left column: summary + payment form ── */}
+        {/* ── Left column ── */}
         <div style={{ flex: 1, minWidth: 300 }}>
           <OrderSummarySection cart={cart} orgName={org.name} pricingData={pricingData} />
+
+          {/* Coupon input — always shown above the payment section */}
+          <CouponInput
+            organizationId={org.id}
+            appliedCoupon={cart.coupon ?? null}
+            onCouponApplied={handleCouponApplied}
+            onCouponRemoved={handleCouponRemoved}
+          />
 
           <div style={{ marginTop: 32 }}>
             <h2
@@ -694,16 +705,145 @@ export default function CheckoutPage() {
                 margin: '0 0 16px',
               }}
             >
-              {isFree ? 'Complete registration' : 'Payment details'}
+              {isFree ? 'Complete registration' : 'Payment'}
             </h2>
 
-            {/* Free path */}
-            {isFree && (
-              <FreeCheckoutButton organizationId={org.id} onDone={handleFreeSuccess} />
+            {/* Inline error from checkout initiation */}
+            {pageError && (
+              <p
+                role="alert"
+                style={{
+                  fontSize: 14,
+                  color: '#DC2626',
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  backgroundColor: '#FEF2F2',
+                  borderRadius: 8,
+                  border: '1px solid #FECACA',
+                }}
+              >
+                {pageError}
+              </p>
             )}
 
-            {/* Paid path — show Stripe Elements once client_secret is ready */}
-            {!isFree && isInitiatingCheckout && (
+            {/* Free path — coupon makes everything free */}
+            {isFree && (
+              <>
+                <div
+                  style={{
+                    borderRadius: 16,
+                    border: '2px solid #BBF7D0',
+                    backgroundColor: '#F0FDF4',
+                    padding: 20,
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <CheckCircle size={20} color="#16A34A" />
+                    <p
+                      style={{
+                        fontWeight: 600,
+                        color: '#14532D',
+                        margin: 0,
+                        fontSize: 15,
+                      }}
+                    >
+                      Your coupon covers the full cost!
+                    </p>
+                  </div>
+                  <p style={{ fontSize: 14, color: '#166534', margin: '6px 0 0 32px' }}>
+                    No payment is required. Click below to complete your registration.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={initiatePayment}
+                  disabled={checkoutStage === 'initiating'}
+                  aria-busy={checkoutStage === 'initiating'}
+                  style={{
+                    width: '100%',
+                    padding: '16px 0',
+                    borderRadius: 12,
+                    backgroundColor: checkoutStage === 'initiating' ? '#D1D5DB' : '#0FA3B1',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: 16,
+                    border: 'none',
+                    cursor: checkoutStage === 'initiating' ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    transition: 'background-color 150ms',
+                  }}
+                >
+                  {checkoutStage === 'initiating' ? (
+                    <>
+                      <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                      Completing…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={18} />
+                      Complete Registration — Free
+                    </>
+                  )}
+                </button>
+                <p
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    color: '#9CA3AF',
+                    marginTop: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Lock size={11} />
+                  Secure checkout
+                </p>
+              </>
+            )}
+
+            {/* Paid path — summary stage: show Pay button */}
+            {!isFree && checkoutStage === 'summary' && (
+              <button
+                type="button"
+                onClick={initiatePayment}
+                style={{
+                  width: '100%',
+                  marginTop: 8,
+                  padding: '16px 0',
+                  borderRadius: 12,
+                  backgroundColor: '#0FA3B1',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  transition: 'background-color 150ms',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0c8a96';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0FA3B1';
+                }}
+              >
+                Pay {formatCents(total)}
+              </button>
+            )}
+
+            {/* Paid path — initiating: spinner */}
+            {!isFree && checkoutStage === 'initiating' && (
               <div
                 style={{
                   padding: '32px 0',
@@ -715,30 +855,32 @@ export default function CheckoutPage() {
                   fontSize: 14,
                 }}
               >
-                <Loader2
-                  size={20}
-                  color="#0FA3B1"
-                  style={{ animation: 'spin 1s linear infinite' }}
-                />
+                <Loader2 size={20} color="#0FA3B1" style={{ animation: 'spin 1s linear infinite' }} />
                 Preparing payment…
               </div>
             )}
 
-            {!isFree && !isInitiatingCheckout && stripePromise && clientSecret && (
-              <Elements
-                stripe={stripePromise}
-                options={{
-                  clientSecret,
-                  appearance: stripeAppearance,
-                }}
-              >
-                <StripePaymentForm
-                  total={total}
-                  orderNumber={checkoutResult?.order_number ?? ''}
-                  onSuccess={handlePaidSuccess}
-                />
-              </Elements>
-            )}
+            {/* Paid path — payment form: Stripe Elements */}
+            {!isFree &&
+              checkoutStage === 'payment_form' &&
+              stripePromise &&
+              clientSecret && (
+                <>
+                  <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 16px' }}>
+                    Enter your payment details below.
+                  </p>
+                  <Elements
+                    stripe={stripePromise}
+                    options={{ clientSecret, appearance: stripeAppearance }}
+                  >
+                    <StripePaymentForm
+                      total={total}
+                      orderNumber={checkoutResult?.order_number ?? ''}
+                      onSuccess={handlePaidSuccess}
+                    />
+                  </Elements>
+                </>
+              )}
           </div>
         </div>
 
@@ -793,6 +935,26 @@ export default function CheckoutPage() {
                 </span>
               </div>
             ))}
+            {cart.discount_cents > 0 && cart.coupon && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 13,
+                  color: '#16A34A',
+                  fontWeight: 500,
+                  marginBottom: 8,
+                  gap: 8,
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Tag size={12} />
+                  {cart.coupon.code}
+                </span>
+                <span>— {formatCents(cart.discount_cents)}</span>
+              </div>
+            )}
             <div
               style={{
                 borderTop: '1px solid #E5E7EB',

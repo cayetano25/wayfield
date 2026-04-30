@@ -12,6 +12,8 @@ use App\Domain\Payments\Models\OrderItem;
 use App\Domain\Payments\Models\PaymentIntentRecord;
 use App\Domain\Payments\Models\StripeConnectAccount;
 use App\Domain\Payments\Models\WorkshopPricing;
+use App\Domain\Payments\Models\WorkshopPriceTier;
+use App\Domain\Payments\Services\PriceResolutionService;
 use App\Domain\Sessions\Exceptions\SessionCapacityExceededException;
 use App\Domain\Shared\Services\AuditLogService;
 use App\Models\Notification;
@@ -19,6 +21,7 @@ use App\Models\Registration;
 use App\Models\Session;
 use App\Models\SessionSelection;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\StripeClient;
@@ -31,6 +34,8 @@ class CheckoutService
         private readonly OrderNumberService $orderNumberService,
         private readonly FeeCalculationService $feeCalculationService,
         private readonly BalancePaymentService $balancePaymentService,
+        private readonly CouponService $couponService,
+        private readonly PriceResolutionService $priceResolutionService,
     ) {
         $this->stripe = new StripeClient(config('stripe.secret_key'));
     }
@@ -52,11 +57,18 @@ class CheckoutService
 
         $this->validateCartItems($cart);
 
-        if ($cart->subtotal_cents === 0) {
+        // When a coupon is applied, use discounted_total_cents (which may be 0 for fully-covered orders).
+        // When no coupon is applied, discounted_total_cents == subtotal_cents by invariant, but fall
+        // back to subtotal_cents defensively (handles test carts that set subtotal_cents directly).
+        $effectiveAmount = $cart->applied_coupon_id !== null
+            ? $cart->discounted_total_cents
+            : $cart->subtotal_cents;
+
+        if ($effectiveAmount === 0) {
             return $this->freeCheckout($cart, $user);
         }
 
-        return $this->stripeCheckout($cart, $user);
+        return $this->stripeCheckout($cart, $user, $effectiveAmount);
     }
 
     /**
@@ -65,10 +77,20 @@ class CheckoutService
     private function freeCheckout(Cart $cart, User $user): CheckoutResult
     {
         return DB::transaction(function () use ($cart, $user) {
+            // Archive any stale checked_out carts for this user+org to avoid the unique constraint
+            // violation on (user_id, organization_id, status).
+            Cart::query()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $cart->organization_id)
+                ->where('status', 'checked_out')
+                ->where('id', '!=', $cart->id)
+                ->update(['status' => 'abandoned']);
+
             // Create as 'pending' so fulfillOrder's idempotency guard does not short-circuit.
             $order = $this->createOrder($cart, $user, 'free', 'pending');
 
             $this->createOrderItems($order, $cart);
+            $this->copyCouponToOrder($cart, $order);
 
             $cart->update(['status' => 'checked_out', 'checked_out_at' => now()]);
 
@@ -82,7 +104,7 @@ class CheckoutService
      * Create a Stripe PaymentIntent and return the client_secret.
      * Fulfillment happens asynchronously via webhook.
      */
-    private function stripeCheckout(Cart $cart, User $user): CheckoutResult
+    private function stripeCheckout(Cart $cart, User $user, int $effectiveAmount): CheckoutResult
     {
         $org            = $cart->organization ?? $cart->load('organization')->organization;
         $connectAccount = StripeConnectAccount::query()
@@ -93,23 +115,36 @@ class CheckoutService
             throw new StripeConnectNotReadyException;
         }
 
-        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
-        $fees     = $this->feeCalculationService->calculateFees(
-            $cart->subtotal_cents,
+        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        // Fees are calculated on the effective (post-coupon) amount.
+        $fees = $this->feeCalculationService->calculateFees(
+            $effectiveAmount,
             $planCode,
             $cart->currency,
         );
 
-        return DB::transaction(function () use ($cart, $user, $org, $connectAccount, $fees) {
+        return DB::transaction(function () use ($cart, $user, $org, $connectAccount, $fees, $effectiveAmount) {
+            // Archive any stale checked_out carts for this user+org to avoid the unique constraint
+            // violation on (user_id, organization_id, status).
+            Cart::query()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $cart->organization_id)
+                ->where('status', 'checked_out')
+                ->where('id', '!=', $cart->id)
+                ->update(['status' => 'abandoned']);
+
             $order = $this->createOrder($cart, $user, 'stripe', 'pending', $fees);
 
             $this->createOrderItems($order, $cart);
+            $this->copyCouponToOrder($cart, $order);
 
             $cart->update(['status' => 'checked_out', 'checked_out_at' => now()]);
 
-            // Create the PaymentIntent on the connected account.
+            // Destination Charges: create the PaymentIntent on the platform account.
+            // transfer_data[destination] routes funds to the connected account after collection.
+            // Do NOT pass stripe_account header here — that would be Direct Charges (mutually exclusive).
             $stripeIntent = $this->stripe->paymentIntents->create([
-                'amount'                    => $cart->subtotal_cents,
+                'amount'                    => $effectiveAmount,
                 'currency'                  => $cart->currency,
                 'automatic_payment_methods' => ['enabled' => true],
                 'application_fee_amount'    => $fees->wayFieldFeeCents,
@@ -120,7 +155,7 @@ class CheckoutService
                     'organization_id'  => $cart->organization_id,
                     'wayfield_user_id' => $user->id,
                 ],
-            ], ['stripe_account' => $connectAccount->stripe_account_id]);
+            ]);
 
             // Store a hashed reference (never the raw secret).
             $intentRecord = new PaymentIntentRecord([
@@ -128,7 +163,7 @@ class CheckoutService
                 'intent_type'               => 'full',
                 'stripe_payment_intent_id'  => $stripeIntent->id,
                 'stripe_account_id'         => $connectAccount->stripe_account_id,
-                'amount_cents'              => $cart->subtotal_cents,
+                'amount_cents'              => $effectiveAmount,
                 'currency'                  => $cart->currency,
                 'application_fee_cents'     => $fees->wayFieldFeeCents,
                 'status'                    => 'requires_payment_method',
@@ -180,7 +215,11 @@ class CheckoutService
                 $this->balancePaymentService->scheduleBalanceJobs($order);
             }
 
+            $this->couponService->recordRedemption($order);
+
             $this->queueConfirmationNotifications($order);
+
+            $this->updateTierAnalytics($order);
 
             AuditLogService::record([
                 'organization_id' => $order->organization_id,
@@ -461,7 +500,8 @@ class CheckoutService
             'subtotal_cents'         => $cart->subtotal_cents,
             'wayfield_fee_cents'     => $fees?->wayFieldFeeCents ?? 0,
             'stripe_fee_cents'       => $fees?->stripeFeeCents ?? 0,
-            'total_cents'            => $fees?->amountCents ?? $cart->subtotal_cents,
+            // Effective total after coupon; fall back to subtotal when discounted_total_cents is unset.
+            'total_cents'            => $fees?->amountCents ?? $cart->discounted_total_cents ?? $cart->subtotal_cents,
             'organizer_payout_cents' => $fees?->organizerPayoutCents ?? 0,
             'currency'               => $cart->currency,
             'take_rate_pct'          => $fees?->takeRatePct ?? 0,
@@ -472,19 +512,97 @@ class CheckoutService
         ]);
     }
 
+    private function copyCouponToOrder(Cart $cart, Order $order): void
+    {
+        if ($cart->applied_coupon_id === null) {
+            return;
+        }
+
+        $order->update([
+            'coupon_id'      => $cart->applied_coupon_id,
+            'coupon_code'    => $cart->coupon_code_applied,
+            'discount_cents' => $cart->discount_cents,
+        ]);
+    }
+
     private function createOrderItems(Order $order, Cart $cart): void
     {
         foreach ($cart->items as $item) {
             OrderItem::create([
-                'order_id'         => $order->id,
-                'item_type'        => $item->item_type,
-                'workshop_id'      => $item->workshop_id,
-                'session_id'       => $item->session_id,
-                'unit_price_cents' => $item->unit_price_cents,
-                'quantity'         => $item->quantity,
-                'line_total_cents' => $item->line_total_cents,
-                'is_deposit'       => $item->is_deposit,
-                'currency'         => $item->currency,
+                'order_id'           => $order->id,
+                'item_type'          => $item->item_type,
+                'workshop_id'        => $item->workshop_id,
+                'session_id'         => $item->session_id,
+                'unit_price_cents'   => $item->unit_price_cents,
+                'applied_tier_id'    => $item->applied_tier_id,
+                'applied_tier_label' => $item->applied_tier_label,
+                'is_tier_price'      => $item->is_tier_price ?? false,
+                'quantity'           => $item->quantity,
+                'line_total_cents'   => $item->line_total_cents,
+                'is_deposit'         => $item->is_deposit,
+                'currency'           => $item->currency,
+            ]);
+        }
+    }
+
+    private function updateTierAnalytics(Order $order): void
+    {
+        foreach ($order->items as $item) {
+            if (! $item->is_tier_price || $item->applied_tier_id === null) {
+                continue;
+            }
+
+            WorkshopPriceTier::where('id', $item->applied_tier_id)->increment('registrations_at_tier');
+
+            $tier = WorkshopPriceTier::find($item->applied_tier_id);
+            if ($tier === null || $tier->capacity_limit === null || $item->workshop_id === null) {
+                continue;
+            }
+
+            $currentCount = Registration::where('workshop_id', $item->workshop_id)
+                ->whereIn('registration_status', ['registered', 'waitlisted'])
+                ->count();
+
+            if ($currentCount < $tier->capacity_limit) {
+                continue;
+            }
+
+            // Tier capacity reached — bust cache and notify organizer.
+            $this->priceResolutionService->bustCache($item->workshop_id);
+
+            $nextTier = WorkshopPriceTier::where('workshop_id', $item->workshop_id)
+                ->where('sort_order', '>', $tier->sort_order)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->first();
+
+            $nextLabel = $nextTier?->label ?? 'standard pricing';
+
+            $workshopTitle = $item->workshop?->title ?? "Workshop #{$item->workshop_id}";
+
+            Notification::create([
+                'organization_id'       => $order->organization_id,
+                'workshop_id'           => $item->workshop_id,
+                'notification_type'     => 'informational',
+                'sender_scope'          => 'organizer',
+                'delivery_scope'        => 'all_participants',
+                'title'                 => "{$tier->label} is now full",
+                'message'               => "{$tier->label} is now full. {$workshopTitle} pricing has moved to {$nextLabel}.",
+            ]);
+
+            AuditLogService::record([
+                'organization_id' => $order->organization_id,
+                'actor_user_id'   => $order->user_id,
+                'entity_type'     => 'workshop_price_tier',
+                'entity_id'       => $tier->id,
+                'action'          => 'price_tier.capacity_reached',
+                'metadata'        => [
+                    'tier_label'        => $tier->label,
+                    'capacity_limit'    => $tier->capacity_limit,
+                    'current_count'     => $currentCount,
+                    'workshop_id'       => $item->workshop_id,
+                    'next_tier_label'   => $nextLabel,
+                ],
             ]);
         }
     }

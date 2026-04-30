@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Domain\Payments\Services\PriceResolutionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -82,6 +83,15 @@ class PublicWorkshopResource extends JsonResource
             // Taxonomy: category, subcategory, specialization, and cross-cutting tags.
             // group_key is included so the frontend can group tags by type for display.
             'taxonomy' => $this->buildTaxonomyArray(),
+
+            // Minimal org info needed for cart/checkout routing — no contact details.
+            'organization' => $this->whenLoaded('organization', fn () => $this->organization ? [
+                'id'   => $this->organization->id,
+                'slug' => $this->organization->slug,
+            ] : null),
+
+            // Pricing display — safe for public consumption (no internal tier IDs).
+            'pricing' => app(PriceResolutionService::class)->buildPublicPricingDisplay($this->resource),
         ];
     }
 

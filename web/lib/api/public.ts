@@ -62,7 +62,27 @@ export interface PublicLocation {
   longitude?: number | null;
 }
 
+export interface WorkshopPricingNextChange {
+  price_cents: number;
+  tier_label: string | null;
+  changes_at: string | null;
+  changes_at_capacity: number | null;
+  urgency: 'urgent' | 'soon' | 'none';
+  change_direction: 'increase' | 'decrease' | 'change';
+}
+
+export interface WorkshopPricingDisplay {
+  current_price_cents: number;
+  current_tier_label: string | null;
+  is_tier_price: boolean;
+  show_original_price: boolean;
+  base_price_cents: number;
+  next_price_change: WorkshopPricingNextChange | null;
+  remaining_at_current_price: number | null;
+}
+
 export interface PublicWorkshop {
+  id: number;
   title: string;
   description: string;
   public_summary?: string | null;
@@ -84,6 +104,8 @@ export interface PublicWorkshop {
   sessions: PublicSession[];
   leaders: PublicLeader[];
   logistics?: PublicLogistics;
+  pricing?: WorkshopPricingDisplay | null;
+  organization?: { id: number; slug: string } | null;
 }
 
 export interface DiscoverWorkshopTaxonomy {
@@ -111,8 +133,9 @@ export interface DiscoverWorkshop {
   default_location?: { city?: string | null; state_or_region?: string | null } | null;
   taxonomy?: DiscoverWorkshopTaxonomy | null;
   tags?: DiscoverWorkshopTag[];
-  organization?: { name: string } | null;
+  organization?: { id: number; slug: string; name: string } | null;
   leader_count: number;
+  pricing?: WorkshopPricingDisplay | null;
   // Legacy fields kept for backwards compat
   location?: { city?: string; state_or_region?: string };
   session_count?: number;

@@ -84,6 +84,8 @@ export interface ParticipantOtherWorkshop {
   payment_status?: 'Free' | 'Deposit Paid' | 'Fully Paid' | 'Balance Due' | 'Payment Pending' | null;
   balance_due_date?: string | null;
   order_number?: string | null;
+  is_tier_price?: boolean;
+  applied_tier_label?: string | null;
 }
 
 export interface ParticipantDashboard {

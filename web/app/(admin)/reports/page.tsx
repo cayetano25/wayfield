@@ -53,7 +53,7 @@ export default function ReportsPage() {
 
   const showWorkshopFilter = activeTab === 'attendance' || activeTab === 'participants';
 
-  /* -- Free plan: full-page locked state -- */
+  /* -- Foundation plan: full-page locked state -- */
   if (!isStarterPlus) {
     return (
       <div className="max-w-[1280px] mx-auto">

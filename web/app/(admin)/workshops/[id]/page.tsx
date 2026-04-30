@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { AddressForm } from '@/components/ui/AddressForm';
 import { FormattedAddress } from '@/components/ui/FormattedAddress';
 import type { AddressFormData } from '@/lib/types/address';
+import { WorkshopCouponRedemptions } from '@/components/workshops/WorkshopCouponRedemptions';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 interface Leader {
   id: number;
@@ -591,6 +593,17 @@ export default function WorkshopOverviewPage() {
           </Card>
         </div>
       </div>
+
+      {/* Coupon Redemptions */}
+      {FEATURE_FLAGS.PAYMENTS_ENABLED && (
+        <div className="mt-8">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Coupon Redemptions</h2>
+          <WorkshopCouponRedemptions
+            workshopId={workshop.id}
+            workshopTitle={workshop.title}
+          />
+        </div>
+      )}
 
       {/* QR Code modal */}
       <QRCodeModal

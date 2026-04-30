@@ -17,6 +17,8 @@ class CartItemResource extends JsonResource
             'workshop_title'       => $this->workshop?->title,
             'session_title'        => $this->session?->title,
             'unit_price_cents'     => $this->unit_price_cents,
+            'applied_tier_label'   => $this->applied_tier_label,
+            'is_tier_price'        => (bool) $this->is_tier_price,
             'quantity'             => $this->quantity,
             'line_total_cents'     => $this->line_total_cents,
             'is_deposit'           => $this->is_deposit,

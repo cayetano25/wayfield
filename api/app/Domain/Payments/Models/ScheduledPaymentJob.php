@@ -24,6 +24,7 @@ class ScheduledPaymentJob extends Model
         'cancelled_at',
         'cancellation_reason',
         'result_message',
+        'metadata_json',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class ScheduledPaymentJob extends Model
         'last_attempted_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'metadata_json' => 'array',
     ];
 
     public function user(): BelongsTo

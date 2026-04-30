@@ -6,8 +6,10 @@ import { RevenueCalculator } from './RevenueCalculator';
 import { DepositConfig } from './DepositConfig';
 import { CommitmentDateSection } from './CommitmentDateSection';
 import { RefundPolicySection } from './RefundPolicySection';
+import { PricingTierSection } from './PricingTierSection';
 import { TAKE_RATE_BY_PLAN, DEPOSIT_PLANS } from '@/lib/utils/currency';
 import { apiGet, apiPost, apiPut, ApiError } from '@/lib/api/client';
+import type { PriceTier } from '@/lib/api/priceTiers';
 import toast from 'react-hot-toast';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
@@ -71,7 +73,10 @@ export function WorkshopPricingSection({
   const [refundPolicy, setRefundPolicy] = useState<RefundPolicyData | null>(null);
   const [isWorkshopRefundOverride, setIsWorkshopRefundOverride] = useState(false);
 
-  // Field-level validation errors (inline, not toast)
+  // Tier state (lifted from PricingTierSection for RevenueCalculator)
+  const [tiers, setTiers] = useState<PriceTier[]>([]);
+
+  // Field-level validation errors
   const [priceError, setPriceError] = useState<string | null>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
 
@@ -104,7 +109,7 @@ export function WorkshopPricingSection({
         setIsWorkshopRefundOverride(pol.scope === 'workshop');
       }
     } catch {
-      // 404 is normal for a new workshop without pricing — not an error
+      // 404 is normal for a new workshop without pricing
     } finally {
       setLoading(false);
     }
@@ -181,7 +186,6 @@ export function WorkshopPricingSection({
   }
 
   /* ── Render ── */
-
 
   if (loading) {
     return (
@@ -269,6 +273,16 @@ export function WorkshopPricingSection({
             basePriceCents={basePriceCents}
             takeRate={takeRate}
             planCode={planCode}
+            tiers={tiers}
+          />
+
+          {/* ── Price tiers ── */}
+          <PricingTierSection
+            workshopId={workshopId}
+            workshopStartDate={workshopStartDate}
+            planCode={planCode}
+            basePriceCents={basePriceCents}
+            onTiersChange={setTiers}
           />
 
           {/* ── Deposit configuration ── */}

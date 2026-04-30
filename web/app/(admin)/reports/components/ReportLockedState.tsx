@@ -10,8 +10,8 @@ interface ReportLockedStateProps {
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter',
-  pro: 'Pro',
+  starter: 'Creator',
+  pro: 'Studio',
 };
 
 export function ReportLockedState({ requiredPlan, feature, description }: ReportLockedStateProps) {

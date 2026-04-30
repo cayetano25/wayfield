@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Loader2, ShoppingBag, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, ShoppingBag, Tag, Trash2, X } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { formatCents } from '@/lib/utils/currency';
-import type { CartItem } from '@/lib/api/cart';
+import type { CartCouponData, CartItem } from '@/lib/api/cart';
+import { CouponInput } from '@/components/checkout/CouponInput';
 
 function CartItemRow({
   item,
@@ -74,6 +75,11 @@ function CartItemRow({
         <p style={{ fontSize: 12, color: '#9CA3AF', margin: '2px 0 0' }}>
           {item.item_type === 'addon_session' ? 'Add-on session' : 'Workshop registration'}
         </p>
+        {item.is_tier_price && item.applied_tier_label && (
+          <p style={{ fontSize: 12, color: '#0FA3B1', margin: '2px 0 0', fontWeight: 500 }}>
+            {item.applied_tier_label} price
+          </p>
+        )}
         {item.is_deposit && item.balance_amount_cents != null && (
           <p
             style={{
@@ -142,7 +148,8 @@ function CartItemRow({
 }
 
 export function CartDrawer() {
-  const { cart, isLoading, isOpen, organizationSlug, closeCart, removeItem } = useCart();
+  const { cart, isLoading, isOpen, organizationSlug, closeCart, removeItem, updateCart } =
+    useCart();
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [feesOpen, setFeesOpen] = useState(false);
   const router = useRouter();
@@ -189,13 +196,39 @@ export function CartDrawer() {
     }
   };
 
+  const handleCouponApplied = useCallback(
+    (coupon: CartCouponData) => {
+      if (!cart) return;
+      updateCart({
+        ...cart,
+        discount_cents: coupon.discount_cents,
+        discounted_total_cents: coupon.discounted_total_cents,
+        coupon,
+      });
+    },
+    [cart, updateCart],
+  );
+
+  const handleCouponRemoved = useCallback(() => {
+    if (!cart) return;
+    updateCart({
+      ...cart,
+      discount_cents: 0,
+      discounted_total_cents: cart.subtotal_cents,
+      coupon: null,
+    });
+  }, [cart, updateCart]);
+
   if (!isOpen) return null;
 
   const items = cart?.items ?? [];
+  const cartHasDepositItem = items.some((item) => item.is_deposit);
   const subtotal = cart?.subtotal_cents ?? 0;
+  const discountedSubtotal = cart?.discounted_total_cents ?? subtotal;
   const fees = cart?.fee_breakdown;
   const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = subtotal + totalFees;
+  const total = discountedSubtotal + totalFees;
+  const discountCents = cart?.discount_cents ?? 0;
   const isEmpty = items.length === 0;
   const canCheckout = !isEmpty && !!organizationSlug;
 
@@ -298,7 +331,7 @@ export function CartDrawer() {
             <div style={{ padding: '40px 0', textAlign: 'center' }}>
               <Loader2 size={24} color="#0FA3B1" style={{ animation: 'spin 1s linear infinite' }} />
             </div>
-          ) : isEmpty ? (
+          ) : !items.length ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <ShoppingBag size={40} color="#D1D5DB" style={{ marginBottom: 12 }} />
               <p style={{ color: '#9CA3AF', fontSize: 14, margin: '0 0 16px' }}>
@@ -322,14 +355,25 @@ export function CartDrawer() {
               </Link>
             </div>
           ) : (
-            items.map((item) => (
-              <CartItemRow
-                key={item.id}
-                item={item}
-                onRemove={handleRemove}
-                removing={removingId === item.id}
-              />
-            ))
+            <>
+              {items.map((item) => (
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  onRemove={handleRemove}
+                  removing={removingId === item.id}
+                />
+              ))}
+              {cart && (
+                <CouponInput
+                  organizationId={cart.organization_id}
+                  appliedCoupon={cart.coupon ?? null}
+                  onCouponApplied={handleCouponApplied}
+                  onCouponRemoved={handleCouponRemoved}
+                  cartHasDepositItem={cartHasDepositItem}
+                />
+              )}
+            </>
           )}
         </div>
 
@@ -350,7 +394,7 @@ export function CartDrawer() {
                 justifyContent: 'space-between',
                 fontSize: 14,
                 color: '#374151',
-                marginBottom: 8,
+                marginBottom: discountCents > 0 ? 4 : 8,
               }}
             >
               <span>Subtotal</span>
@@ -359,8 +403,31 @@ export function CartDrawer() {
               </span>
             </div>
 
+            {/* Coupon discount line */}
+            {discountCents > 0 && cart?.coupon && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 13,
+                  color: '#16A34A',
+                  fontWeight: 500,
+                  marginBottom: 8,
+                }}
+              >
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <Tag size={12} />
+                  {cart.coupon.code}
+                </span>
+                <span>— {formatCents(discountCents)}</span>
+              </div>
+            )}
+
             {/* Fee breakdown toggle */}
-            {fees && subtotal > 0 && (
+            {fees && discountedSubtotal > 0 && (
               <>
                 <button
                   onClick={() => setFeesOpen((v) => !v)}
@@ -448,7 +515,9 @@ export function CartDrawer() {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0FA3B1';
               }}
             >
-              Proceed to Checkout
+              {total === 0
+                ? 'Proceed to Checkout — Free'
+                : `Proceed to Checkout · ${formatCents(total)}`}
             </button>
           </div>
         )}

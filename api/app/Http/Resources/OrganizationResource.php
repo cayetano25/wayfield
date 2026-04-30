@@ -20,6 +20,7 @@ class OrganizationResource extends JsonResource
             'primary_contact_phone' => $this->primary_contact_phone,
             'status' => $this->status,
             'logo_url' => $this->logo_url,
+            'primary_color' => $this->primary_color,
             'address' => $this->whenLoaded('address', fn () => $this->address ? app(AddressService::class)->toApiResponse($this->address) : null
             ),
             'created_at' => $this->created_at->toIso8601String(),

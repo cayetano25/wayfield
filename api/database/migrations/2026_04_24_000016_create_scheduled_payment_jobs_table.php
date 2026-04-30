@@ -26,6 +26,9 @@ return new class extends Migration
                 'cart_expiry',
                 'minimum_attendance_check',
                 'payment_requires_action_reminder',
+                'price_tier_expiry_reminder',
+                'price_tier_activated',
+                'price_tier_capacity_check',
             ])->notNull();
             $table->string('notification_code', 10)->nullable();
             $table->string('related_entity_type', 100)->notNull();

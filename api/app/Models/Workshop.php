@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Payments\Models\RefundPolicy;
+use App\Domain\Payments\Models\WorkshopPriceTier;
 use App\Domain\Payments\Models\WorkshopPricing;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -149,5 +150,10 @@ class Workshop extends Model
     public function refundPolicy(): HasOne
     {
         return $this->hasOne(RefundPolicy::class)->where('scope', 'workshop');
+    }
+
+    public function priceTiers(): HasMany
+    {
+        return $this->hasMany(WorkshopPriceTier::class);
     }
 }

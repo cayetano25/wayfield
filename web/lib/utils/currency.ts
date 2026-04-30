@@ -27,11 +27,14 @@ export const TAKE_RATE_BY_PLAN: Record<string, number> = {
 };
 
 export const PLAN_LABEL: Record<string, string> = {
-  free: 'Free',
-  starter: 'Starter',
-  pro: 'Pro',
+  free: 'Foundation',
+  starter: 'Creator',
+  pro: 'Studio',
   enterprise: 'Enterprise',
 };
 
-/** Plans that include deposit payment functionality */
+/** Plans that include deposit payment functionality (Creator / Studio / Enterprise) */
 export const DEPOSIT_PLANS = new Set(['starter', 'pro', 'enterprise']);
+
+/** Plans that include price tier functionality (Creator / Studio / Enterprise) */
+export const TIER_PLANS = new Set(['starter', 'pro', 'enterprise']);

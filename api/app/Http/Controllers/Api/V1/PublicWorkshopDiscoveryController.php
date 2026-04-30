@@ -49,6 +49,7 @@ class PublicWorkshopDiscoveryController extends Controller
                 'primaryTaxonomy.subcategory',
                 'primaryTaxonomy.specialization',
                 'tags.tagGroup',
+                'pricing',
             ])
             ->withCount('confirmedLeaders as confirmed_leaders_count');
 

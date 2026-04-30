@@ -29,6 +29,7 @@ class Organization extends Model
         'status',
         'stripe_customer_id',
         'logo_url',
+        'primary_color',
         'address_id',
     ];
 

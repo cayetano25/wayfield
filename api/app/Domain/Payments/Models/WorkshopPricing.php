@@ -67,4 +67,9 @@ class WorkshopPricing extends Model
     {
         return '$' . number_format(($this->deposit_amount_cents ?? 0) / 100, 2);
     }
+
+    public function hasTiers(): bool
+    {
+        return $this->workshop->priceTiers()->where('is_active', true)->exists();
+    }
 }

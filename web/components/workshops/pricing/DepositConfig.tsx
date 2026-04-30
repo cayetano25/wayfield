@@ -72,7 +72,7 @@ export function DepositConfig({
         <div className="mt-2 flex items-center gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
           <Lock size={16} className="text-gray-400 shrink-0" />
           <p className="text-sm text-gray-600">
-            Deposit payments are available on Starter and Pro plans.{' '}
+            Deposit payments are available on Creator and Studio plans.{' '}
             <a href="/organization/settings/billing" className="text-[#0FA3B1] hover:underline font-medium">
               Upgrade Plan
             </a>

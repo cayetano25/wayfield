@@ -212,8 +212,6 @@ class WaitlistPromotionService
             try {
                 $stripeIntent = $stripe->paymentIntents->retrieve(
                     $existing->stripe_payment_intent_id,
-                    [],
-                    ['stripe_account' => $stripeAccountId],
                 );
 
                 if (in_array($stripeIntent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action'], true)) {
@@ -228,7 +226,7 @@ class WaitlistPromotionService
         }
 
         $org      = $workshop->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $org->activeSubscription?->plan_code ?? 'free';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $pricing->base_price_cents,
             $planCode,
@@ -246,7 +244,7 @@ class WaitlistPromotionService
                 'workshop_id'                   => $workshop->id,
                 'intent_type'                   => 'waitlist',
             ],
-        ], ['stripe_account' => $stripeAccountId]);
+        ]);
 
         PaymentIntentRecord::create([
             'order_id'                 => null,

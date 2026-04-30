@@ -13,7 +13,7 @@ class FeeCalculationService
 
     private const STRIPE_VARIABLE_RATE = 0.029;
     private const STRIPE_FLAT_FEE_CENTS = 30;
-    private const DEFAULT_PLAN_CODE = 'foundation';
+    private const DEFAULT_PLAN_CODE = 'free';
 
     public function calculateFees(
         int $amountCents,

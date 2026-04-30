@@ -115,8 +115,10 @@ function workshopToCardProps(w: DiscoverWorkshop) {
     imageUrl: w.hero_image_url ?? '',
     location,
     dateRange: formatDateRange(w.start_date, w.end_date),
-    price: 0,
+    price: w.pricing ? w.pricing.current_price_cents / 100 : 0,
     publicSlug: w.public_slug ?? '',
+    orgId: w.organization?.id,
+    orgSlug: w.organization?.slug,
     spotsLeft: w.spots_remaining ?? null,
     totalCapacity: null as number | null,
   };
@@ -173,7 +175,7 @@ export function DiscoverClient() {
           ? [w.first_leader.profile_image_url]
           : [],
         totalInstructors: w.leader_count,
-        startingPrice: 0,
+        startingPrice: w.pricing ? w.pricing.current_price_cents / 100 : 0,
         publicSlug: w.public_slug,
       });
     });

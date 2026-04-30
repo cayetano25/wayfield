@@ -59,17 +59,21 @@ export default function WorkshopsPage() {
   function loadData(orgId: number) {
     setLoading(true);
     setError(false);
-    Promise.all([
+    Promise.allSettled([
       getWorkshops(orgId) as Promise<WorkshopSummary[]>,
       getEntitlements(orgId),
     ])
-      .then(([ws, ent]) => {
-        setWorkshops(ws ?? []);
-        setEntitlements(ent);
-      })
-      .catch(() => {
-        setError(true);
-        toast.error('Failed to load workshops');
+      .then(([wsResult, entResult]) => {
+        if (wsResult.status === 'fulfilled') {
+          setWorkshops(wsResult.value ?? []);
+        } else {
+          setError(true);
+          toast.error('Failed to load workshops');
+        }
+        if (entResult.status === 'fulfilled') {
+          setEntitlements(entResult.value);
+        }
+        // entitlements failure is non-fatal — workshops still display
       })
       .finally(() => setLoading(false));
   }

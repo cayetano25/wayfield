@@ -1,5 +1,15 @@
 import { apiDelete, apiGet, apiPost } from './client';
 
+export interface CartCouponData {
+  code: string;
+  discount_type: 'percentage' | 'fixed_amount' | 'free';
+  discount_pct?: number;
+  discount_amount_formatted: string;
+  discount_cents: number;
+  discounted_total_cents: number;
+  message: string;
+}
+
 export interface CartItem {
   id: number;
   item_type: 'workshop_registration' | 'addon_session' | 'waitlist_upgrade';
@@ -15,6 +25,8 @@ export interface CartItem {
   balance_amount_cents: number | null;
   balance_due_date: string | null;
   currency: string;
+  is_tier_price: boolean;
+  applied_tier_label: string | null;
 }
 
 export interface FeeBreakdown {
@@ -28,11 +40,16 @@ export interface FeeBreakdown {
 export interface Cart {
   id: number;
   organization_id: number;
+  organization_name?: string | null;
+  organization_slug?: string | null;
   status: 'active' | 'checked_out' | 'abandoned' | 'expired';
   subtotal_cents: number;
+  discount_cents: number;
+  discounted_total_cents: number;
   currency: string;
   expires_at: string;
   items: CartItem[];
+  coupon: CartCouponData | null;
   fee_breakdown: FeeBreakdown | null;
 }
 
@@ -65,6 +82,8 @@ export interface OrderItem {
   line_total_cents: number;
   is_deposit: boolean;
   balance_due_date: string | null;
+  is_tier_price: boolean;
+  applied_tier_label: string | null;
   refunded_amount_cents: number;
   refund_status: string;
   currency: string;
@@ -121,6 +140,39 @@ export function removeCartItem(organizationId: number, cartItemId: number): Prom
 
 export function checkoutCart(organizationId: number): Promise<CheckoutResult> {
   return apiPost(`/cart/${organizationId}/checkout`);
+}
+
+interface ApplyCouponApiResponse {
+  data: {
+    coupon_code: string;
+    discount_type: string;
+    discount_pct?: number;
+    discount_amount: string;
+    discounted_total: string;
+    message: string;
+  };
+}
+
+export async function applyCoupon(
+  organizationId: number,
+  code: string,
+): Promise<CartCouponData> {
+  const res = await apiPost<ApplyCouponApiResponse>(`/cart/${organizationId}/coupon`, { code });
+  const discountCents = Math.round(parseFloat(res.data.discount_amount) * 100);
+  const discountedTotalCents = Math.round(parseFloat(res.data.discounted_total) * 100);
+  return {
+    code: res.data.coupon_code,
+    discount_type: res.data.discount_type as CartCouponData['discount_type'],
+    discount_pct: res.data.discount_pct,
+    discount_amount_formatted: '$' + res.data.discount_amount,
+    discount_cents: discountCents,
+    discounted_total_cents: discountedTotalCents,
+    message: res.data.message,
+  };
+}
+
+export function removeCoupon(organizationId: number): Promise<void> {
+  return apiDelete<unknown>(`/cart/${organizationId}/coupon`).then(() => undefined);
 }
 
 export function getOrder(orderNumber: string): Promise<OrderSummary> {

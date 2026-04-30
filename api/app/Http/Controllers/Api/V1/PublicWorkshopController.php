@@ -15,6 +15,7 @@ class PublicWorkshopController extends Controller
             ->where('status', 'published')
             ->where('public_page_enabled', true)
             ->with([
+                'organization',
                 'defaultLocation',
                 'logistics',
                 'publicPage',

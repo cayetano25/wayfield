@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Domain\Payments\Services\PriceResolutionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -35,6 +36,7 @@ class WorkshopCardResource extends JsonResource
             'tags'                => $this->resolveTags(),
             'organization'        => $this->resolveOrganization(),
             'leader_count'        => $this->confirmed_leaders_count ?? 0,
+            'pricing'             => $this->resolvePricing(),
             // join_code intentionally absent — triple-checked
         ];
     }
@@ -109,8 +111,20 @@ class WorkshopCardResource extends JsonResource
 
         return [
             'id'   => $this->organization->id,
+            'slug' => $this->organization->slug,
             'name' => $this->organization->name,
             // primary_contact_* intentionally absent — private org data
         ];
+    }
+
+    private function resolvePricing(): ?array
+    {
+        $pricing = $this->relationLoaded('pricing') ? $this->pricing : null;
+
+        if ($pricing === null || ! $pricing->is_paid) {
+            return null;
+        }
+
+        return app(PriceResolutionService::class)->buildPublicPricingDisplay($this->resource);
     }
 }

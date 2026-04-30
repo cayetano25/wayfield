@@ -135,7 +135,7 @@ class DashboardMetricsService
 
     /**
      * Attendance metrics — Starter plan and above only.
-     * Returns null for Free plan.
+     * Returns null for Foundation plan.
      */
     public function getAttendanceMetrics(): ?array
     {
@@ -181,7 +181,7 @@ class DashboardMetricsService
 
     /**
      * Capacity metrics — Starter plan and above only.
-     * Returns null for Free plan.
+     * Returns null for Foundation plan.
      */
     public function getCapacityMetrics(): ?array
     {
@@ -222,7 +222,7 @@ class DashboardMetricsService
 
     /**
      * Per-session breakdown — Starter plan and above only.
-     * Returns null for Free plan.
+     * Returns null for Foundation plan.
      */
     public function getSessionBreakdown(): ?array
     {

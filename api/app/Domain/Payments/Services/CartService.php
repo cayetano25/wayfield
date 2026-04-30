@@ -9,6 +9,7 @@ use App\Domain\Payments\Exceptions\DuplicateWorkshopInCartException;
 use App\Domain\Payments\Exceptions\WorkshopNotPublishedException;
 use App\Domain\Payments\Models\Cart;
 use App\Domain\Payments\Models\CartItem;
+use App\Domain\Payments\Models\ScheduledPaymentJob;
 use App\Domain\Payments\Models\SessionPricing;
 use App\Domain\Payments\Models\WorkshopPricing;
 use App\Models\Organization;
@@ -16,6 +17,7 @@ use App\Models\Registration;
 use App\Models\Session;
 use App\Models\User;
 use App\Models\Workshop;
+use Illuminate\Support\Facades\Log;
 
 class CartService
 {
@@ -23,6 +25,8 @@ class CartService
 
     public function __construct(
         private readonly FeeCalculationService $feeCalculationService,
+        private readonly CouponService $couponService,
+        private readonly PriceResolutionService $priceResolutionService,
     ) {}
 
     /**
@@ -81,6 +85,7 @@ class CartService
     /**
      * Add a workshop registration item to the cart.
      *
+     * Uses PriceResolutionService as the single source of truth for pricing.
      * If the workshop has deposit pricing, the cart item is created as a
      * deposit item; the balance is stored as metadata for display.
      */
@@ -98,45 +103,84 @@ class CartService
 
         $this->assertNoWorkshopDuplicate($cart, $workshop);
 
+        $resolution = $this->priceResolutionService->resolve($workshop);
+
         $pricing = WorkshopPricing::query()
             ->where('workshop_id', $workshop->id)
             ->first();
 
-        $isDeposit         = false;
-        $unitPriceCents    = 0;
-        $depositAmtCents   = null;
-        $balanceAmtCents   = null;
-        $balanceDueDate    = null;
+        $isDeposit       = false;
+        $unitPriceCents  = $resolution->priceCents;
+        $depositAmtCents = null;
+        $balanceAmtCents = null;
+        $balanceDueDate  = null;
 
-        if ($pricing !== null) {
-            if ($pricing->deposit_enabled && $pricing->deposit_amount_cents > 0) {
-                $isDeposit       = true;
-                $unitPriceCents  = $pricing->deposit_amount_cents;
-                $depositAmtCents = $pricing->deposit_amount_cents;
-                $balanceAmtCents = $pricing->base_price_cents - $pricing->deposit_amount_cents;
-                $balanceDueDate  = $pricing->balance_due_date;
-            } else {
-                $unitPriceCents = $pricing->base_price_cents;
-            }
+        // Deposit mode: use deposit amount as the charge price, preserve balance info.
+        // Deposit overrides tier pricing — tier applies to the full price, not the deposit split.
+        if ($pricing !== null && $pricing->deposit_enabled && $pricing->deposit_amount_cents > 0) {
+            $isDeposit       = true;
+            $unitPriceCents  = $pricing->deposit_amount_cents;
+            $depositAmtCents = $pricing->deposit_amount_cents;
+            $balanceAmtCents = $resolution->priceCents - $pricing->deposit_amount_cents;
+            $balanceDueDate  = $pricing->balance_due_date;
         }
 
+        // Check for an abandoned cart with this workshop — detect price increases.
+        $this->detectAndNotifyPriceIncrease($cart, $workshop, $resolution->priceCents);
+
         $item = CartItem::create([
-            'cart_id'             => $cart->id,
-            'item_type'           => 'workshop_registration',
-            'workshop_id'         => $workshop->id,
-            'unit_price_cents'    => $unitPriceCents,
-            'quantity'            => 1,
-            'line_total_cents'    => $unitPriceCents,
-            'is_deposit'          => $isDeposit,
+            'cart_id'              => $cart->id,
+            'item_type'            => 'workshop_registration',
+            'workshop_id'          => $workshop->id,
+            'unit_price_cents'     => $unitPriceCents,
+            'applied_tier_id'      => $resolution->tierId,
+            'applied_tier_label'   => $resolution->tierLabel,
+            'is_tier_price'        => $resolution->isTierPrice,
+            'quantity'             => 1,
+            'line_total_cents'     => $unitPriceCents,
+            'is_deposit'           => $isDeposit,
             'deposit_amount_cents' => $depositAmtCents,
             'balance_amount_cents' => $balanceAmtCents,
-            'balance_due_date'    => $balanceDueDate,
-            'currency'            => $cart->currency,
+            'balance_due_date'     => $balanceDueDate,
+            'currency'             => $cart->currency,
         ]);
 
         $this->recalculateSubtotal($cart);
+        $this->refreshCouponDiscount($cart);
 
         return $item;
+    }
+
+    private function detectAndNotifyPriceIncrease(Cart $cart, Workshop $workshop, int $newPriceCents): void
+    {
+        $abandonedItem = CartItem::query()
+            ->whereHas('cart', fn ($q) => $q
+                ->where('user_id', $cart->user_id)
+                ->whereIn('status', ['abandoned', 'expired'])
+            )
+            ->where('item_type', 'workshop_registration')
+            ->where('workshop_id', $workshop->id)
+            ->latest()
+            ->first();
+
+        if ($abandonedItem === null) {
+            return;
+        }
+
+        if ($newPriceCents <= $abandonedItem->unit_price_cents) {
+            return;
+        }
+
+        // Price increased — schedule the in-app notification N-70 immediately.
+        ScheduledPaymentJob::create([
+            'job_type'            => 'price_tier_capacity_check',
+            'notification_code'   => 'N-70',
+            'related_entity_type' => 'workshop',
+            'related_entity_id'   => $workshop->id,
+            'user_id'             => $cart->user_id,
+            'scheduled_for'       => now(),
+            'status'              => 'pending',
+        ]);
     }
 
     /**
@@ -210,6 +254,7 @@ class CartService
         ]);
 
         $this->recalculateSubtotal($cart);
+        $this->refreshCouponDiscount($cart);
 
         return $item;
     }
@@ -226,9 +271,27 @@ class CartService
             ->where('id', $cartItemId)
             ->firstOrFail();
 
+        $removedItemType  = $item->item_type;
+        $removedWorkshopId = $item->workshop_id;
+
         $item->delete();
 
         $this->recalculateSubtotal($cart);
+
+        // If a workshop-scoped coupon was applied and its workshop was just removed,
+        // the coupon is no longer applicable — re-validate to catch this.
+        if ($cart->applied_coupon_id !== null) {
+            if ($removedItemType === 'workshop_registration' && $removedWorkshopId !== null) {
+                // Quick check: if the coupon is scoped to this specific workshop, remove it.
+                $appliedCoupon = \App\Domain\Payments\Models\Coupon::find($cart->applied_coupon_id);
+                if ($appliedCoupon && $appliedCoupon->workshop_id === $removedWorkshopId) {
+                    $this->couponService->removeFromCart($cart);
+                    return;
+                }
+            }
+
+            $this->refreshCouponDiscount($cart);
+        }
     }
 
     /**
@@ -238,7 +301,7 @@ class CartService
     {
         $cart->load('items.workshop', 'items.session', 'organization');
 
-        $planCode = $cart->organization->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $cart->organization->activeSubscription?->plan_code ?? 'free';
         $fees     = $this->feeCalculationService->calculateFees(
             $cart->subtotal_cents,
             $planCode,
@@ -287,13 +350,50 @@ class CartService
 
     private function recalculateSubtotal(Cart $cart): void
     {
-        $subtotal = CartItem::query()
+        $subtotal = (int) CartItem::query()
             ->where('cart_id', $cart->id)
             ->sum('line_total_cents');
 
+        // Keep discounted_total in sync: subtotal - applied discount.
+        // When no coupon, discount_cents = 0, so discounted_total = subtotal.
+        $discountedTotal = max(0, $subtotal - $cart->discount_cents);
+
         $cart->update([
-            'subtotal_cents'   => (int) $subtotal,
-            'last_activity_at' => now(),
+            'subtotal_cents'         => $subtotal,
+            'discounted_total_cents' => $discountedTotal,
+            'last_activity_at'       => now(),
+        ]);
+    }
+
+    private function refreshCouponDiscount(Cart $cart): void
+    {
+        if ($cart->applied_coupon_id === null) {
+            return;
+        }
+
+        $user = User::find($cart->user_id);
+
+        if (! $user) {
+            return;
+        }
+
+        $result = $this->couponService->validate($cart->coupon_code_applied, $cart, $user);
+
+        if (! $result->isValid()) {
+            // Coupon is no longer valid for the new cart state — auto-remove it.
+            Log::info('CartService: auto-removing invalid coupon after cart change', [
+                'cart_id'    => $cart->id,
+                'coupon_id'  => $cart->applied_coupon_id,
+                'error_code' => $result->errorCode,
+            ]);
+            $this->couponService->removeFromCart($cart);
+            return;
+        }
+
+        // Recalculate discount for the new subtotal.
+        $cart->update([
+            'discount_cents'         => $result->discountCents,
+            'discounted_total_cents' => $result->discountedTotalCents,
         ]);
     }
 }

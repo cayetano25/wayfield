@@ -681,9 +681,9 @@ export default function DashboardPage() {
   if (isFree) {
     analyticsRow = (
       <>
-        <LockedMetricCard label="Attendance Rate" previewValue="68%" availableOn="Starter" currentPlan={planCode} />
-        <LockedMetricCard label="No-Show Rate"   previewValue="12%" availableOn="Starter" currentPlan={planCode} />
-        <LockedMetricCard label="Capacity Use"   previewValue="45%" availableOn="Starter" currentPlan={planCode} />
+        <LockedMetricCard label="Attendance Rate" previewValue="68%" availableOn="Creator" currentPlan={planCode} />
+        <LockedMetricCard label="No-Show Rate"   previewValue="12%" availableOn="Creator" currentPlan={planCode} />
+        <LockedMetricCard label="Capacity Use"   previewValue="45%" availableOn="Creator" currentPlan={planCode} />
       </>
     );
   } else {
@@ -728,7 +728,7 @@ export default function DashboardPage() {
       <LockedMetricCard
         label="Registration Trend"
         previewValue="↑ 12%"
-        availableOn="Pro"
+        availableOn="Studio"
         currentPlan={planCode}
         className="w-full"
       />
@@ -784,7 +784,7 @@ export default function DashboardPage() {
       <LockedMetricCard
         label="Session Attendance"
         previewValue="↑ sessions"
-        availableOn="Starter"
+        availableOn="Creator"
         currentPlan={planCode}
         className="w-full h-full"
       />

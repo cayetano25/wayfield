@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -21,11 +22,36 @@ interface CartContextValue {
   refreshCart: (orgId: number, orgSlug?: string) => Promise<void>;
   addWorkshop: (orgId: number, workshopId: number, orgSlug?: string) => Promise<Cart>;
   removeItem: (orgId: number, itemId: number) => Promise<void>;
+  updateCart: (cart: Cart) => void;
   clearCart: () => void;
   itemCount: number;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+const CART_ORG_KEY = 'wayfield_cart_org';
+
+function persistCartOrg(orgId: number, orgSlug: string): void {
+  try {
+    localStorage.setItem(CART_ORG_KEY, JSON.stringify({ id: orgId, slug: orgSlug }));
+  } catch {}
+}
+
+function clearPersistedCartOrg(): void {
+  try {
+    localStorage.removeItem(CART_ORG_KEY);
+  } catch {}
+}
+
+function getPersistedCartOrg(): { id: number; slug: string } | null {
+  try {
+    const raw = localStorage.getItem(CART_ORG_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { id: number; slug: string };
+  } catch {
+    return null;
+  }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
@@ -37,7 +63,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const refreshCart = useCallback(async (orgId: number, orgSlug?: string) => {
     if (!getToken()) return;
     lastOrgId.current = orgId;
-    if (orgSlug) setOrganizationSlug(orgSlug);
+    if (orgSlug) {
+      setOrganizationSlug(orgSlug);
+      persistCartOrg(orgId, orgSlug);
+    }
     setIsLoading(true);
     try {
       const data = await getCart(orgId);
@@ -49,6 +78,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // On mount: restore cart from the last known org (survives page refresh)
+  useEffect(() => {
+    const org = getPersistedCartOrg();
+    if (org && getToken()) {
+      refreshCart(org.id, org.slug);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addWorkshop = useCallback(
     async (orgId: number, workshopId: number, orgSlug?: string): Promise<Cart> => {
       const updated = await addCartItem(orgId, {
@@ -57,7 +95,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
       setCart(updated);
       lastOrgId.current = orgId;
-      if (orgSlug) setOrganizationSlug(orgSlug);
+      if (orgSlug) {
+        setOrganizationSlug(orgSlug);
+        persistCartOrg(orgId, orgSlug);
+      }
       return updated;
     },
     [],
@@ -68,10 +109,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart(updated);
   }, []);
 
+  const updateCart = useCallback((updated: Cart) => {
+    setCart(updated);
+  }, []);
+
   const clearCart = useCallback(() => {
     setCart(null);
     setOrganizationSlug(null);
     lastOrgId.current = null;
+    clearPersistedCartOrg();
   }, []);
 
   const openCart = useCallback(() => setIsOpen(true), []);
@@ -93,6 +139,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         refreshCart,
         addWorkshop,
         removeItem,
+        updateCart,
         clearCart,
         itemCount,
       }}

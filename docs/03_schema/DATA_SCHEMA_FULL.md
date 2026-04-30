@@ -1428,3 +1428,16 @@ Core relationship additions:
 - registrations → waitlist_promotion_payments
 - all notification/payment events → scheduled_payment_jobs
 - all outbound emails → email_logs
+
+## 60. workshop_price_tiers
+Purpose: Named price tiers with time-based, capacity-based, or combined triggers.
+Key fields: workshop_id, label, price_cents, valid_from (nullable),
+  valid_until (nullable), capacity_limit (nullable), sort_order,
+  registrations_at_tier (denormalized), is_active, reminder_sent_at.
+Constraint: price_cents <= workshop_pricing.base_price_cents (application layer).
+Constraint: at least one of valid_until or capacity_limit must be set.
+
+Core relationship additions:
+  - workshops → workshop_price_tiers (one-to-many)
+  - workshop_price_tiers → cart_items (via applied_tier_id, nullable)
+  - workshop_price_tiers → order_items (via applied_tier_id, nullable)

@@ -112,15 +112,14 @@ class BalancePaymentService
         $stripe          = new StripeClient(config('stripe.secret_key'));
 
         // Retrieve the deposit PaymentIntent to find the saved payment method.
+        // Destination Charges: intent lives on the platform account — no stripe_account header.
         $depositIntent   = $stripe->paymentIntents->retrieve(
             $order->stripe_payment_intent_id,
-            [],
-            ['stripe_account' => $stripeAccountId],
         );
         $paymentMethodId = $depositIntent->payment_method;
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $org->activeSubscription?->plan_code ?? 'free';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,
@@ -141,7 +140,7 @@ class BalancePaymentService
                     'intent_type'  => 'balance',
                     'order_number' => $order->order_number,
                 ],
-            ], ['stripe_account' => $stripeAccountId]);
+            ]);
 
             DB::transaction(function () use ($order, $balanceIntent, $fees, $stripeAccountId) {
                 $order->update([
@@ -218,8 +217,6 @@ class BalancePaymentService
         if ($existing) {
             $stripeIntent = $stripe->paymentIntents->retrieve(
                 $existing->stripe_payment_intent_id,
-                [],
-                ['stripe_account' => $stripeAccountId],
             );
 
             if (in_array($stripeIntent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action'], true)) {
@@ -232,7 +229,7 @@ class BalancePaymentService
         }
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $org->activeSubscription?->plan_code ?? 'free';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,
@@ -250,7 +247,7 @@ class BalancePaymentService
                 'intent_type'  => 'balance',
                 'order_number' => $order->order_number,
             ],
-        ], ['stripe_account' => $stripeAccountId]);
+        ]);
 
         PaymentIntentRecord::create([
             'order_id'                 => $order->id,
@@ -293,7 +290,7 @@ class BalancePaymentService
         $stripe          = new StripeClient(config('stripe.secret_key'));
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $org->activeSubscription?->plan_code ?? 'free';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,
@@ -311,7 +308,7 @@ class BalancePaymentService
                 'intent_type'  => 'balance',
                 'order_number' => $order->order_number,
             ],
-        ], ['stripe_account' => $stripeAccountId]);
+        ]);
 
         PaymentIntentRecord::create([
             'order_id'                 => $order->id,

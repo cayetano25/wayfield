@@ -10,8 +10,10 @@ use App\Domain\Payments\Exceptions\WorkshopNotPublishedException;
 use App\Domain\Payments\Models\CartItem;
 use App\Domain\Payments\Services\CartService;
 use App\Domain\Payments\Services\CheckoutService;
+use App\Domain\Payments\Services\CouponService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AddCartItemRequest;
+use App\Http\Requests\Api\V1\ApplyCouponRequest;
 use App\Http\Resources\CartResource;
 use App\Http\Resources\OrderResource;
 use App\Models\Organization;
@@ -25,6 +27,7 @@ class CartController extends Controller
     public function __construct(
         private readonly CartService $cartService,
         private readonly CheckoutService $checkoutService,
+        private readonly CouponService $couponService,
     ) {}
 
     /**
@@ -110,6 +113,70 @@ class CartController extends Controller
         return response()->json(
             (new CartResource($summary['cart']))->withFees($summary['fees'])
         );
+    }
+
+    /**
+     * POST /api/v1/cart/{organization}/coupon
+     */
+    public function applyCoupon(ApplyCouponRequest $request, Organization $organization): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $cart = $this->cartService->getOrCreateCart($user, $organization);
+        } catch (CartOrgMismatchException $e) {
+            return response()->json(['error' => 'CART_ORG_MISMATCH', 'message' => $e->getMessage()], 409);
+        }
+
+        if (! $cart->isActive()) {
+            return response()->json(['error' => 'CART_EXPIRED', 'message' => 'Your cart has expired.'], 410);
+        }
+
+        $result = $this->couponService->applyToCart($request->input('code'), $cart, $user);
+
+        if (! $result->isValid()) {
+            return response()->json([
+                'error'   => $result->errorCode,
+                'message' => $result->errorMessage,
+            ], 422);
+        }
+
+        $cart->refresh()->load('items.workshop', 'items.session', 'appliedCoupon');
+
+        return response()->json([
+            'data' => [
+                'coupon_code'           => $result->coupon->code,
+                'discount_type'         => $result->coupon->discount_type,
+                'discount_pct'          => $result->coupon->discount_pct,
+                'discount_amount'       => number_format($result->discountCents / 100, 2),
+                'pre_discount_subtotal' => number_format($cart->subtotal_cents / 100, 2),
+                'discounted_total'      => number_format($result->discountedTotalCents / 100, 2),
+                'message'               => 'Coupon applied — $' . number_format($result->discountCents / 100, 2) . ' off',
+            ],
+        ]);
+    }
+
+    /**
+     * DELETE /api/v1/cart/{organization}/coupon
+     */
+    public function removeCoupon(Request $request, Organization $organization): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $cart = $this->cartService->getOrCreateCart($user, $organization);
+        } catch (CartOrgMismatchException $e) {
+            return response()->json(['error' => 'CART_ORG_MISMATCH', 'message' => $e->getMessage()], 409);
+        }
+
+        $this->couponService->removeFromCart($cart);
+
+        $summary = $this->cartService->getCartSummary($cart->fresh());
+
+        return response()->json(array_merge(
+            ['message' => 'Coupon removed.'],
+            ['cart' => (new CartResource($summary['cart']))->withFees($summary['fees'])],
+        ));
     }
 
     /**

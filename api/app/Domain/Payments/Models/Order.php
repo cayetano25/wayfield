@@ -16,6 +16,9 @@ class Order extends Model
         'user_id',
         'organization_id',
         'cart_id',
+        'coupon_id',
+        'coupon_code',
+        'discount_cents',
         'status',
         'payment_method',
         'subtotal_cents',
@@ -42,6 +45,7 @@ class Order extends Model
 
     protected $casts = [
         'subtotal_cents' => 'integer',
+        'discount_cents' => 'integer',
         'wayfield_fee_cents' => 'integer',
         'stripe_fee_cents' => 'integer',
         'total_cents' => 'integer',
@@ -58,6 +62,11 @@ class Order extends Model
         'metadata_json' => 'array',
     ];
 
+    public function getRouteKeyName(): string
+    {
+        return 'order_number';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -73,6 +82,11 @@ class Order extends Model
         return $this->belongsTo(Cart::class);
     }
 
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
@@ -86,6 +100,11 @@ class Order extends Model
     public function refundRequests(): HasMany
     {
         return $this->hasMany(RefundRequest::class);
+    }
+
+    public function hasCoupon(): bool
+    {
+        return $this->coupon_id !== null;
     }
 
     public function isFullyPaid(): bool

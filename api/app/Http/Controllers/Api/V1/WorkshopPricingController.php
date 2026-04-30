@@ -31,10 +31,10 @@ class WorkshopPricingController extends Controller
         $pricing = WorkshopPricing::where('workshop_id', $workshop->id)->first();
 
         if ($pricing === null) {
-            return response()->json(['data' => null], 200);
+            return response()->json(['message' => 'No pricing configured for this workshop.'], 404);
         }
 
-        return response()->json(['data' => new WorkshopPricingResource($pricing)]);
+        return response()->json(new WorkshopPricingResource($pricing));
     }
 
     /**
@@ -59,7 +59,7 @@ class WorkshopPricingController extends Controller
             ['workshop_id' => $workshop->id],
         ));
 
-        return response()->json(['data' => new WorkshopPricingResource($pricing)], 201);
+        return response()->json(new WorkshopPricingResource($pricing), 201);
     }
 
     /**
@@ -81,7 +81,7 @@ class WorkshopPricingController extends Controller
 
         $pricing->update($request->validated());
 
-        return response()->json(['data' => new WorkshopPricingResource($pricing->fresh())]);
+        return response()->json(new WorkshopPricingResource($pricing->fresh()));
     }
 
     /**
@@ -103,7 +103,7 @@ class WorkshopPricingController extends Controller
         }
 
         $workshop->loadMissing('organization');
-        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'foundation';
+        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'free';
 
         $baseFees = $this->feeService->calculateFees($pricing->base_price_cents, $planCode);
 

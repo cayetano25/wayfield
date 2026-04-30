@@ -7,6 +7,7 @@ import {
   User,
   Bell,
   LogOut,
+  Receipt,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { clearNavCache } from '@/lib/hooks/useNavContext'
@@ -224,6 +225,32 @@ export function UserMenu({ user }: UserMenuProps) {
               }}
             >
               Notifications
+            </span>
+          </button>
+
+          {/* My Receipts */}
+          <button
+            role="menuitem"
+            onClick={() => navigateTo('/account/receipts')}
+            className="w-full flex items-center gap-3 px-4 py-[10px]
+                       transition-colors duration-100 cursor-pointer text-left"
+            style={{ backgroundColor: 'transparent', border: 'none' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+            }}
+          >
+            <Receipt size={16} color="#6B7280" aria-hidden="true" />
+            <span
+              style={{
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontSize:   13,
+                color:      '#374151',
+              }}
+            >
+              My Receipts
             </span>
           </button>
 

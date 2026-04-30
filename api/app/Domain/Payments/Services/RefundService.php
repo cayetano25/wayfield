@@ -224,6 +224,7 @@ class RefundService
 
         $stripeAccountId = $connectAccount?->stripe_account_id;
 
+        // Destination Charges: refunds are issued on the platform account — no stripe_account header.
         $stripeRefund = $this->stripe->refunds->create([
             'charge'   => $order->stripe_charge_id,
             'amount'   => $finalAmountCents,
@@ -232,7 +233,7 @@ class RefundService
                 'order_number'      => $order->order_number,
                 'reason_code'       => $refundRequest->reason_code,
             ],
-        ], $stripeAccountId ? ['stripe_account' => $stripeAccountId] : []);
+        ]);
 
         // Create RefundTransaction
         $refundTransaction = RefundTransaction::create([

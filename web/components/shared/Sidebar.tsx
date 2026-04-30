@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   Wallet,
+  Tag,
   BarChart3,
   HelpCircle,
   X,
@@ -31,6 +32,7 @@ const orgItems: NavItem[] = [
   { href: '/organization/members', label: 'Members', icon: Users },
   { href: '/organization/billing', label: 'Billing', icon: CreditCard },
   { href: '/organization/settings/payments', label: 'Payments', icon: Wallet },
+  { href: '/organization/coupons', label: 'Coupons', icon: Tag },
 ];
 
 const bottomItems: NavItem[] = [
@@ -38,6 +40,7 @@ const bottomItems: NavItem[] = [
 ];
 
 const BILLING_ROLES = ['owner', 'billing_admin'];
+const COUPON_ROLES = ['owner', 'admin'];
 
 function NavLink({ href, label, icon: Icon, active }: NavItem & { active: boolean }) {
   return (
@@ -113,7 +116,11 @@ export function Sidebar({ onClose }: SidebarProps) {
         </div>
 
         {orgItems
-          .filter((item) => item.href !== '/organization/billing' || canSeeBilling)
+          .filter((item) => {
+            if (item.href === '/organization/billing') return canSeeBilling;
+            if (item.href === '/organization/coupons') return COUPON_ROLES.includes(role);
+            return true;
+          })
           .map((item) => (
             <NavLink key={item.href} {...item} active={isActive(item.href)} />
           ))}

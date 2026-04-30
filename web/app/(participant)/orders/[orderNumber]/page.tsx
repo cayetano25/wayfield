@@ -92,6 +92,19 @@ function OrderItemRow({ item }: { item: OrderSummary['items'][number] }) {
         <p style={{ fontSize: 12, color: '#9CA3AF', margin: '2px 0 0' }}>
           {item.item_type === 'addon_session' ? 'Add-on session' : 'Workshop registration'}
         </p>
+        {item.is_tier_price && item.applied_tier_label && (
+          <span
+            style={{
+              fontSize: 12,
+              color: '#16A34A',
+              fontWeight: 500,
+              marginTop: 4,
+              display: 'inline-block',
+            }}
+          >
+            {item.applied_tier_label} pricing applied
+          </span>
+        )}
         {item.is_deposit && item.balance_due_date && (
           <p
             style={{

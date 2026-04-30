@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Clock } from 'lucide-react';
+import { Clock, Receipt } from 'lucide-react';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { PaymentStatusBadge } from '@/components/workshops/pricing/PaymentStatusBadge';
 import { apiPost } from '@/lib/api/client';
@@ -70,6 +70,19 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
         {workshop.title}
       </h3>
 
+      {/* View Receipt link — shown when an order exists */}
+      {workshop.order_number && (
+        <div className="mb-1">
+          <Link
+            href={`/account/receipts/${workshop.order_number}`}
+            className="inline-flex items-center gap-1 text-xs font-medium text-[#0FA3B1] hover:underline"
+          >
+            <Receipt size={11} />
+            View Receipt
+          </Link>
+        </div>
+      )}
+
       {/* Series / date */}
       {workshop.series ? (
         <p className="font-sans mb-2" style={{ fontSize: 12, color: '#6B7280' }}>
@@ -90,6 +103,13 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
             orderNumber={workshop.order_number}
           />
         </div>
+      )}
+
+      {/* Tier pricing label */}
+      {workshop.is_tier_price && workshop.applied_tier_label && (
+        <p className="font-sans mb-2" style={{ fontSize: 12, color: '#6B7280' }}>
+          Registered at {workshop.applied_tier_label} price
+        </p>
       )}
 
       {/* Bottom: session count + check-in rate + view details */}

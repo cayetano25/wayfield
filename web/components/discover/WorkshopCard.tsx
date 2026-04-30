@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, CalendarDays, Heart, ArrowRight, Lock } from 'lucide-react';
+import { MapPin, CalendarDays, Heart, ArrowRight, Lock, ShoppingBag, Check, Loader2 } from 'lucide-react';
+import { useOptionalCart } from '@/contexts/CartContext';
+import { ApiError } from '@/lib/api/client';
 
 /* --- Types ----------------------------------------------------------------- */
 
@@ -16,6 +20,8 @@ export interface WorkshopCardProps {
   dateRange: string;
   price: number;
   publicSlug: string;
+  orgId?: number;
+  orgSlug?: string;
   spotsLeft?: number | null;
   totalCapacity?: number | null;
   isFavorited?: boolean;
@@ -59,6 +65,81 @@ function StatusBadge({
   );
 }
 
+/* --- Cart icon button ------------------------------------------------------- */
+
+function CartButton({
+  workshopId,
+  orgId,
+  orgSlug,
+  publicSlug,
+}: {
+  workshopId: number;
+  orgId: number;
+  orgSlug: string;
+  publicSlug: string;
+}) {
+  const cart = useOptionalCart();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const inCart = cart?.cart?.items.some((item) => item.workshop_id === workshopId) ?? false;
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (inCart) {
+      cart?.openCart();
+      return;
+    }
+
+    if (!cart) return;
+
+    setLoading(true);
+    try {
+      await cart.addWorkshop(orgId, workshopId, orgSlug);
+      cart.openCart();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push(`/login?return=/w/${publicSlug}`);
+      } else if (err instanceof ApiError && err.status === 409) {
+        // Already in cart (e.g. after page refresh) — sync state then show cart
+        await cart.refreshCart(orgId, orgSlug);
+        cart.openCart();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading}
+      aria-label={inCart ? 'View cart' : 'Add to cart'}
+      className="flex items-center justify-center rounded-xl transition-all active:scale-95"
+      style={{
+        width: 36,
+        height: 36,
+        minWidth: 36,
+        backgroundColor: inCart ? '#ECFDF5' : '#0FA3B1',
+        border: 'none',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {loading ? (
+        <Loader2 size={15} color={inCart ? '#065F46' : '#ffffff'} style={{ animation: 'spin 1s linear infinite' }} />
+      ) : inCart ? (
+        <Check size={15} color="#065F46" />
+      ) : (
+        <ShoppingBag size={15} color="#ffffff" />
+      )}
+    </button>
+  );
+}
+
 /* --- WorkshopCard ---------------------------------------------------------- */
 
 export function WorkshopCard({
@@ -71,6 +152,8 @@ export function WorkshopCard({
   dateRange,
   price,
   publicSlug,
+  orgId,
+  orgSlug,
   spotsLeft,
   totalCapacity,
   isFavorited = false,
@@ -135,12 +218,28 @@ export function WorkshopCard({
           </div>
         </div>
 
-        {/* Price + CTA row */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <span className="font-bold text-gray-900 text-base">
+        {/* Price + Cart + CTA row */}
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+          <span className="font-bold text-gray-900 text-base flex-1">
             {price > 0 ? `$${price.toLocaleString()}` : 'Free'}
           </span>
-          {isWaitlistOnly ? (
+          {!isWaitlistOnly && orgId != null && orgSlug ? (
+            <>
+              <CartButton
+                workshopId={id}
+                orgId={orgId}
+                orgSlug={orgSlug}
+                publicSlug={publicSlug}
+              />
+              <Link
+                href={`/w/${publicSlug}`}
+                className="text-[#0FA3B1] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
+                onClick={(e) => e.stopPropagation()}
+              >
+                View <ArrowRight size={13} />
+              </Link>
+            </>
+          ) : isWaitlistOnly ? (
             <span className="text-gray-400 text-sm flex items-center gap-1.5">
               Waitlist Only <Lock size={12} />
             </span>

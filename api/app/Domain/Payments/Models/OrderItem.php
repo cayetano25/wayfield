@@ -19,6 +19,9 @@ class OrderItem extends Model
         'registration_id',
         'session_selection_id',
         'unit_price_cents',
+        'applied_tier_id',
+        'applied_tier_label',
+        'is_tier_price',
         'quantity',
         'line_total_cents',
         'is_deposit',
@@ -30,6 +33,8 @@ class OrderItem extends Model
 
     protected $casts = [
         'unit_price_cents' => 'integer',
+        'applied_tier_id' => 'integer',
+        'is_tier_price' => 'boolean',
         'quantity' => 'integer',
         'line_total_cents' => 'integer',
         'is_deposit' => 'boolean',
@@ -60,5 +65,10 @@ class OrderItem extends Model
     public function sessionSelection(): BelongsTo
     {
         return $this->belongsTo(SessionSelection::class);
+    }
+
+    public function appliedTier(): BelongsTo
+    {
+        return $this->belongsTo(WorkshopPriceTier::class, 'applied_tier_id');
     }
 }

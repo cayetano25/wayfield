@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Domain\Payments\Models\WorkshopPriceTier;
+use App\Domain\Payments\Services\PriceResolutionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -54,8 +56,50 @@ class OrganizerWorkshopResource extends JsonResource
             ])
             ),
             'taxonomy' => $this->buildTaxonomyArray(),
+            'price_tiers' => $this->buildPriceTiersArray(),
+            'current_price_resolution' => $this->buildCurrentPriceResolution(),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
+        ];
+    }
+
+    private function buildPriceTiersArray(): array
+    {
+        $tiers = WorkshopPriceTier::where('workshop_id', $this->id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($tiers->isEmpty()) {
+            return [];
+        }
+
+        return $tiers->map(fn ($tier) => [
+            'id'                    => $tier->id,
+            'label'                 => $tier->label,
+            'price_cents'           => $tier->price_cents,
+            'valid_from'            => $tier->valid_from?->toIso8601String(),
+            'valid_until'           => $tier->valid_until?->toIso8601String(),
+            'capacity_limit'        => $tier->capacity_limit,
+            'registrations_at_tier' => $tier->registrations_at_tier,
+            'sort_order'            => $tier->sort_order,
+            'is_active'             => $tier->is_active,
+        ])->values()->all();
+    }
+
+    private function buildCurrentPriceResolution(): array
+    {
+        $service    = app(PriceResolutionService::class);
+        $resolution = $service->resolve($this->resource);
+
+        return [
+            'price_cents'        => $resolution->priceCents,
+            'currency'           => $resolution->currency,
+            'tier_id'            => $resolution->tierId,
+            'tier_label'         => $resolution->tierLabel,
+            'is_tier_price'      => $resolution->isTierPrice,
+            'remaining_capacity' => $resolution->remainingCapacity,
+            'base_price_cents'   => $resolution->basePriceCents,
         ];
     }
 

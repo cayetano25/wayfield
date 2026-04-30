@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
+import { WorkshopPriceDisplay } from '@/components/workshops/public/WorkshopPriceDisplay';
+import { AddToCartButton } from '@/components/workshops/public/AddToCartButton';
 
 // Allowed public leader fields — enforced here as a second layer after the API
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
@@ -437,6 +439,30 @@ export default async function PublicWorkshopPage(
           </div>
         </div>
       </div>
+
+      {/* Pricing + Add to Cart */}
+      {workshop.organization && (
+        <section className="max-w-4xl mx-auto px-6 pt-10 pb-0">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 max-w-2xl">
+            {/* Only render the price card when it's a paid workshop */}
+            {workshop.pricing && workshop.pricing.current_price_cents > 0 && (
+              <div className="flex-1">
+                <WorkshopPriceDisplay pricing={workshop.pricing} />
+              </div>
+            )}
+            <div className={workshop.pricing && workshop.pricing.current_price_cents > 0 ? 'sm:flex-shrink-0' : 'w-full sm:max-w-sm'}>
+              <AddToCartButton
+                workshopId={workshop.id}
+                orgId={workshop.organization.id}
+                orgSlug={workshop.organization.slug}
+                publicSlug={workshop.public_slug}
+                pricing={workshop.pricing}
+                fullWidth
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* About */}
       {(workshop.description || workshop.body_content) && (

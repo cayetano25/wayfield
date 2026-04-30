@@ -20,19 +20,27 @@ class CartResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'               => $this->id,
-            'organization_id'  => $this->organization_id,
-            'status'           => $this->status,
-            'subtotal_cents'   => $this->subtotal_cents,
-            'currency'         => $this->currency,
-            'expires_at'       => $this->expires_at?->toIso8601String(),
-            'items'            => CartItemResource::collection($this->whenLoaded('items')),
-            'fee_breakdown'    => $this->when($this->fees !== null, fn () => [
-                'wayfield_fee_cents'   => $this->fees->wayFieldFeeCents,
-                'stripe_fee_cents'     => $this->fees->stripeFeeCents,
-                'total_fee_cents'      => $this->fees->totalFeeCents,
+            'id'                      => $this->id,
+            'organization_id'         => $this->organization_id,
+            'organization_name'       => $this->whenLoaded('organization', fn () => $this->organization?->name),
+            'organization_slug'       => $this->whenLoaded('organization', fn () => $this->organization?->slug),
+            'status'                  => $this->status,
+            'subtotal_cents'          => $this->subtotal_cents,
+            'discount_cents'          => $this->discount_cents,
+            'discounted_total_cents'  => $this->discounted_total_cents,
+            'currency'                => $this->currency,
+            'expires_at'              => $this->expires_at?->toIso8601String(),
+            'items'                   => CartItemResource::collection($this->whenLoaded('items')),
+            'coupon'                  => $this->when(
+                $this->applied_coupon_id !== null,
+                fn () => new CartCouponResource($this->resource)
+            ),
+            'fee_breakdown'           => $this->when($this->fees !== null, fn () => [
+                'wayfield_fee_cents'     => $this->fees->wayFieldFeeCents,
+                'stripe_fee_cents'       => $this->fees->stripeFeeCents,
+                'total_fee_cents'        => $this->fees->totalFeeCents,
                 'organizer_payout_cents' => $this->fees->organizerPayoutCents,
-                'take_rate_pct'        => $this->fees->takeRatePct,
+                'take_rate_pct'          => $this->fees->takeRatePct,
             ]),
         ];
     }

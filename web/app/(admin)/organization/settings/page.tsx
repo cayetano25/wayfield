@@ -17,6 +17,7 @@ interface OrgDetail {
   name: string;
   slug: string;
   logo_url: string | null;
+  primary_color: string | null;
   primary_contact_first_name: string;
   primary_contact_last_name: string;
   primary_contact_email: string;
@@ -34,10 +35,15 @@ export default function OrganizationSettingsPage() {
 
   const { currentOrg } = useUser();
   const canEdit = EDIT_ROLES.includes(currentOrg?.role ?? '');
+  const planCode = currentOrg?.plan_code ?? 'free';
+  const isCreatorOrAbove = ['starter', 'pro', 'enterprise'].includes(planCode);
+  const isStudioOrAbove = ['pro', 'enterprise'].includes(planCode);
 
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState('#0FA3B1');
+  const [savingColor, setSavingColor] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -66,6 +72,7 @@ export default function OrganizationSettingsPage() {
           primary_contact_phone: d.primary_contact_phone ?? '',
         });
         setOrgAddress(d.address ?? null);
+        setPrimaryColor(d.primary_color ?? '#0FA3B1');
       })
       .catch(() => toast.error('Failed to load organization'))
       .finally(() => setLoading(false));
@@ -75,6 +82,20 @@ export default function OrganizationSettingsPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }
+
+  async function handleSaveColor() {
+    if (!currentOrg) return;
+    setSavingColor(true);
+    try {
+      await apiPatch(`/organizations/${currentOrg.id}`, { primary_color: primaryColor });
+      setOrg((prev) => prev ? { ...prev, primary_color: primaryColor } : prev);
+      toast.success('Brand color saved');
+    } catch {
+      toast.error('Failed to save brand color');
+    } finally {
+      setSavingColor(false);
     }
   }
 
@@ -131,27 +152,6 @@ export default function OrganizationSettingsPage() {
             <p className="text-sm text-medium-gray mt-0.5">
               These details identify your organization across the platform.
             </p>
-          </div>
-          <div className="px-6 pt-6 pb-2 flex justify-center">
-            <ImageUploader
-              currentUrl={org.logo_url}
-              entityType="organization"
-              entityId={org.id}
-              fieldName="logo_url"
-              shape="circle"
-              width={96}
-              height={96}
-              onUploadComplete={(url) => setOrg((prev) => prev ? { ...prev, logo_url: url } : prev)}
-              onRemove={
-                canEdit
-                  ? async () => {
-                      await apiPatch(`/organizations/${org.id}`, { logo_url: null });
-                      setOrg((prev) => prev ? { ...prev, logo_url: null } : prev);
-                    }
-                  : undefined
-              }
-              label="Organization Logo"
-            />
           </div>
           <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <Input
@@ -237,6 +237,128 @@ export default function OrganizationSettingsPage() {
             />
           </div>
         </Card>
+
+        {/* Brand Identity */}
+        {canEdit && (
+          <Card className="mb-6">
+            <div className="px-6 py-5 border-b border-border-gray">
+              <h2 className="font-heading text-base font-semibold text-dark">Brand Identity</h2>
+              <p className="text-sm text-medium-gray mt-0.5">
+                Your logo and brand color appear on payment receipts sent to participants.
+              </p>
+            </div>
+
+            {!isCreatorOrAbove ? (
+              <div className="px-6 py-8 flex flex-col items-center text-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: '#FFF7ED' }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2L2 17h16L10 2z" stroke="#E67E22" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+                    <path d="M10 8v4" stroke="#E67E22" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="10" cy="14.5" r="0.75" fill="#E67E22"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-dark mb-1">Available on Creator plan and above</p>
+                  <p className="text-sm text-medium-gray">
+                    Upgrade to Creator to add your logo to receipts and customize your brand color.
+                  </p>
+                </div>
+                <a
+                  href="/organization/billing"
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-[#0FA3B1] hover:underline"
+                >
+                  View plans →
+                </a>
+              </div>
+            ) : (
+              <div className="px-6 py-6 space-y-6">
+                {/* Logo */}
+                <div>
+                  <p className="text-sm font-medium text-dark mb-3">Organization Logo</p>
+                  <ImageUploader
+                    currentUrl={org.logo_url}
+                    entityType="organization"
+                    entityId={org.id}
+                    fieldName="logo_url"
+                    shape="circle"
+                    width={96}
+                    height={96}
+                    onUploadComplete={(url) => setOrg((prev) => prev ? { ...prev, logo_url: url } : prev)}
+                    onRemove={async () => {
+                      await apiPatch(`/organizations/${org.id}`, { logo_url: null });
+                      setOrg((prev) => prev ? { ...prev, logo_url: null } : prev);
+                    }}
+                    label="Organization Logo"
+                  />
+                  <p className="text-xs text-medium-gray mt-2">
+                    Shown on receipts and emails sent to participants.
+                  </p>
+                </div>
+
+                {/* Primary color */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-dark">Brand Color</p>
+                    {!isStudioOrAbove && (
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{ backgroundColor: '#FFF7ED', color: '#E67E22' }}
+                      >
+                        Studio+
+                      </span>
+                    )}
+                  </div>
+                  {isStudioOrAbove ? (
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="w-10 h-10 rounded-lg border border-border-gray cursor-pointer p-0.5"
+                          style={{ backgroundColor: 'transparent' }}
+                        />
+                      </div>
+                      <Input
+                        value={primaryColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setPrimaryColor(v);
+                        }}
+                        className="w-32 font-mono"
+                        placeholder="#0FA3B1"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleSaveColor}
+                        loading={savingColor}
+                        disabled={!/^#[0-9A-Fa-f]{6}$/.test(primaryColor)}
+                      >
+                        Save color
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-lg border border-border-gray flex items-center justify-center"
+                        style={{ backgroundColor: primaryColor }}
+                      />
+                      <span className="text-sm text-medium-gray font-mono">{primaryColor}</span>
+                      <span className="text-xs text-medium-gray">Upgrade to Studio to customize</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-medium-gray mt-2">
+                    Used as the accent color on receipts and participant-facing emails.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
 
         {canEdit && (
           <div className="flex justify-end">
