@@ -95,23 +95,39 @@ export function buildLeaderMetadata(leader: LeaderProfilePublic): Metadata {
   };
 }
 
-export function buildWorkshopsListingMetadata(page?: number): Metadata {
-  const title = 'Photography Workshops | Wayfield';
-  const description =
-    'Discover photography workshops, creative education events, and immersive learning experiences led by professional photographers on Wayfield.';
-  const url =
-    page && page > 1
-      ? `${SITE_URL}/workshops?page=${page}`
-      : `${SITE_URL}/workshops`;
+export function buildWorkshopsListingMetadata(
+  page?: number,
+  categoryName?: string,
+  categorySlug?: string,
+): Metadata {
+  // When a category is active, title reflects it
+  const title = categoryName
+    ? `${categoryName} Workshops | Wayfield`
+    : 'Workshops | Wayfield';
+
+  const description = categoryName
+    ? `Browse ${categoryName.toLowerCase()} workshops on Wayfield.`
+    : 'Discover photography workshops, creative education events, and immersive learning experiences led by professional photographers on Wayfield.';
+
+  // Canonical logic:
+  // - No category: canonical is /workshops (or /workshops?page=N for paginated)
+  // - Category active: canonical points to the DEDICATED category page /workshops/[slug]
+  //   This tells Google the authoritative URL for this content is the category page,
+  //   preventing the ?category= query param from competing with it in search results.
+  const canonical = categorySlug
+    ? `${SITE_URL}/workshops/${categorySlug}`
+    : page && page > 1
+    ? `${SITE_URL}/workshops?page=${page}`
+    : `${SITE_URL}/workshops`;
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical },
     openGraph: {
       title,
       description,
-      url,
+      url: canonical,
       type: 'website',
       siteName: 'Wayfield',
       images: [{ url: DEFAULT_OG_IMAGE }],
