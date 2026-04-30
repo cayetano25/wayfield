@@ -169,6 +169,16 @@ class Workshop extends Model
         return $this->belongsToMany(WorkshopCategory::class, 'workshop_category_workshop');
     }
 
+    public function favoritedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'workshop_favorites',
+            'workshop_id',
+            'user_id'
+        )->withTimestamps(false);
+    }
+
     // ─── Scopes ──────────────────────────────────────────────────────────────
 
     public function scopePubliclyVisible(Builder $query): Builder

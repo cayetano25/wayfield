@@ -81,6 +81,7 @@ use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\UserNotificationController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WorkshopAnalyticsController;
+use App\Http\Controllers\Api\V1\WorkshopFavoritesController;
 use App\Http\Controllers\Api\V1\WorkshopController;
 use App\Http\Controllers\Api\V1\WorkshopLeaderController;
 use App\Http\Controllers\Api\V1\WorkshopLogisticsController;
@@ -302,6 +303,11 @@ Route::prefix('v1')->group(function () {
         // Participant search across all org workshops (for organizer add-to-session flow)
         Route::get('organizations/{organization}/participants/search', [ParticipantController::class, 'search'])
             ->name('org-participants.search');
+
+        // Workshop favorites (any authenticated user)
+        Route::post('workshops/{workshop}/favorite', [WorkshopFavoritesController::class, 'toggle']);
+        Route::get('workshops/{workshop}/is-favorited', [WorkshopFavoritesController::class, 'isFavorited']);
+        Route::get('me/favorites', [WorkshopFavoritesController::class, 'favorites']);
 
         // Workshop join and registration (participant)
         // Note: join route must come before {workshop} routes to avoid conflict
