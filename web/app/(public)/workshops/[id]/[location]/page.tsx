@@ -14,7 +14,8 @@ export const dynamicParams = true;
 export async function generateStaticParams() {
   try {
     const categories = await getSitemapCategories();
-    return categories.map((c) => ({ category: c.slug, location: '_' }));
+    // param name is `id` — matches the parent [id] segment
+    return categories.map((c) => ({ id: c.slug, location: '_' }));
   } catch {
     return [];
   }
@@ -23,10 +24,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ category: string; location: string }>;
+  params: Promise<{ id: string; location: string }>;
 }) {
-  const { category, location } = await params;
-  const data = await getPublicCategoryByLocation(category, location);
+  const { id, location } = await params;
+  const data = await getPublicCategoryByLocation(id, location);
   if (!data) return { title: 'Not Found' };
   return buildCategoryMetadata(data.category, data.location, location);
 }
@@ -34,10 +35,11 @@ export async function generateMetadata({
 export default async function CategoryLocationPage({
   params,
 }: {
-  params: Promise<{ category: string; location: string }>;
+  params: Promise<{ id: string; location: string }>;
 }) {
-  const { category, location } = await params;
-  const data = await getPublicCategoryByLocation(category, location);
+  // `id` holds the category slug — named `id` to match the parent [id] segment
+  const { id, location } = await params;
+  const data = await getPublicCategoryByLocation(id, location);
 
   if (!data) notFound();
 
