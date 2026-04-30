@@ -87,11 +87,6 @@ function formatMonthlyPrice(cents: number): string {
   return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`
 }
 
-function formatAnnualTotal(cents: number): string {
-  const dollars = cents / 100
-  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`
-}
-
 function resolvesLimit(planCode: string, limitHitKey: string): string | null {
   const resolutions: Record<string, Record<string, string>> = {
     active_workshops: {
@@ -147,6 +142,7 @@ export function PlanCard({
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         display: 'flex',
         flexDirection: 'column',
+        height: '100%',
       }
     : isHighlighted
       ? {
@@ -157,6 +153,7 @@ export function PlanCard({
           boxShadow: '0 4px 20px rgba(15,163,177,0.15)',
           display: 'flex',
           flexDirection: 'column',
+          height: '100%',
         }
       : {
           background: 'white',
@@ -166,6 +163,7 @@ export function PlanCard({
           boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           display: 'flex',
           flexDirection: 'column',
+          height: '100%',
         }
 
   const textPrimary = isEnterprise ? 'white' : '#2E2E2E'
@@ -199,23 +197,27 @@ export function PlanCard({
       </div>
     )
   } else {
-    const annualMonthlyCents = plan.annual_cents !== null ? Math.round(plan.annual_cents / 12) : null
-    const displayCents = billingCycle === 'monthly' ? plan.monthly_cents : (annualMonthlyCents ?? plan.monthly_cents)
-    const monthlyStr = formatMonthlyPrice(displayCents)
+    const monthlyDollars = plan.monthly_cents / 100
+    const annualMonthlyRate = monthlyDollars * 0.8
+    const annualTotal = monthlyDollars * 12 * 0.8
+
+    const displayStr = billingCycle === 'monthly'
+      ? formatMonthlyPrice(plan.monthly_cents)
+      : `$${annualMonthlyRate.toFixed(0)}`
 
     priceDisplay = (
       <div style={{ marginTop: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
           <span style={{ fontFamily: 'var(--font-heading)', fontSize: '36px', fontWeight: 800, color: textPrimary }}>
-            {monthlyStr}
+            {displayStr}
           </span>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: '#9CA3AF' }}>
             /mo
           </span>
         </div>
-        {billingCycle === 'annual' && plan.annual_cents !== null && (
+        {billingCycle === 'annual' && (
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
-            billed annually ({formatAnnualTotal(plan.annual_cents)}/yr)
+            Billed as ${annualTotal.toFixed(2)}/year · Save 20%
           </div>
         )}
       </div>

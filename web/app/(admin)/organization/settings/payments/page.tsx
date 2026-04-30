@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, ApiError } from '@/lib/api/client';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -328,7 +329,7 @@ export default function OrganizationPaymentsPage() {
                 {[
                   'Accept payments directly from participants',
                   'Receive payouts to your bank account',
-                  `${takeRate}% platform fee + Stripe 2.9% + $0.30/transaction`,
+                  ...(FEATURE_FLAGS.PAYMENTS_ENABLED ? [`${takeRate}% platform fee + Stripe 2.9% + $0.30/transaction`] : ['Stripe payment processing included']),
                   'Full refund management through Wayfield',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
@@ -456,28 +457,30 @@ export default function OrganizationPaymentsPage() {
           </div>
 
           {/* Fee breakdown */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <p className="text-sm font-semibold text-gray-900 mb-4">Your fee structure</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Wayfield platform fee</span>
-                <span className="font-medium">{takeRate}%</span>
+          {FEATURE_FLAGS.PAYMENTS_ENABLED && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-sm font-semibold text-gray-900 mb-4">Your fee structure</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Wayfield platform fee</span>
+                  <span className="font-medium">{takeRate}%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Stripe processing fee</span>
+                  <span className="font-medium">2.9% + $0.30</span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                  <span className="text-gray-700 font-medium">Example: $200 workshop</span>
+                  <span className="font-semibold text-primary">
+                    You receive ~${examplePayout}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Stripe processing fee</span>
-                <span className="font-medium">2.9% + $0.30</span>
-              </div>
-              <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                <span className="text-gray-700 font-medium">Example: $200 workshop</span>
-                <span className="font-semibold text-primary">
-                  You receive ~${examplePayout}
-                </span>
-              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                * Estimates only. Actual amounts depend on refunds and chargebacks.
+              </p>
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              * Estimates only. Actual amounts depend on refunds and chargebacks.
-            </p>
-          </div>
+          )}
 
           {/* Payouts status */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
