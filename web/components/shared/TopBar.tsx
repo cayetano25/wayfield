@@ -9,6 +9,7 @@ import { usePage } from '@/contexts/PageContext';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { formatDistanceToNow } from 'date-fns';
+import { UserAvatar } from '@/components/nav/UserAvatar';
 
 /* --- Types ---------------------------------------------------------------- */
 
@@ -42,34 +43,6 @@ const typeColors: Record<InAppNotification['notification_type'], string> = {
   reminder:      'bg-secondary/10 text-secondary',
 };
 
-function UserAvatar({
-  firstName,
-  lastName,
-  imageUrl,
-  size = 'sm',
-}: {
-  firstName: string;
-  lastName: string;
-  imageUrl?: string | null;
-  size?: 'sm' | 'md';
-}) {
-  const dim = size === 'md' ? 'w-9 h-9 text-sm' : 'w-8 h-8 text-xs';
-  if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={`${firstName} ${lastName}`}
-        className={`${dim} rounded-full object-cover shrink-0`}
-      />
-    );
-  }
-  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
-  return (
-    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-semibold shrink-0`}>
-      {initials}
-    </div>
-  );
-}
 
 function UserMenuDropdown({
   user,
@@ -87,8 +60,8 @@ function UserMenuDropdown({
         <UserAvatar
           firstName={user.first_name}
           lastName={user.last_name}
-          imageUrl={user.profile_image_url}
-          size="md"
+          profileImageUrl={user.profile_image_url}
+          size={36}
         />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[#2E2E2E] truncate">
@@ -403,7 +376,8 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
               <UserAvatar
                 firstName={user.first_name}
                 lastName={user.last_name}
-                imageUrl={user.profile_image_url}
+                profileImageUrl={user.profile_image_url}
+                size={32}
               />
               <span
                 className="hidden sm:block max-w-[140px] truncate"
