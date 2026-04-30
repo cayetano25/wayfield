@@ -236,3 +236,107 @@ export async function discoverWorkshopsV2(
   const query = qs.toString();
   return publicFetch<DiscoverResponse>(`/public/workshops${query ? `?${query}` : ''}`);
 }
+
+// --- SEO public types ---
+// These extend the existing public API surface for SEO pages.
+// Prohibited fields must never appear: meeting_url, meeting_id, meeting_passcode,
+// phone_number, address_line_1, address_line_2, postal_code
+
+export interface WorkshopListItem {
+  id: number;
+  title: string;
+  public_slug: string;
+  workshop_type: 'session_based' | 'event_based';
+  start_date: string;
+  end_date: string;
+  timezone: string;
+  location: {
+    city: string | null;
+    state_or_region: string | null;
+    country: string | null;
+  } | null;
+  categories: Array<{ name: string; slug: string }>;
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_image_url: string | null;
+  updated_at: string;
+}
+
+export interface WorkshopCategory {
+  name: string;
+  slug: string;
+  description: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  workshops_count: number | null;
+}
+
+export interface CategoryWithWorkshops {
+  category: WorkshopCategory;
+  workshops: PaginatedResponse<WorkshopListItem>;
+}
+
+export interface CategoryLocationPage {
+  category: WorkshopCategory;
+  location: string;
+  location_slug: string;
+  workshops: PaginatedResponse<WorkshopListItem>;
+}
+
+export interface LeaderProfilePublic {
+  first_name: string;
+  last_name: string;
+  display_name: string | null;
+  slug: string;
+  bio: string | null;
+  profile_image_url: string | null;
+  website_url: string | null;
+  city: string | null;
+  state_or_region: string | null;
+  confirmed_workshops: Array<{
+    title: string;
+    public_slug: string;
+    start_date: string;
+  }>;
+  // email, phone_number, address fields intentionally absent
+}
+
+export interface OrganizerProfilePublic {
+  name: string;
+  slug: string;
+  workshops: WorkshopListItem[];
+  // primary_contact_email, primary_contact_phone intentionally absent
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+  links: {
+    first: string | null;
+    last: string | null;
+    prev: string | null;
+    next: string | null;
+  };
+}
+
+export interface SitemapWorkshop {
+  slug: string;
+  updated_at: string;
+  priority: number;
+}
+
+export interface SitemapCategory {
+  slug: string;
+  updated_at: string;
+  count: number;
+}
+
+export interface SitemapLeader {
+  slug: string;
+  updated_at: string;
+}
