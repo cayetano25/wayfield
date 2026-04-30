@@ -1,16 +1,35 @@
-import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { DiscoverClient } from './DiscoverClient';
+import { buildWorkshopsListingMetadata } from '@/lib/seo/metadata';
+import { buildOrganizationJsonLd } from '@/lib/seo/jsonld';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 
-export const metadata: Metadata = {
-  title: 'Browse Workshops | Wayfield',
-  description: 'Discover and join photography workshops and creative events curated on Wayfield.',
-};
+export const revalidate = 300;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  return buildWorkshopsListingMetadata(page ? Number(page) : undefined);
+}
 
 export default function DiscoverPage() {
   return (
-    <Suspense>
-      <DiscoverClient />
-    </Suspense>
+    <>
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Workshops', href: '/workshops' },
+        ]}
+      />
+      <JsonLd data={buildOrganizationJsonLd()} />
+      {/* existing Suspense + DiscoverClient — do not remove */}
+      <Suspense>
+        <DiscoverClient />
+      </Suspense>
+    </>
   );
 }
