@@ -128,7 +128,7 @@ function WaitlistPaymentForm({
     }
 
     if (paymentIntent?.status === 'succeeded') {
-      router.push(`/w/${workshopSlug}?waitlist_paid=true`);
+      router.push(`/workshops/${workshopSlug}?waitlist_paid=true`);
     } else {
       setIsProcessing(false);
     }

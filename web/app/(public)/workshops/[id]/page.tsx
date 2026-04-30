@@ -314,10 +314,10 @@ function LogisticsSection({
 // --- generateMetadata --------------------------------------------------------
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<Metadata> {
-  const { slug } = await params;
-  const workshop = await getPublicWorkshop(slug);
+  const { id } = await params;
+  const workshop = await getPublicWorkshop(id);
   if (!workshop) {
     return { title: 'Workshop Not Found | Wayfield' };
   }
@@ -361,10 +361,10 @@ export async function generateMetadata(
 // --- Page --------------------------------------------------------------------
 
 export default async function PublicWorkshopPage(
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { slug } = await params;
-  const workshop = await getPublicWorkshop(slug);
+  const { id } = await params;
+  const workshop = await getPublicWorkshop(id);
 
   if (!workshop) notFound();
 

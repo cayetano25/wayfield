@@ -89,7 +89,7 @@ export function WorkshopCard({ workshop }: WorkshopCardProps) {
 
   return (
     <Link
-      href={workshop.public_slug ? `/w/${workshop.public_slug}` : '#'}
+      href={workshop.public_slug ? `/workshops/${workshop.public_slug}` : '#'}
       className="group bg-white rounded-xl border border-border-gray overflow-hidden flex flex-col
                  transition-shadow duration-200 hover:shadow-[0_8px_24px_rgba(46,46,46,0.12)]
                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"

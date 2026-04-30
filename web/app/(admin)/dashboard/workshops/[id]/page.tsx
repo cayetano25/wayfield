@@ -329,7 +329,7 @@ export default function WorkshopOverviewPage() {
             </Link>
             <ShareWorkshopButton
               workshopTitle={workshop.title}
-              publicUrl={workshop.public_slug ? `/w/${workshop.public_slug}` : ''}
+              publicUrl={workshop.public_slug ? `/workshops/${workshop.public_slug}` : ''}
               variant="organizer"
               disabled={workshop.status !== 'published' || !workshop.public_slug}
               disabledTooltip="Publish this workshop to enable sharing."

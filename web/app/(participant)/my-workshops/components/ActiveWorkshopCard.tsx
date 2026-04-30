@@ -192,7 +192,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                 </Button>
               )}
               {workshop.public_slug && workshop.public_page_enabled && (
-                <Link href={`/w/${workshop.public_slug}`}>
+                <Link href={`/workshops/${workshop.public_slug}`}>
                   <Button variant="secondary" size="md">
                     View Details
                   </Button>
@@ -201,7 +201,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
               {workshop.public_slug && workshop.public_page_enabled && (
                 <ShareWorkshopButton
                   workshopTitle={workshop.title}
-                  publicUrl={`/w/${workshop.public_slug}`}
+                  publicUrl={`/workshops/${workshop.public_slug}`}
                   variant="participant"
                 />
               )}

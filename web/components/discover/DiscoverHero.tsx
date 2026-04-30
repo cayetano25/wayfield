@@ -174,7 +174,7 @@ export function DiscoverHero({ featuredWorkshop = null, onSearch }: Props) {
             {/* Right: featured workshop card (desktop only) */}
             {featuredWorkshop && (
               <div className="hidden lg:block">
-                <Link href={`/w/${featuredWorkshop.publicSlug}`} className="block max-w-[320px] ml-auto">
+                <Link href={`/workshops/${featuredWorkshop.publicSlug}`} className="block max-w-[320px] ml-auto">
                   <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                     {/* Card image */}
                     <div className="relative h-44">

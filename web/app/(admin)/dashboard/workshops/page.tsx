@@ -273,7 +273,7 @@ export default function WorkshopsPage() {
                   {workshop.status === 'published' && workshop.public_slug && (
                     <ShareWorkshopButton
                       workshopTitle={workshop.title}
-                      publicUrl={`/w/${workshop.public_slug}`}
+                      publicUrl={`/workshops/${workshop.public_slug}`}
                       variant="participant"
                     />
                   )}

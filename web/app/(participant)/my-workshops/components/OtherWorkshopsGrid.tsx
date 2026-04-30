@@ -133,7 +133,7 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
         <div className="flex items-center gap-2 shrink-0">
           {workshop.public_slug && workshop.public_page_enabled && (
             <Link
-              href={`/w/${workshop.public_slug}`}
+              href={`/workshops/${workshop.public_slug}`}
               className="font-sans font-semibold hover:underline shrink-0"
               style={{ fontSize: 12, color: '#0FA3B1' }}
             >
@@ -143,7 +143,7 @@ function OtherWorkshopCard({ workshop }: { workshop: ParticipantOtherWorkshop })
           {workshop.public_slug && workshop.public_page_enabled && (
             <ShareWorkshopButton
               workshopTitle={workshop.title}
-              publicUrl={`/w/${workshop.public_slug}`}
+              publicUrl={`/workshops/${workshop.public_slug}`}
               variant="participant"
               className="p-1 rounded text-gray-400 hover:text-[#0FA3B1] hover:bg-[#F0FDFF] transition-colors"
             />

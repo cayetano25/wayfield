@@ -237,7 +237,7 @@ function NextUpWorkshopCard({
   const atCapacityWarning = utilization !== null && utilization >= 90;
 
   const publicPageEnabled = workshop.public_page_enabled !== false;
-  const publicHref = workshop.join_code ? `/w/${workshop.join_code}` : '#';
+  const publicHref = workshop.join_code ? `/workshops/${workshop.join_code}` : '#';
 
   return (
     <div

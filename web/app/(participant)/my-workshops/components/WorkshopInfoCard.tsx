@@ -24,7 +24,7 @@ export function WorkshopInfoCard({ logistics, workshopId, publicSlug, publicPage
         : null;
 
   const workshopDetailsHref =
-    publicSlug && publicPageEnabled ? `/w/${publicSlug}` : `/workshops/${workshopId}`;
+    publicSlug && publicPageEnabled ? `/workshops/${publicSlug}` : `/workshops/${workshopId}`;
 
   return (
     <div

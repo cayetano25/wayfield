@@ -232,7 +232,7 @@ export function WorkshopCard({
                 publicSlug={publicSlug}
               />
               <Link
-                href={`/w/${publicSlug}`}
+                href={`/workshops/${publicSlug}`}
                 className="text-[#0FA3B1] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -245,7 +245,7 @@ export function WorkshopCard({
             </span>
           ) : (
             <Link
-              href={`/w/${publicSlug}`}
+              href={`/workshops/${publicSlug}`}
               className="text-[#0FA3B1] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
               onClick={(e) => e.stopPropagation()}
             >
