@@ -11,4 +11,14 @@ return [
     |
     */
     'api_key_rate_limit' => (int) env('API_KEY_RATE_LIMIT', 1000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contact Form Email
+    |--------------------------------------------------------------------------
+    |
+    | Address that receives public contact form submissions.
+    |
+    */
+    'contact_email' => env('WAYFIELD_CONTACT_EMAIL', 'hello@wayfield.com'),
 ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CouponController;
@@ -142,6 +143,10 @@ Route::prefix('v1')->group(function () {
 
     // ─── Plans (public — no auth required) ───────────────────────────────────
     Route::get('plans', [PlansController::class, 'index']);
+
+    // ─── Contact form (public — 3 per IP per hour) ────────────────────────────
+    Route::post('contact', [ContactController::class, 'submit'])
+        ->middleware('throttle:3,60');
 
     // ─── Stripe webhooks (no auth — signature verification inside controller) ─
     // Legacy route kept for backwards compatibility with existing Stripe config.
