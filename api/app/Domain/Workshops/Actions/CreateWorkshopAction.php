@@ -5,6 +5,7 @@ namespace App\Domain\Workshops\Actions;
 use App\Domain\Subscriptions\Services\EnforceFeatureGateService;
 use App\Domain\Taxonomy\Actions\AssignWorkshopTaxonomyAction;
 use App\Domain\Workshops\Services\GenerateJoinCodeService;
+use App\Domain\Workshops\Services\SlugGeneratorService;
 use App\Models\Organization;
 use App\Models\Workshop;
 
@@ -14,6 +15,7 @@ class CreateWorkshopAction
         private readonly GenerateJoinCodeService $joinCodeService,
         private readonly EnforceFeatureGateService $featureGate,
         private readonly AssignWorkshopTaxonomyAction $taxonomyAction,
+        private readonly SlugGeneratorService $slugGenerator,
     ) {}
 
     public function execute(Organization $organization, array $data): Workshop
@@ -34,6 +36,9 @@ class CreateWorkshopAction
             'public_page_enabled' => $data['public_page_enabled'] ?? false,
             'public_slug' => $data['public_slug'] ?? null,
         ]);
+
+        // Auto-generate slug from title on first save; generateAndSave is a no-op if slug already set.
+        $this->slugGenerator->generateAndSave($workshop);
 
         if (array_key_exists('category_id', $data)) {
             $this->taxonomyAction->assign($workshop, $data);

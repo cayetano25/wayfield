@@ -15,7 +15,7 @@ class UpdateWorkshopAction
         'end_date',
         'default_location_id',
         'public_page_enabled',
-        'public_slug',
+        // public_slug is immutable after creation — never updated here
     ];
 
     public function __construct(
