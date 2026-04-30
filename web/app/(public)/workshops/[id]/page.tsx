@@ -2,11 +2,30 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getPublicWorkshop, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
+import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import { WorkshopPriceDisplay } from '@/components/workshops/public/WorkshopPriceDisplay';
 import { AddToCartButton } from '@/components/workshops/public/AddToCartButton';
+import { buildCategoryMetadata } from '@/lib/seo/metadata';
+import { buildEventJsonLd, buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '@/lib/seo/jsonld';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
+
+export const revalidate = 600;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  try {
+    const workshops = await getSitemapWorkshops();
+    // Param name is `id` — routes are /workshops/[id] where id holds the slug value
+    return workshops.map((w) => ({ id: w.slug }));
+  } catch {
+    // If backend is unavailable at build time, fall back to empty.
+    // dynamicParams = true means pages still render on first request.
+    return [];
+  }
+}
 
 // Allowed public leader fields — enforced here as a second layer after the API
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
@@ -318,44 +337,51 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { id } = await params;
   const workshop = await getPublicWorkshop(id);
-  if (!workshop) {
-    return { title: 'Workshop Not Found | Wayfield' };
+
+  if (workshop) {
+    const resolvedTitle = workshop.social_share_title || workshop.title;
+    const resolvedDescription = (
+      workshop.social_share_description ||
+      workshop.public_summary ||
+      (workshop.description ? workshop.description.replace(/<[^>]*>/g, '') : undefined)
+    )?.slice(0, 160) || undefined;
+
+    const canonical = workshop.canonical_url;
+    const socialImage = workshop.social_share_image_url ?? null;
+
+    return {
+      title: `${resolvedTitle} | Wayfield`,
+      description: resolvedDescription,
+      alternates: { canonical },
+      robots: workshop.public_page_is_indexable
+        ? { index: true, follow: true }
+        : { index: false, follow: false },
+      openGraph: {
+        type: 'website',
+        url: canonical,
+        title: resolvedTitle,
+        description: resolvedDescription,
+        siteName: 'Wayfield',
+        locale: 'en_US',
+        ...(socialImage ? { images: [{ url: socialImage, width: 1200, height: 630 }] } : {}),
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: resolvedTitle,
+        description: resolvedDescription,
+        site: '@wayfieldapp',
+        ...(socialImage ? { images: [socialImage] } : {}),
+      },
+    };
   }
 
-  const resolvedTitle = workshop.social_share_title || workshop.title;
-  const resolvedDescription = (
-    workshop.social_share_description ||
-    workshop.public_summary ||
-    (workshop.description ? workshop.description.replace(/<[^>]*>/g, '') : undefined)
-  )?.slice(0, 160) || undefined;
+  // Fallback: try category slug
+  const categoryData = await getPublicCategory(id);
+  if (categoryData) {
+    return buildCategoryMetadata(categoryData.category);
+  }
 
-  const canonical = workshop.canonical_url;
-  const socialImage = workshop.social_share_image_url ?? null;
-
-  return {
-    title: `${resolvedTitle} | Wayfield`,
-    description: resolvedDescription,
-    alternates: { canonical },
-    robots: workshop.public_page_is_indexable
-      ? { index: true, follow: true }
-      : { index: false, follow: false },
-    openGraph: {
-      type: 'website',
-      url: canonical,
-      title: resolvedTitle,
-      description: resolvedDescription,
-      siteName: 'Wayfield',
-      locale: 'en_US',
-      ...(socialImage ? { images: [{ url: socialImage, width: 1200, height: 630 }] } : {}),
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: resolvedTitle,
-      description: resolvedDescription,
-      site: '@wayfieldapp',
-      ...(socialImage ? { images: [socialImage] } : {}),
-    },
-  };
+  return { title: 'Not Found' };
 }
 
 // --- Page --------------------------------------------------------------------
@@ -366,7 +392,36 @@ export default async function PublicWorkshopPage(
   const { id } = await params;
   const workshop = await getPublicWorkshop(id);
 
-  if (!workshop) notFound();
+  // Category fallback — try slug as a category before calling notFound()
+  if (!workshop) {
+    const categoryData = await getPublicCategory(id);
+    if (categoryData) {
+      return (
+        <>
+          <Breadcrumbs
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Workshops', href: '/workshops' },
+              {
+                label: categoryData.category.name,
+                href: `/workshops/${categoryData.category.slug}`,
+              },
+            ]}
+          />
+          <JsonLd data={buildOrganizationJsonLd()} />
+          <div className="max-w-4xl mx-auto px-6 py-16">
+            <h1 className="font-heading text-3xl font-bold text-dark mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
+              {categoryData.category.name} Workshops
+            </h1>
+            {categoryData.category.description && (
+              <p className="text-medium-gray leading-relaxed">{categoryData.category.description}</p>
+            )}
+          </div>
+        </>
+      );
+    }
+    notFound();
+  }
 
   const standardSessions = workshop.sessions.filter(s => !s.is_addon);
   const addonSessions = workshop.sessions.filter(s => s.is_addon);
@@ -377,9 +432,25 @@ export default async function PublicWorkshopPage(
   ].filter(Boolean).join(', ');
 
   const dateRange = formatDateRange(workshop.start_date, workshop.end_date, workshop.timezone);
+  const slug = workshop.public_slug ?? id;
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Workshops', href: '/workshops' },
+          { label: workshop.title, href: `/workshops/${slug}` },
+        ]}
+      />
+      <JsonLd data={buildEventJsonLd(workshop)} />
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: 'Home', url: 'https://wayfield.app/' },
+          { name: 'Workshops', url: 'https://wayfield.app/workshops' },
+          { name: workshop.title, url: `https://wayfield.app/workshops/${slug}` },
+        ])}
+      />
       {/* Hero */}
       <div className="relative overflow-hidden" style={{ minHeight: '420px' }}>
         {workshop.hero_image_url ? (
