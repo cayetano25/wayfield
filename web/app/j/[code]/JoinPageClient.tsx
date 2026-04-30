@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 interface JoinWorkshop {
@@ -211,11 +212,13 @@ export default function JoinPageClient({ code, isMobileSsr }: Props) {
 
             {/* Workshop hero image */}
             {workshop.social_share_image_url ? (
-              <div className="w-full h-52 sm:h-64 overflow-hidden">
-                <img
+              <div className="relative w-full h-52 sm:h-64 overflow-hidden">
+                <Image
                   src={workshop.social_share_image_url}
                   alt={workshop.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  priority
+                  className="object-cover"
                 />
               </div>
             ) : (

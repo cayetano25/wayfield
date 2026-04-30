@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import type { SessionLeaderSummary } from '@/lib/types/session-selection';
 
 interface Props {
@@ -15,11 +16,13 @@ function SingleAvatar({ leader }: { leader: SessionLeaderSummary }) {
 
   if (leader.profile_image_url && !failed) {
     return (
-      <img
+      <Image
         src={leader.profile_image_url}
         alt={`${leader.first_name} ${leader.last_name}`}
+        width={20}
+        height={20}
         className="rounded-full object-cover"
-        style={{ width: 20, height: 20, border: '1.5px solid white' }}
+        style={{ border: '1.5px solid white' }}
         onError={() => setFailed(true)}
       />
     );

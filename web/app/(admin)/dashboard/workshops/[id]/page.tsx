@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import {
   Copy, Check, Camera, Pencil, AlertTriangle, AlertCircle,
@@ -286,11 +287,13 @@ export default function WorkshopOverviewPage() {
     <div className="max-w-[1280px] mx-auto space-y-5">
       {/* Hero image */}
       {workshop.header_image_url ? (
-        <div className="w-full h-48 rounded-xl overflow-hidden">
-          <img
+        <div className="relative w-full h-48 rounded-xl overflow-hidden">
+          <Image
             src={workshop.header_image_url}
             alt={workshop.title}
-            className="w-full h-full object-cover"
+            fill
+            priority
+            className="object-cover"
           />
         </div>
       ) : (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { Mail, UserPlus, Clock, CheckCircle } from 'lucide-react';
 import { useSetPage } from '@/contexts/PageContext';
@@ -114,10 +115,12 @@ function MemberAvatar({ user }: { user: OrgMemberUser }) {
   const initials = `${user.first_name[0] ?? ''}${user.last_name[0] ?? ''}`.toUpperCase();
   if (user.profile_image_url) {
     return (
-      <img
+      <Image
         src={user.profile_image_url}
         alt={`${user.first_name} ${user.last_name}`}
-        className="w-8 h-8 rounded-full object-cover shrink-0"
+        width={32}
+        height={32}
+        className="rounded-full object-cover shrink-0"
       />
     );
   }

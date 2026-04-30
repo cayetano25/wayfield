@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import type { ParticipantSession, ParticipantSessionLeader } from '@/lib/types/participant';
 import type { SessionLocationResponse } from '@/lib/types/session-location';
@@ -187,11 +188,12 @@ function LocationBlock({ location }: { location: SessionLocationResponse | null 
 function LeaderAvatar({ leader }: { leader: ParticipantSessionLeader }) {
   if (leader.profile_image_url) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={leader.profile_image_url}
         alt={`${leader.first_name} ${leader.last_name}`}
-        style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        width={36}
+        height={36}
+        style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
     );
   }
