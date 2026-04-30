@@ -49,9 +49,9 @@ class SitemapController extends Controller
     {
         $categories = WorkshopCategory::active()
             ->ordered()
+            ->whereHas('workshops', fn ($q) => $q->publiclyVisible())
             ->withCount(['workshops as workshops_count' => fn ($q) => $q->publiclyVisible()])
-            ->having('workshops_count', '>', 0)
-            ->get(['slug', 'updated_at', 'workshops_count'])
+            ->get(['id', 'slug', 'updated_at'])
             ->map(fn ($cat) => [
                 'slug'       => $cat->slug,
                 'updated_at' => $cat->updated_at->toIso8601String(),
