@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AttemptSanctumAuth;
 use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\CheckFeatureAccess;
 use App\Http\Middleware\EnsureOnboardingComplete;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.api_key' => AuthenticateApiKey::class,
             'onboarding.complete' => EnsureOnboardingComplete::class,
             'payments.enabled'    => RequirePaymentsEnabled::class,
+            'auth.optional'       => AttemptSanctumAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

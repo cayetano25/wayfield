@@ -172,12 +172,15 @@ export interface DiscoverResponse {
 
 async function publicFetch<T>(
   path: string,
-  options?: { next?: { revalidate?: number | false; tags?: string[] } },
+  options?: { next?: { revalidate?: number | false; tags?: string[] }; token?: string },
 ): Promise<T | null> {
   try {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (options?.token) headers['Authorization'] = `Bearer ${options.token}`;
     const res = await fetch(`${BASE_URL}${path}`, {
-      headers: { Accept: 'application/json' },
-      next: options?.next ?? { revalidate: 60 },
+      headers,
+      // Skip Next.js cache for authenticated requests (response is user-specific)
+      ...(options?.token ? {} : { next: options?.next ?? { revalidate: 60 } }),
     });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
@@ -232,6 +235,7 @@ export interface DiscoverFilters {
 
 export async function discoverWorkshopsV2(
   filters: DiscoverFilters,
+  token?: string,
 ): Promise<DiscoverResponse | null> {
   const qs = new URLSearchParams();
   if (filters.q) qs.set('q', filters.q);
@@ -248,7 +252,7 @@ export async function discoverWorkshopsV2(
   qs.set('page', String(filters.page ?? 1));
   if (filters.sort) qs.set('sort', filters.sort);
   const query = qs.toString();
-  return publicFetch<DiscoverResponse>(`/public/workshops${query ? `?${query}` : ''}`);
+  return publicFetch<DiscoverResponse>(`/public/workshops${query ? `?${query}` : ''}`, { token });
 }
 
 // --- SEO public types ---

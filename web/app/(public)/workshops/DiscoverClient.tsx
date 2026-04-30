@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { useTaxonomy } from '@/hooks/useTaxonomy';
 import { discoverWorkshopsV2 } from '@/lib/api/public';
+import { getToken } from '@/lib/auth/session';
 import type { DiscoverWorkshop, DiscoverResponse } from '@/lib/api/public';
 import { FilterSidebar, FILTER_GROUPS } from './components/FilterSidebar';
 import { SkeletonCard } from './components/SkeletonCard';
@@ -165,7 +166,7 @@ export function DiscoverClient() {
   const [featuredWorkshop, setFeaturedWorkshop] = useState<FeaturedWorkshop | null>(null);
 
   useEffect(() => {
-    discoverWorkshopsV2({ per_page: 1, sort: 'newest' }).then((res) => {
+    discoverWorkshopsV2({ per_page: 1, sort: 'newest' }, getToken() ?? undefined).then((res) => {
       const w = res?.data?.[0];
       if (!w || !w.public_slug) return;
       setFeaturedWorkshop({
@@ -212,7 +213,7 @@ export function DiscoverClient() {
       per_page: perPage,
       page,
       sort,
-    })
+    }, getToken() ?? undefined)
       .then((res) => {
         if (cancelled) return;
         setWorkshops(res?.data ?? []);

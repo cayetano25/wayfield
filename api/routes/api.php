@@ -114,9 +114,10 @@ Route::prefix('v1')->group(function () {
 
     // ─── Public endpoints (no auth required) ─────────────────────────────────
     Route::prefix('public')->group(function () {
-        // Workshop listing (taxonomy-aware discovery) and detail
-        Route::get('workshops', [PublicWorkshopDiscoveryController::class, 'index']);
-        Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show']);
+        // Workshop listing (taxonomy-aware discovery) and detail.
+        // auth.optional: enriches response with is_favorited/participant_status for logged-in users.
+        Route::get('workshops', [PublicWorkshopDiscoveryController::class, 'index'])->middleware('auth.optional');
+        Route::get('workshops/{slug}', [PublicWorkshopController::class, 'show'])->middleware('auth.optional');
 
         // Categories
         Route::get('categories', [PublicCategoryController::class, 'index']);
