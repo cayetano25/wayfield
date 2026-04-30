@@ -377,10 +377,10 @@ function RefundRequestCard({
         {/* Header row */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-dark text-sm">{participantName}</p>
+            <div>
+              <p className="font-medium text-gray-900 text-sm">{participantName}</p>
               {participantEmail && (
-                <p className="text-xs text-medium-gray">{participantEmail}</p>
+                <p className="text-xs text-gray-400">{participantEmail}</p>
               )}
             </div>
             {req.order && (
