@@ -5,12 +5,16 @@ namespace App\Models;
 use App\Domain\Payments\Models\RefundPolicy;
 use App\Domain\Payments\Models\WorkshopPriceTier;
 use App\Domain\Payments\Models\WorkshopPricing;
+use App\Domain\Seo\Models\WorkshopCategory;
+use App\Domain\Seo\Services\SlugGeneratorService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Workshop extends Model
 {
@@ -29,6 +33,9 @@ class Workshop extends Model
         'default_location_id',
         'public_page_enabled',
         'public_slug',
+        'seo_title',
+        'seo_description',
+        'seo_image_url',
         'social_share_title',
         'social_share_description',
         'social_share_image_file_id',
@@ -155,5 +162,53 @@ class Workshop extends Model
     public function priceTiers(): HasMany
     {
         return $this->hasMany(WorkshopPriceTier::class);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkshopCategory::class, 'workshop_category_workshop');
+    }
+
+    // ─── Scopes ──────────────────────────────────────────────────────────────
+
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        return $query->where('status', 'published')
+            ->where('public_page_enabled', true)
+            ->whereNotNull('public_slug');
+    }
+
+    public function scopeForCategory(Builder $query, string $categorySlug): Builder
+    {
+        return $query->whereHas('categories', fn (Builder $q) => $q->where('slug', $categorySlug));
+    }
+
+    public function scopeForLocation(Builder $query, string $stateOrRegion, ?string $city = null): Builder
+    {
+        return $query->whereHas('defaultLocation', function (Builder $q) use ($stateOrRegion, $city) {
+            $q->where('state_or_region', $stateOrRegion);
+            if ($city !== null) {
+                $q->where('city', $city);
+            }
+        });
+    }
+
+    // ─── Slug helpers ─────────────────────────────────────────────────────────
+
+    /**
+     * Generates and sets public_slug if not already set. Slugs are immutable once set.
+     * Caller is responsible for persisting the model after calling this method.
+     */
+    public function ensurePublicSlug(): void
+    {
+        if (! empty($this->public_slug)) {
+            return;
+        }
+
+        $this->loadMissing('organization');
+        $orgSlug = Str::slug($this->organization?->name ?? 'workshop');
+
+        $this->public_slug = app(SlugGeneratorService::class)
+            ->generateWorkshopSlug($this->title, $orgSlug, $this->id ?: null);
     }
 }

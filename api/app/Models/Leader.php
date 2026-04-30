@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Seo\Services\SlugGeneratorService;
 use Database\Factories\LeaderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,7 @@ class Leader extends Model
         'first_name',
         'last_name',
         'display_name',
+        'slug',
         'bio',
         'profile_image_url',
         'website_url',
@@ -87,5 +89,21 @@ class Leader extends Model
     public function isLinkedToUser(): bool
     {
         return $this->user_id !== null;
+    }
+
+    /**
+     * Generates and sets slug from first_name + last_name if not already set.
+     * Slugs are immutable once set. Caller is responsible for saving.
+     */
+    public function ensureSlug(): void
+    {
+        if (! empty($this->slug)) {
+            return;
+        }
+
+        $source = trim("{$this->first_name} {$this->last_name}");
+
+        $this->slug = app(SlugGeneratorService::class)
+            ->generate($source, 'leaders', 'slug', $this->id ?: null);
     }
 }

@@ -80,6 +80,10 @@ class AcceptLeaderInvitationAction
                 ], fn ($v) => $v !== null));
             }
 
+            // Ensure the leader has a slug (no-op if already set — slugs are immutable).
+            $leader->ensureSlug();
+            $leader->save();
+
             // Link invitation to leader record
             $invitation->update([
                 'leader_id' => $leader->id,

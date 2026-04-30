@@ -31,8 +31,12 @@ class UpdateWorkshopAction
         $updates = array_intersect_key($data, array_flip(self::ALLOWED_FIELDS));
 
         if (! empty($updates)) {
-            $workshop->update($updates);
+            $workshop->fill($updates);
         }
+
+        // Only generates a slug if one does not already exist — never overwrites.
+        $workshop->ensurePublicSlug();
+        $workshop->save();
 
         if (array_key_exists('category_id', $data)) {
             $this->taxonomyAction->assign($workshop, $data);
