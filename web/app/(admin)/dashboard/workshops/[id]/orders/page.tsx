@@ -530,8 +530,8 @@ export default function WorkshopOrdersPage() {
   useEffect(() => {
     const title = workshop?.title ?? 'Workshop';
     setPage(title, [
-      { label: 'Workshops', href: '/workshops' },
-      { label: title, href: `/workshops/${id}` },
+      { label: 'Workshops', href: '/dashboard/workshops' },
+      { label: title, href: `/dashboard/workshops/${id}` },
       { label: 'Orders' },
     ]);
   }, [workshop, id, setPage]);

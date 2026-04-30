@@ -11,7 +11,7 @@ import { WorkshopForm, type WorkshopFormValues, type WorkshopFormErrors } from '
 
 export default function NewWorkshopPage() {
   useSetPage('New Workshop', [
-    { label: 'Workshops', href: '/workshops' },
+    { label: 'Workshops', href: '/dashboard/workshops' },
     { label: 'New Workshop' },
   ]);
 
@@ -76,7 +76,7 @@ export default function NewWorkshopPage() {
       }) as { id: number };
 
       toast.success('Workshop created');
-      router.push(`/workshops/${workshopRes.id}`);
+      router.push(`/dashboard/workshops/${workshopRes.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403 && !err.errors) {
         toast.error('You have reached your plan\'s workshop limit. Upgrade to add more workshops.');
@@ -111,7 +111,7 @@ export default function NewWorkshopPage() {
         submitting={submitting}
         submitLabel="Create Workshop"
         onSubmit={handleSubmit}
-        onCancel={() => router.push('/workshops')}
+        onCancel={() => router.push('/dashboard/workshops')}
       />
     </div>
   );

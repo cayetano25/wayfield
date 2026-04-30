@@ -155,11 +155,11 @@ export default function WorkshopOverviewPage() {
   // Update top bar title + breadcrumbs once workshop loads
   useEffect(() => {
     if (!workshop) {
-      setPage('Workshop', [{ label: 'Workshops', href: '/workshops' }, { label: 'Workshop' }]);
+      setPage('Workshop', [{ label: 'Workshops', href: '/dashboard/workshops' }, { label: 'Workshop' }]);
       return;
     }
     setPage(workshop.title, [
-      { label: 'Workshops', href: '/workshops' },
+      { label: 'Workshops', href: '/dashboard/workshops' },
       { label: workshop.title },
     ]);
     setLogisticsForm({
@@ -321,7 +321,7 @@ export default function WorkshopOverviewPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Link href={`/workshops/${workshop.id}/edit`}>
+            <Link href={`/dashboard/workshops/${workshop.id}/edit`}>
               <Button variant="secondary" size="sm">
                 <Pencil className="w-3.5 h-3.5" />
                 Edit
@@ -424,7 +424,7 @@ export default function WorkshopOverviewPage() {
           <Card>
             <div className="px-5 py-4 border-b border-border-gray flex items-center justify-between">
               <h2 className="font-heading text-sm font-semibold text-dark">Upcoming Sessions</h2>
-              <Link href={`/workshops/${workshop.id}/sessions`} className="text-xs text-primary hover:underline">
+              <Link href={`/dashboard/workshops/${workshop.id}/sessions`} className="text-xs text-primary hover:underline">
                 View all
               </Link>
             </div>
@@ -432,7 +432,7 @@ export default function WorkshopOverviewPage() {
               <div className="px-5 py-10 text-center">
                 <CalendarDays className="w-8 h-8 text-light-gray mx-auto mb-2" />
                 <p className="text-sm text-medium-gray">No sessions yet</p>
-                <Link href={`/workshops/${workshop.id}/sessions`} className="text-xs text-primary hover:underline mt-1 inline-block">
+                <Link href={`/dashboard/workshops/${workshop.id}/sessions`} className="text-xs text-primary hover:underline mt-1 inline-block">
                   Add sessions
                 </Link>
               </div>
@@ -456,14 +456,14 @@ export default function WorkshopOverviewPage() {
           <Card>
             <div className="px-5 py-4 border-b border-border-gray flex items-center justify-between">
               <h2 className="font-heading text-sm font-semibold text-dark">Confirmed Leaders</h2>
-              <Link href={`/workshops/${workshop.id}/leaders`} className="text-xs text-primary hover:underline">
+              <Link href={`/dashboard/workshops/${workshop.id}/leaders`} className="text-xs text-primary hover:underline">
                 Manage
               </Link>
             </div>
             {(workshop.confirmed_leaders ?? []).length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <p className="text-sm text-medium-gray">No confirmed leaders yet</p>
-                <Link href={`/workshops/${workshop.id}/leaders`} className="text-xs text-primary hover:underline mt-1 inline-block">
+                <Link href={`/dashboard/workshops/${workshop.id}/leaders`} className="text-xs text-primary hover:underline mt-1 inline-block">
                   Invite leaders
                 </Link>
               </div>

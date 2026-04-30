@@ -17,7 +17,7 @@ const TABS = [
 export function WorkshopTabs() {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
-  const base = `/workshops/${id}`;
+  const base = `/dashboard/workshops/${id}`;
 
   return (
     <div className="bg-white border-b border-border-gray">

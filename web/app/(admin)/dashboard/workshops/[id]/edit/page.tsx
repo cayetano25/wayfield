@@ -43,8 +43,8 @@ export default function EditWorkshopPage() {
       .then((res) => {
         setWorkshop(res);
         setPage(res.title, [
-          { label: 'Workshops', href: '/workshops' },
-          { label: res.title, href: `/workshops/${id}` },
+          { label: 'Workshops', href: '/dashboard/workshops' },
+          { label: res.title, href: `/dashboard/workshops/${id}` },
           { label: 'Edit' },
         ]);
       })
@@ -77,7 +77,7 @@ export default function EditWorkshopPage() {
       });
 
       toast.success('Workshop updated');
-      router.push(`/workshops/${id}`);
+      router.push(`/dashboard/workshops/${id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         const fieldErrors: WorkshopFormErrors = {};
@@ -132,7 +132,7 @@ export default function EditWorkshopPage() {
         submitting={submitting}
         submitLabel="Save Changes"
         onSubmit={handleSubmit}
-        onCancel={() => router.push(`/workshops/${id}`)}
+        onCancel={() => router.push(`/dashboard/workshops/${id}`)}
       />
     </div>
   );

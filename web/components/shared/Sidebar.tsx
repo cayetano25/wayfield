@@ -24,7 +24,7 @@ interface NavItem {
 
 const mainItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/workshops', label: 'Workshops', icon: CalendarDays },
+  { href: '/dashboard/workshops', label: 'Workshops', icon: CalendarDays },
 ];
 
 const orgItems: NavItem[] = [

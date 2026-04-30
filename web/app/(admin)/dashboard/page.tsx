@@ -356,7 +356,7 @@ function NextUpWorkshopCard({
 
         {/* Button row */}
         <div className="flex items-center gap-3" style={{ marginTop: 20 }}>
-          <Link href={`/workshops/${workshop.id}`}>
+          <Link href={`/dashboard/workshops/${workshop.id}`}>
             <Button size="md">Manage Workshop</Button>
           </Link>
           {publicPageEnabled ? (
@@ -526,7 +526,7 @@ function WorkshopsList({
       <div className="flex items-center justify-between mb-3 shrink-0">
         <span className="font-heading text-base font-semibold text-dark">Workshops</span>
         <Link
-          href="/workshops"
+          href="/dashboard/workshops"
           className="font-sans text-[13px] hover:underline"
           style={{ color: '#0FA3B1' }}
         >
@@ -878,7 +878,7 @@ export default function DashboardPage() {
           nextUp={nextUpWorkshop}
           loading={loadingWorkshops}
           planParticipantsLimit={core.plan.participants_limit}
-          onNewWorkshop={() => router.push('/workshops/new')}
+          onNewWorkshop={() => router.push('/dashboard/workshops/new')}
         />
 
         {/* Empty state — no workshops yet */}
@@ -891,7 +891,7 @@ export default function DashboardPage() {
             <p className="text-sm text-medium-gray max-w-sm mb-8 leading-relaxed">
               Once you create and publish a workshop, your dashboard will fill with real data.
             </p>
-            <Button size="lg" onClick={() => router.push('/admin/workshops/new')}>
+            <Button size="lg" onClick={() => router.push('/dashboard/workshops/new')}>
               <Plus className="w-4 h-4" />
               Create Workshop
             </Button>
@@ -943,7 +943,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Button
               size="md"
-              onClick={() => router.push('/admin/workshops/new')}
+              onClick={() => router.push('/dashboard/workshops/new')}
               className="sm:w-auto"
             >
               <Plus className="w-4 h-4" />

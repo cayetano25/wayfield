@@ -40,13 +40,13 @@ export default function WorkshopPricingPage() {
       if (wRes.status === 'fulfilled') {
         setWorkshop(wRes.value);
         setPage(wRes.value.title, [
-          { label: 'Workshops', href: '/workshops' },
-          { label: wRes.value.title, href: `/workshops/${id}` },
+          { label: 'Workshops', href: '/dashboard/workshops' },
+          { label: wRes.value.title, href: `/dashboard/workshops/${id}` },
           { label: 'Pricing' },
         ]);
       } else {
         setPage('Pricing', [
-          { label: 'Workshops', href: '/workshops' },
+          { label: 'Workshops', href: '/dashboard/workshops' },
           { label: 'Pricing' },
         ]);
       }

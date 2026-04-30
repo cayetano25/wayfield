@@ -173,7 +173,7 @@ export function WorkshopsReportTab({ orgId }: WorkshopsReportProps) {
                     <tr
                       key={w.id}
                       className="hover:bg-[#FAFAFA] cursor-pointer transition-colors"
-                      onClick={() => router.push(`/workshops/${w.id}`)}
+                      onClick={() => router.push(`/dashboard/workshops/${w.id}`)}
                     >
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">

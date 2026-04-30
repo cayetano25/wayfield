@@ -141,7 +141,7 @@ export default function WorkshopsPage() {
           {atLimit ? (
             <Link href="/organization/billing">{newButton}</Link>
           ) : (
-            <Link href="/workshops/new">{newButton}</Link>
+            <Link href="/dashboard/workshops/new">{newButton}</Link>
           )}
           {workshopLimit !== null && (
             <div className="text-right">
@@ -206,7 +206,7 @@ export default function WorkshopsPage() {
               : `You don't have any ${statusFilter} workshops.`}
           </p>
           {statusFilter === 'all' && (
-            <Link href={atLimit ? '/organization/billing' : '/workshops/new'}>
+            <Link href={atLimit ? '/organization/billing' : '/dashboard/workshops/new'}>
               <Button>
                 <Plus className="w-4 h-4" />
                 {atLimit ? 'Upgrade plan' : 'Create workshop'}
@@ -217,7 +217,7 @@ export default function WorkshopsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((workshop) => (
-            <Link key={workshop.id} href={`/workshops/${workshop.id}`} className="block group">
+            <Link key={workshop.id} href={`/dashboard/workshops/${workshop.id}`} className="block group">
               <Card
                 interactive
                 className="p-5 h-full transition-all group-hover:shadow-[0px_16px_40px_rgba(46,46,46,0.10)] group-hover:-translate-y-0.5"

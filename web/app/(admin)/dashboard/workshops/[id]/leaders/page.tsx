@@ -1206,15 +1206,15 @@ export default function WorkshopLeadersPage() {
   useEffect(() => {
     if (!workshop) {
       setPage('Leaders', [
-        { label: 'Workshops', href: '/workshops' },
-        { label: 'Workshop', href: `/workshops/${id}` },
+        { label: 'Workshops', href: '/dashboard/workshops' },
+        { label: 'Workshop', href: `/dashboard/workshops/${id}` },
         { label: 'Leaders' },
       ]);
       return;
     }
     setPage(workshop.title, [
-      { label: 'Workshops', href: '/workshops' },
-      { label: workshop.title, href: `/workshops/${id}` },
+      { label: 'Workshops', href: '/dashboard/workshops' },
+      { label: workshop.title, href: `/dashboard/workshops/${id}` },
       { label: 'Leaders' },
     ]);
   }, [workshop, id, setPage]);

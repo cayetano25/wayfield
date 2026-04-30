@@ -578,8 +578,8 @@ export default function WorkshopNotificationsPage() {
   useEffect(() => {
     const t = workshop?.title ?? 'Workshop';
     setPage(t, [
-      { label: 'Workshops', href: '/workshops' },
-      { label: t, href: `/workshops/${id}` },
+      { label: 'Workshops', href: '/dashboard/workshops' },
+      { label: t, href: `/dashboard/workshops/${id}` },
       { label: 'Notifications' },
     ]);
   }, [workshop, id, setPage]);

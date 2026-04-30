@@ -990,7 +990,7 @@ function SessionRow({
           />
           <div className="min-w-0">
             <Link
-              href={`/workshops/${workshopId}/sessions/${session.id}`}
+              href={`/dashboard/workshops/${workshopId}/sessions/${session.id}`}
               className="text-sm font-medium text-dark truncate max-w-[200px] hover:text-primary transition-colors block"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1109,12 +1109,12 @@ export default function WorkshopSessionsPage() {
 
   useEffect(() => {
     if (!workshop) {
-      setPage('Sessions', [{ label: 'Workshops', href: '/workshops' }, { label: 'Workshop', href: `/workshops/${id}` }, { label: 'Sessions' }]);
+      setPage('Sessions', [{ label: 'Workshops', href: '/dashboard/workshops' }, { label: 'Workshop', href: `/dashboard/workshops/${id}` }, { label: 'Sessions' }]);
       return;
     }
     setPage(workshop.title, [
-      { label: 'Workshops', href: '/workshops' },
-      { label: workshop.title, href: `/workshops/${id}` },
+      { label: 'Workshops', href: '/dashboard/workshops' },
+      { label: workshop.title, href: `/dashboard/workshops/${id}` },
       { label: 'Sessions' },
     ]);
   }, [workshop, id, setPage]);

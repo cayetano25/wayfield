@@ -444,9 +444,9 @@ export default function SessionDetailPage() {
     const workshopTitle = workshop?.title ?? 'Workshop';
     const sessionTitle = session?.title ?? 'Session';
     setPage(sessionTitle, [
-      { label: 'Workshops', href: '/workshops' },
-      { label: workshopTitle, href: `/workshops/${workshopId}` },
-      { label: 'Sessions', href: `/workshops/${workshopId}/sessions` },
+      { label: 'Workshops', href: '/dashboard/workshops' },
+      { label: workshopTitle, href: `/dashboard/workshops/${workshopId}` },
+      { label: 'Sessions', href: `/dashboard/workshops/${workshopId}/sessions` },
       { label: sessionTitle },
     ]);
   }, [workshop, session, workshopId, setPage]);
@@ -468,7 +468,7 @@ export default function SessionDetailPage() {
       <div className="max-w-[1280px] mx-auto">
         <Card className="p-8 text-center">
           <p className="text-medium-gray">Session not found.</p>
-          <Link href={`/workshops/${workshopId}/sessions`} className="text-xs text-primary hover:underline mt-2 inline-block">
+          <Link href={`/dashboard/workshops/${workshopId}/sessions`} className="text-xs text-primary hover:underline mt-2 inline-block">
             Back to sessions
           </Link>
         </Card>
@@ -486,7 +486,7 @@ export default function SessionDetailPage() {
     <div className="max-w-[1280px] mx-auto space-y-5">
       {/* Back link */}
       <Link
-        href={`/workshops/${workshopId}/sessions`}
+        href={`/dashboard/workshops/${workshopId}/sessions`}
         className="inline-flex items-center gap-1.5 text-sm text-medium-gray hover:text-dark transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
@@ -569,7 +569,7 @@ export default function SessionDetailPage() {
           <Card className="p-4">
             <p className="text-xs text-medium-gray mb-1">Workshop</p>
             <Link
-              href={`/workshops/${workshopId}`}
+              href={`/dashboard/workshops/${workshopId}`}
               className="text-sm font-medium text-primary hover:underline"
             >
               {workshop.title}

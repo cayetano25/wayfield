@@ -307,7 +307,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
   const handleNavigate = useCallback((workshopId: number | null) => {
     setDropdownOpen(false);
     if (workshopId) {
-      router.push(`/workshops/${workshopId}/notifications`);
+      router.push(`/dashboard/workshops/${workshopId}/notifications`);
     }
   }, [router]);
 
