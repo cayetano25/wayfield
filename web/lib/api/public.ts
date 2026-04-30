@@ -158,7 +158,7 @@ export interface DiscoverResponse {
 
 async function publicFetch<T>(
   path: string,
-  options?: { next?: { revalidate?: number; tags?: string[] } },
+  options?: { next?: { revalidate?: number | false; tags?: string[] } },
 ): Promise<T | null> {
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
@@ -339,4 +339,88 @@ export interface SitemapCategory {
 export interface SitemapLeader {
   slug: string;
   updated_at: string;
+}
+
+// --- SEO fetch functions ---
+
+export async function getPublicWorkshops(params?: {
+  category?: string;
+  state?: string;
+  city?: string;
+  page?: number;
+}): Promise<PaginatedResponse<WorkshopListItem> | null> {
+  const query = new URLSearchParams();
+  if (params?.category) query.set('category', params.category);
+  if (params?.state) query.set('state', params.state);
+  if (params?.city) query.set('city', params.city);
+  if (params?.page) query.set('page', String(params.page));
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  return publicFetch<PaginatedResponse<WorkshopListItem>>(
+    `/public/workshops${qs}`,
+    { next: { revalidate: 300 } }
+  );
+}
+
+export async function getPublicCategories(): Promise<WorkshopCategory[] | null> {
+  return publicFetch<WorkshopCategory[]>('/public/categories', {
+    next: { revalidate: 3600 },
+  });
+}
+
+export const getPublicCategory = cache(async function getPublicCategory(
+  categorySlug: string
+): Promise<CategoryWithWorkshops | null> {
+  return publicFetch<CategoryWithWorkshops>(`/public/categories/${categorySlug}`, {
+    next: { revalidate: 600 },
+  });
+});
+
+export async function getPublicCategoryByLocation(
+  categorySlug: string,
+  locationSlug: string
+): Promise<CategoryLocationPage | null> {
+  return publicFetch<CategoryLocationPage>(
+    `/public/categories/${categorySlug}/locations/${locationSlug}`,
+    { next: { revalidate: 3600 } }
+  );
+}
+
+export const getPublicLeader = cache(async function getPublicLeader(
+  slug: string
+): Promise<LeaderProfilePublic | null> {
+  return publicFetch<LeaderProfilePublic>(`/public/leaders/${slug}`, {
+    next: { revalidate: 3600 },
+  });
+});
+
+export async function getPublicOrganizer(
+  slug: string
+): Promise<OrganizerProfilePublic | null> {
+  return publicFetch<OrganizerProfilePublic>(`/public/organizers/${slug}`, {
+    next: { revalidate: 3600 },
+  });
+}
+
+export async function getSitemapWorkshops(): Promise<SitemapWorkshop[]> {
+  const res = await publicFetch<{ data: SitemapWorkshop[] }>(
+    '/public/sitemap/workshops',
+    { next: { revalidate: false } }
+  );
+  return res?.data ?? [];
+}
+
+export async function getSitemapCategories(): Promise<SitemapCategory[]> {
+  const res = await publicFetch<{ data: SitemapCategory[] }>(
+    '/public/sitemap/categories',
+    { next: { revalidate: false } }
+  );
+  return res?.data ?? [];
+}
+
+export async function getSitemapLeaders(): Promise<SitemapLeader[]> {
+  const res = await publicFetch<{ data: SitemapLeader[] }>(
+    '/public/sitemap/leaders',
+    { next: { revalidate: false } }
+  );
+  return res?.data ?? [];
 }
