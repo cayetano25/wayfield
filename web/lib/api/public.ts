@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 // Public-safe allowed fields on sessions (never expose meeting credentials)
@@ -154,11 +156,14 @@ export interface DiscoverResponse {
   };
 }
 
-async function publicFetch<T>(path: string): Promise<T | null> {
+async function publicFetch<T>(
+  path: string,
+  options?: { next?: { revalidate?: number; tags?: string[] } },
+): Promise<T | null> {
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 60 },
+      next: options?.next ?? { revalidate: 60 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
@@ -167,9 +172,13 @@ async function publicFetch<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function getPublicWorkshop(slug: string): Promise<PublicWorkshop | null> {
-  return publicFetch<PublicWorkshop>(`/public/workshops/${slug}`);
-}
+export const getPublicWorkshop = cache(async function getPublicWorkshop(
+  slug: string,
+): Promise<PublicWorkshop | null> {
+  return publicFetch<PublicWorkshop>(`/public/workshops/${slug}`, {
+    next: { revalidate: 600, tags: [`workshop:${slug}`] },
+  });
+});
 
 export async function discoverWorkshops(params: {
   search?: string;
