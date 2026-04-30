@@ -8,6 +8,7 @@ import {
   Bell,
   LogOut,
   Receipt,
+  Heart,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { clearNavCache } from '@/lib/hooks/useNavContext'
@@ -225,6 +226,32 @@ export function UserMenu({ user }: UserMenuProps) {
               }}
             >
               Notifications
+            </span>
+          </button>
+
+          {/* My Favorites */}
+          <button
+            role="menuitem"
+            onClick={() => navigateTo('/account/favorites')}
+            className="w-full flex items-center gap-3 px-4 py-[10px]
+                       transition-colors duration-100 cursor-pointer text-left"
+            style={{ backgroundColor: 'transparent', border: 'none' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F9FAFB'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+            }}
+          >
+            <Heart size={16} color="#6B7280" aria-hidden="true" />
+            <span
+              style={{
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontSize:   13,
+                color:      '#374151',
+              }}
+            >
+              My Favorites
             </span>
           </button>
 

@@ -121,6 +121,8 @@ function workshopToCardProps(w: DiscoverWorkshop) {
     orgSlug: w.organization?.slug,
     spotsLeft: w.spots_remaining ?? null,
     totalCapacity: null as number | null,
+    isFavorited: w.is_favorited ?? false,
+    participantStatus: w.participant_status ?? null,
   };
 }
 

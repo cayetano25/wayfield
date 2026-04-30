@@ -7,8 +7,18 @@ import Link from 'next/link';
 import { MapPin, CalendarDays, Heart, ArrowRight, Lock, ShoppingBag, Check, Loader2 } from 'lucide-react';
 import { useOptionalCart } from '@/contexts/CartContext';
 import { ApiError } from '@/lib/api/client';
+import { useWorkshopFavorite } from '@/hooks/useWorkshopFavorite';
 
 /* --- Types ----------------------------------------------------------------- */
+
+export interface ParticipantStatus {
+  registration_status: 'registered' | 'waitlisted' | string;
+  payment_status: string;
+  is_paid: boolean;
+  order_number: string | null;
+  is_deposit_only: boolean;
+  balance_due_date: string | null;
+}
 
 export interface WorkshopCardProps {
   id: number;
@@ -27,11 +37,12 @@ export interface WorkshopCardProps {
   isFavorited?: boolean;
   isWaitlistOnly?: boolean;
   onFavoriteToggle?: (id: number) => void;
+  participantStatus?: ParticipantStatus | null;
 }
 
-/* --- Status badge ---------------------------------------------------------- */
+/* --- Availability badge --------------------------------------------------- */
 
-function StatusBadge({
+function AvailabilityBadge({
   spotsLeft,
   totalCapacity,
 }: {
@@ -63,6 +74,34 @@ function StatusBadge({
       {spotsLeft} Spots Left
     </span>
   );
+}
+
+/* --- Participant status badge ---------------------------------------------- */
+
+function ParticipantStatusBadge({ status }: { status: ParticipantStatus }) {
+  if (status.registration_status === 'waitlisted') {
+    return (
+      <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full
+        px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase
+        font-[JetBrains_Mono] bg-blue-100 text-blue-800">
+        Waitlisted
+      </span>
+    );
+  }
+
+  if (status.registration_status === 'registered') {
+    const isDepositOnly = status.is_deposit_only;
+    const isFree = status.payment_status === 'free';
+    return (
+      <span className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full
+        px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase font-[JetBrains_Mono]
+        ${isDepositOnly ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+        {isDepositOnly ? 'Deposit Paid' : isFree ? 'Registered' : 'Paid'}
+      </span>
+    );
+  }
+
+  return null;
 }
 
 /* --- Cart icon button ------------------------------------------------------- */
@@ -158,8 +197,10 @@ export function WorkshopCard({
   totalCapacity,
   isFavorited = false,
   isWaitlistOnly = false,
-  onFavoriteToggle,
+  participantStatus,
 }: WorkshopCardProps) {
+  const { isFavorited: favorited, toggle, isLoading: favoriteLoading } = useWorkshopFavorite(id, isFavorited);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
       {/* Image area */}
@@ -176,20 +217,31 @@ export function WorkshopCard({
           <div className="w-full h-full bg-gradient-to-br from-[#0FA3B1] to-[#0c6b75]" />
         )}
 
-        <StatusBadge spotsLeft={spotsLeft} totalCapacity={totalCapacity} />
+        {/* Participant status badge takes priority over availability badge */}
+        {participantStatus ? (
+          <ParticipantStatusBadge status={participantStatus} />
+        ) : (
+          <AvailabilityBadge spotsLeft={spotsLeft} totalCapacity={totalCapacity} />
+        )}
 
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
-            onFavoriteToggle?.(id);
+            toggle();
           }}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
-          aria-label={isFavorited ? 'Remove from favourites' : 'Add to favourites'}
+          disabled={favoriteLoading}
+          aria-label={favorited ? 'Remove from favorites' : 'Save to favorites'}
+          className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-white
+            rounded-full flex items-center justify-center shadow-sm transition-all
+            disabled:opacity-60"
         >
           <Heart
             size={15}
-            className={isFavorited ? 'text-[#E94F37] fill-[#E94F37]' : 'text-gray-500'}
+            className={`transition-colors ${
+              favorited ? 'text-[#E94F37] fill-[#E94F37]' : 'text-gray-500'
+            }`}
           />
         </button>
       </div>

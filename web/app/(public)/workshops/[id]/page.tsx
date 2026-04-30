@@ -3,11 +3,13 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader, type PublicSession, type PublicLogistics, type PublicLocation } from '@/lib/api/public';
+import { MapPin } from 'lucide-react';
+import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import { WorkshopPriceDisplay } from '@/components/workshops/public/WorkshopPriceDisplay';
 import { AddToCartButton } from '@/components/workshops/public/AddToCartButton';
+import { ScheduleItem } from '@/components/workshops/public/ScheduleItem';
 import { buildCategoryMetadata } from '@/lib/seo/metadata';
 import { buildEventJsonLd, buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '@/lib/seo/jsonld';
 import { JsonLd } from '@/components/seo/JsonLd';
@@ -35,7 +37,31 @@ export async function generateStaticParams() {
 const SAFE_LEADER_FIELDS: (keyof PublicLeader)[] = [
   'id', 'first_name', 'last_name', 'display_name',
   'bio', 'profile_image_url', 'website_url', 'city', 'state_or_region',
+  'country', 'country_name',
 ];
+
+function formatLeaderLocation(leader: PublicLeader): string | null {
+  if (!leader.city) return null;
+
+  // US / Canada: "Portland, OR" or "Vancouver, BC"
+  if (leader.country === 'US' || leader.country === 'USA' || leader.country === 'CA' || leader.country === 'CAN') {
+    return leader.state_or_region
+      ? `${leader.city}, ${leader.state_or_region}`
+      : leader.city;
+  }
+
+  // Countries with a name available: "Reykjavik, Iceland" (state optional)
+  if (leader.country_name) {
+    return leader.state_or_region
+      ? `${leader.city}, ${leader.state_or_region}, ${leader.country_name}`
+      : `${leader.city}, ${leader.country_name}`;
+  }
+
+  // Fallback: city + state if available, or just city
+  return leader.state_or_region
+    ? `${leader.city}, ${leader.state_or_region}`
+    : leader.city;
+}
 
 function sanitizeLeader(leader: PublicLeader): PublicLeader {
   const safe: Partial<PublicLeader> = {};
@@ -45,11 +71,6 @@ function sanitizeLeader(leader: PublicLeader): PublicLeader {
   return safe as PublicLeader;
 }
 
-// Session fields safe to render — meeting credentials are intentionally excluded
-function isVirtual(s: PublicSession) {
-  return s.delivery_type === 'virtual' || s.delivery_type === 'hybrid';
-}
-
 function formatDateRange(start: string, end: string, timezone: string): string {
   const opts: Intl.DateTimeFormatOptions = {
     month: 'long', day: 'numeric', year: 'numeric', timeZone: timezone,
@@ -57,76 +78,6 @@ function formatDateRange(start: string, end: string, timezone: string): string {
   const s = new Date(`${start}T00:00:00`).toLocaleDateString('en-US', opts);
   const e = new Date(`${end}T00:00:00`).toLocaleDateString('en-US', opts);
   return s === e ? s : `${s} – ${e}`;
-}
-
-function formatSessionTime(start: string, end: string, timezone: string): string {
-  const fmt = (d: string) =>
-    new Date(d).toLocaleString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-      hour: 'numeric', minute: '2-digit', timeZone: timezone,
-    });
-  return `${fmt(start)} – ${new Date(end).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', timeZone: timezone,
-  })}`;
-}
-
-function DeliveryBadge({ type }: { type: PublicSession['delivery_type'] }) {
-  const map = {
-    in_person: { label: 'In Person', cls: 'bg-info/10 text-info' },
-    virtual: { label: 'Virtual', cls: 'bg-primary/10 text-primary' },
-    hybrid: { label: 'Hybrid', cls: 'bg-secondary/10 text-secondary' },
-  };
-  const { label, cls } = map[type];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${cls}`}>
-      {label}
-    </span>
-  );
-}
-
-function SessionCard({
-  session,
-  timezone,
-  showAddonBadge = false,
-}: {
-  session: PublicSession;
-  timezone: string;
-  showAddonBadge?: boolean;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2 mb-1">
-          <DeliveryBadge type={session.delivery_type} />
-          {showAddonBadge && (
-            <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-600">
-              Add-On
-            </span>
-          )}
-          {session.track_name && (
-            <span className="text-xs text-medium-gray font-medium">{session.track_name}</span>
-          )}
-        </div>
-        <p className="font-semibold text-dark">{session.title}</p>
-        <p className="text-sm text-medium-gray mt-0.5">
-          {formatSessionTime(session.start_at, session.end_at, timezone)}
-        </p>
-        {(session.location_city || session.location_state) && (
-          <p className="text-xs text-medium-gray mt-0.5 flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">location_on</span>
-            {[session.location_city, session.location_state].filter(Boolean).join(', ')}
-          </p>
-        )}
-      </div>
-      {/* Never show meeting_url — show informational text instead */}
-      {isVirtual(session) && (
-        <p className="text-xs text-primary font-semibold shrink-0 flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">videocam</span>
-          Join link provided after registration
-        </p>
-      )}
-    </div>
-  );
 }
 
 function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
@@ -154,9 +105,10 @@ function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
           <p className="font-heading font-semibold text-dark leading-tight">
             {leader.display_name ?? `${leader.first_name} ${leader.last_name}`}
           </p>
-          {(leader.city || leader.state_or_region) && (
-            <p className="text-xs text-medium-gray mt-0.5">
-              {[leader.city, leader.state_or_region].filter(Boolean).join(', ')}
+          {formatLeaderLocation(leader) && (
+            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+              <MapPin size={10} />
+              {formatLeaderLocation(leader)}
             </p>
           )}
         </div>
@@ -175,164 +127,6 @@ function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
         </a>
       )}
     </div>
-  );
-}
-
-function LogisticsCard({ icon, children }: { icon: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 flex gap-4">
-      <span className="material-symbols-outlined text-primary text-xl shrink-0">{icon}</span>
-      <div>{children}</div>
-    </div>
-  );
-}
-
-function buildMapsUrl(
-  lat?: number | null,
-  lng?: number | null,
-  name?: string,
-  address?: string,
-): string | null {
-  if (lat != null && lng != null) {
-    const q = name ? `&q=${encodeURIComponent(name)}` : '';
-    return `https://maps.apple.com/?ll=${lat},${lng}${q}`;
-  }
-  if (address) {
-    return `https://maps.apple.com/?address=${encodeURIComponent(address)}`;
-  }
-  return null;
-}
-
-function MapLink({ url, label }: { url: string; label: string }) {
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 min-h-[44px] text-sm text-primary font-medium hover:underline"
-    >
-      <span className="material-symbols-outlined text-base shrink-0">pin_drop</span>
-      {label}
-    </a>
-  );
-}
-
-function LogisticsSection({
-  logistics,
-  defaultLocation,
-}: {
-  logistics: PublicLogistics;
-  defaultLocation?: PublicLocation;
-}) {
-  const hasLogistics = Object.values(logistics).some(Boolean);
-  const hasDefaultLocation =
-    defaultLocation &&
-    (defaultLocation.city || defaultLocation.state_or_region || defaultLocation.address_line_1 || defaultLocation.name);
-
-  if (!hasLogistics && !hasDefaultLocation) return null;
-
-  // Map URL for the venue-only card (uses location coordinates when available)
-  const venueMapUrl = buildMapsUrl(
-    defaultLocation?.latitude,
-    defaultLocation?.longitude,
-    defaultLocation?.name,
-    defaultLocation?.address_line_1,
-  );
-
-  // Map URL for the hotel card — prefer structured address, fall back to legacy freeform
-  const hotelAddressString =
-    logistics.hotel_address_object?.formatted_address ?? logistics.hotel_address ?? null;
-  const hotelMapUrl = buildMapsUrl(null, null, logistics.hotel_name, hotelAddressString ?? undefined);
-
-  // Map URL for the parking card (coordinates only — no freeform address fallback)
-  const parkingMapUrl =
-    defaultLocation?.latitude != null && defaultLocation.longitude != null
-      ? buildMapsUrl(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.name)
-      : null;
-
-  const cleanPhone = logistics.hotel_phone?.replace(/\D/g, '') ?? '';
-
-  return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <h2 className="font-heading text-2xl font-bold text-dark mb-8">Venue &amp; Logistics</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {hasDefaultLocation && !logistics.hotel_name && (
-          <LogisticsCard icon="location_on">
-            <p className="font-semibold text-dark">{defaultLocation!.name ?? 'Workshop Location'}</p>
-            {defaultLocation!.address_line_1 && (
-              <p className="text-sm text-medium-gray mt-0.5">{defaultLocation!.address_line_1}</p>
-            )}
-            {defaultLocation!.address_line_2 && (
-              <p className="text-sm text-medium-gray">{defaultLocation!.address_line_2}</p>
-            )}
-            {(defaultLocation!.city || defaultLocation!.state_or_region) && (
-              <p className="text-sm text-medium-gray">
-                {[defaultLocation!.city, defaultLocation!.state_or_region, defaultLocation!.postal_code]
-                  .filter(Boolean)
-                  .join(', ')}
-              </p>
-            )}
-            {venueMapUrl && <MapLink url={venueMapUrl} label="Open in Maps" />}
-          </LogisticsCard>
-        )}
-
-        {logistics.hotel_name && (
-          <LogisticsCard icon="hotel">
-            <p className="font-heading font-semibold text-dark text-base">{logistics.hotel_name}</p>
-
-            {/* Address: prefer Phase 16 structured object, fall back to legacy freeform string */}
-            {logistics.hotel_address_object?.formatted_address ? (
-              <p className="mt-1 text-sm text-medium-gray whitespace-pre-line leading-relaxed">
-                {logistics.hotel_address_object.formatted_address}
-              </p>
-            ) : logistics.hotel_address ? (
-              <p className="mt-1 text-sm text-medium-gray">{logistics.hotel_address}</p>
-            ) : null}
-
-            {/* Phone as tappable tel: link */}
-            {logistics.hotel_phone && (
-              <a
-                href={`tel:${cleanPhone}`}
-                className="inline-flex items-center gap-1.5 min-h-[44px] text-sm text-primary font-medium hover:underline"
-              >
-                <span className="material-symbols-outlined text-base shrink-0">call</span>
-                {logistics.hotel_phone}
-              </a>
-            )}
-
-            {/* Map link */}
-            {hotelMapUrl && <MapLink url={hotelMapUrl} label="Open in Maps" />}
-
-            {/* Notes — muted, below action links */}
-            {logistics.hotel_notes && (
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">{logistics.hotel_notes}</p>
-            )}
-          </LogisticsCard>
-        )}
-
-        {logistics.parking_details && (
-          <LogisticsCard icon="local_parking">
-            <p className="font-semibold text-dark mb-1">Parking</p>
-            <p className="text-sm text-medium-gray leading-relaxed">{logistics.parking_details}</p>
-            {parkingMapUrl && <MapLink url={parkingMapUrl} label="View Location in Maps" />}
-          </LogisticsCard>
-        )}
-
-        {logistics.meeting_room_details && (
-          <LogisticsCard icon="door_open">
-            <p className="font-semibold text-dark mb-1">Meeting Room</p>
-            <p className="text-sm text-medium-gray leading-relaxed">{logistics.meeting_room_details}</p>
-          </LogisticsCard>
-        )}
-
-        {logistics.meetup_instructions && (
-          <LogisticsCard icon="info">
-            <p className="font-semibold text-dark mb-1">Meetup Instructions</p>
-            <p className="text-sm text-medium-gray leading-relaxed">{logistics.meetup_instructions}</p>
-          </LogisticsCard>
-        )}
-      </div>
-    </section>
   );
 }
 
@@ -567,7 +361,7 @@ export default async function PublicWorkshopPage(
                 <h2 className="font-heading text-2xl font-bold text-dark mb-8">Schedule</h2>
                 <div className="space-y-3">
                   {standardSessions.map((session) => (
-                    <SessionCard key={session.id} session={session} timezone={workshop.timezone} />
+                    <ScheduleItem key={session.id} session={session} />
                   ))}
                 </div>
               </>
@@ -579,7 +373,7 @@ export default async function PublicWorkshopPage(
                 </div>
                 <div className="space-y-3">
                   {addonSessions.map((session) => (
-                    <SessionCard key={session.id} session={session} timezone={workshop.timezone} showAddonBadge />
+                    <ScheduleItem key={session.id} session={session} />
                   ))}
                 </div>
               </section>
@@ -598,14 +392,6 @@ export default async function PublicWorkshopPage(
             ))}
           </div>
         </section>
-      )}
-
-      {/* Logistics */}
-      {(workshop.logistics || workshop.default_location) && (
-        <LogisticsSection
-          logistics={workshop.logistics ?? {}}
-          defaultLocation={workshop.default_location}
-        />
       )}
 
       {/* Footer CTA */}

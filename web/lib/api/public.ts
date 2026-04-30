@@ -9,11 +9,11 @@ export interface PublicSession {
   start_at: string;
   end_at: string;
   delivery_type: 'in_person' | 'virtual' | 'hybrid';
-  location_city?: string;
-  location_state?: string;
   track_name?: string;
   is_addon?: boolean;
-  // meeting_url, meeting_id, meeting_passcode are intentionally absent
+  description_preview?: string | null;
+  // location_city and location_state intentionally excluded from public surface
+  // meeting_url, meeting_id, meeting_passcode intentionally absent
 }
 
 // Public-safe leader fields (no email, phone, or full address)
@@ -27,7 +27,10 @@ export interface PublicLeader {
   website_url?: string;
   city?: string;
   state_or_region?: string;
-  // email, phone_number, address_line_1, address_line_2, postal_code, country are intentionally absent
+  // country and country_name are safe at country-level granularity (added with Chunk C)
+  country?: string;
+  country_name?: string;
+  // email, phone_number, address_line_1, address_line_2, postal_code are intentionally absent
 }
 
 export interface PublicHotelAddressObject {
@@ -123,6 +126,15 @@ export interface DiscoverWorkshopTag {
   label: string;
 }
 
+export interface DiscoverWorkshopParticipantStatus {
+  registration_status: 'registered' | 'waitlisted' | string;
+  payment_status: string;
+  is_paid: boolean;
+  order_number: string | null;
+  is_deposit_only: boolean;
+  balance_due_date: string | null;
+}
+
 export interface DiscoverWorkshop {
   id: number;
   title: string;
@@ -138,6 +150,8 @@ export interface DiscoverWorkshop {
   organization?: { id: number; slug: string; name: string } | null;
   leader_count: number;
   pricing?: WorkshopPricingDisplay | null;
+  is_favorited?: boolean;
+  participant_status?: DiscoverWorkshopParticipantStatus | null;
   // Legacy fields kept for backwards compat
   location?: { city?: string; state_or_region?: string };
   session_count?: number;
