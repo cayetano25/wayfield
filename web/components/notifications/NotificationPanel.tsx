@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { X, Bell, CheckCheck } from 'lucide-react'
 import { NotificationItem } from './NotificationItem'
 import type { AppNotification } from '@/lib/types/notifications'
@@ -210,6 +211,29 @@ export function NotificationPanel({
             onRemove={onRemove}
           />
         ))}
+      </div>
+
+      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+      <div style={{
+        borderTop:  '1px solid #F3F4F6',
+        padding:    '12px 16px',
+        flexShrink: 0,
+      }}>
+        <Link
+          href="/notifications"
+          onClick={onClose}
+          style={{
+            display:        'block',
+            textAlign:      'center',
+            fontFamily:     'Plus Jakarta Sans, sans-serif',
+            fontSize:       13,
+            fontWeight:     500,
+            color:          '#0FA3B1',
+            textDecoration: 'none',
+          }}
+        >
+          See all notifications →
+        </Link>
       </div>
     </div>
   )

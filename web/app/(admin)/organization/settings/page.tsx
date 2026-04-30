@@ -145,99 +145,6 @@ export default function OrganizationSettingsPage() {
   return (
     <div className="max-w-[1280px] mx-auto">
       <form onSubmit={handleSave}>
-        {/* Organization identity */}
-        <Card className="mb-6">
-          <div className="px-6 py-5 border-b border-border-gray">
-            <h2 className="font-heading text-base font-semibold text-dark">Organization Identity</h2>
-            <p className="text-sm text-medium-gray mt-0.5">
-              These details identify your organization across the platform.
-            </p>
-          </div>
-          <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input
-              label="Organization Name"
-              value={form.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              error={errors.name}
-              disabled={!canEdit}
-              required
-            />
-            <Input
-              label="Slug"
-              value={form.slug}
-              onChange={(e) => handleChange('slug', e.target.value)}
-              error={errors.slug}
-              disabled={!canEdit}
-              helper="Used in URLs — lowercase letters, numbers, and hyphens only"
-              required
-            />
-          </div>
-        </Card>
-
-        {/* Primary contact */}
-        <Card className="mb-6">
-          <div className="px-6 py-5 border-b border-border-gray">
-            <h2 className="font-heading text-base font-semibold text-dark">Primary Contact</h2>
-            <p className="text-sm text-medium-gray mt-0.5">
-              The main point of contact for this organization.
-            </p>
-          </div>
-          <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input
-              label="First Name"
-              value={form.primary_contact_first_name}
-              onChange={(e) => handleChange('primary_contact_first_name', e.target.value)}
-              error={errors.primary_contact_first_name}
-              disabled={!canEdit}
-              required
-            />
-            <Input
-              label="Last Name"
-              value={form.primary_contact_last_name}
-              onChange={(e) => handleChange('primary_contact_last_name', e.target.value)}
-              error={errors.primary_contact_last_name}
-              disabled={!canEdit}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={form.primary_contact_email}
-              onChange={(e) => handleChange('primary_contact_email', e.target.value)}
-              error={errors.primary_contact_email}
-              disabled={!canEdit}
-            />
-            <Input
-              label="Phone"
-              type="tel"
-              value={form.primary_contact_phone}
-              onChange={(e) => handleChange('primary_contact_phone', e.target.value)}
-              error={errors.primary_contact_phone}
-              disabled={!canEdit}
-            />
-          </div>
-        </Card>
-
-        {/* Organization Address */}
-        <Card className="mb-6">
-          <div className="px-6 py-5 border-b border-border-gray">
-            <h2 className="font-heading text-base font-semibold text-dark">Organization Address</h2>
-            <p className="text-sm text-medium-gray mt-0.5">
-              For internal use and billing purposes.
-            </p>
-          </div>
-          <div className="px-6 py-6">
-            <AddressForm
-              label=""
-              value={orgAddress}
-              onChange={setOrgAddress}
-              defaultCountryCode={orgAddress?.country_code ?? 'US'}
-              privacyNote="This address is for internal use and billing purposes only."
-              disabled={!canEdit}
-            />
-          </div>
-        </Card>
-
         {/* Brand Identity */}
         {canEdit && (
           <Card className="mb-6">
@@ -359,6 +266,99 @@ export default function OrganizationSettingsPage() {
             )}
           </Card>
         )}
+
+        {/* Organization identity */}
+        <Card className="mb-6">
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Organization Identity</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              These details identify your organization across the platform.
+            </p>
+          </div>
+          <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Input
+              label="Organization Name"
+              value={form.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              error={errors.name}
+              disabled={!canEdit}
+              required
+            />
+            <Input
+              label="Slug"
+              value={form.slug}
+              onChange={(e) => handleChange('slug', e.target.value)}
+              error={errors.slug}
+              disabled={!canEdit}
+              helper="Used in URLs — lowercase letters, numbers, and hyphens only"
+              required
+            />
+          </div>
+        </Card>
+
+        {/* Primary contact */}
+        <Card className="mb-6">
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Primary Contact</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              The main point of contact for this organization.
+            </p>
+          </div>
+          <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Input
+              label="First Name"
+              value={form.primary_contact_first_name}
+              onChange={(e) => handleChange('primary_contact_first_name', e.target.value)}
+              error={errors.primary_contact_first_name}
+              disabled={!canEdit}
+              required
+            />
+            <Input
+              label="Last Name"
+              value={form.primary_contact_last_name}
+              onChange={(e) => handleChange('primary_contact_last_name', e.target.value)}
+              error={errors.primary_contact_last_name}
+              disabled={!canEdit}
+              required
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={form.primary_contact_email}
+              onChange={(e) => handleChange('primary_contact_email', e.target.value)}
+              error={errors.primary_contact_email}
+              disabled={!canEdit}
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              value={form.primary_contact_phone}
+              onChange={(e) => handleChange('primary_contact_phone', e.target.value)}
+              error={errors.primary_contact_phone}
+              disabled={!canEdit}
+            />
+          </div>
+        </Card>
+
+        {/* Organization Address */}
+        <Card className="mb-6">
+          <div className="px-6 py-5 border-b border-border-gray">
+            <h2 className="font-heading text-base font-semibold text-dark">Organization Address</h2>
+            <p className="text-sm text-medium-gray mt-0.5">
+              For internal use and billing purposes.
+            </p>
+          </div>
+          <div className="px-6 py-6">
+            <AddressForm
+              label=""
+              value={orgAddress}
+              onChange={setOrgAddress}
+              defaultCountryCode={orgAddress?.country_code ?? 'US'}
+              privacyNote="This address is for internal use and billing purposes only."
+              disabled={!canEdit}
+            />
+          </div>
+        </Card>
 
         {canEdit && (
           <div className="flex justify-end">
