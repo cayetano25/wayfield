@@ -122,7 +122,7 @@ export function MobileMenu({ nav, onClose }: MobileMenuProps) {
 
 function buildLinks(nav: NavContextData): Array<{ href: string; label: string }> {
   const links: Array<{ href: string; label: string }> = [
-    { href: '/discover', label: 'Discover' },
+    { href: '/discover', label: 'Explore Workshops' },
   ]
   if (nav.showMyWorkshops)    links.push({ href: '/my-workshops',    label: 'My Workshops' })
   if (nav.showMySessions)     links.push({ href: '/leader/dashboard', label: 'My Sessions' })

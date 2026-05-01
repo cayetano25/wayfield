@@ -68,8 +68,8 @@ export function AppTopNav() {
             className="hidden sm:flex items-center gap-7 h-full"
             aria-label="Main navigation"
           >
-            {/* Discover — always visible */}
-            <NavLink href="/discover" label="Discover" />
+            {/* Explore Workshops — always visible */}
+            <NavLink href="/discover" label="Explore Workshops" />
 
             {/* My Workshops — all authenticated users */}
             {nav.isAuthenticated && (
