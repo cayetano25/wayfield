@@ -45,6 +45,7 @@ class UpdateWorkshopRequest extends FormRequest
                 'integer',
                 Rule::exists('taxonomy_tags', 'id')->where('is_active', true),
             ],
+            'header_image_url' => ['sometimes', 'nullable', 'string', 'url'],
         ];
     }
 }

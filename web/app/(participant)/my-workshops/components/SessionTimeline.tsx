@@ -24,12 +24,11 @@ function formatSessionTime(startAt: string, endAt: string): string {
 
 /* --- Status dot -------------------------------------------------------- */
 
-function StatusDot({ session }: { session: ParticipantSession }) {
-  const isCompleted = session.attendance_status === 'checked_in';
+function StatusDot({ isCompleted, isNext }: { isCompleted: boolean; isNext: boolean }) {
   if (isCompleted) {
     return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-300" />;
   }
-  if (session.is_next) {
+  if (isNext) {
     return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-[#0FA3B1]" />;
   }
   return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 border-gray-300 bg-white" />;
@@ -37,14 +36,13 @@ function StatusDot({ session }: { session: ParticipantSession }) {
 
 /* --- Status badge ------------------------------------------------------ */
 
-function StatusBadge({ session }: { session: ParticipantSession }) {
-  const isCompleted = session.attendance_status === 'checked_in';
-  const label = isCompleted ? 'Done' : session.is_next ? 'Next' : 'Upcoming';
+function StatusBadge({ isCompleted, isNext }: { isCompleted: boolean; isNext: boolean }) {
+  const label = isCompleted ? 'Done' : isNext ? 'Next' : 'Upcoming';
 
   return (
     <span
       className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex-shrink-0 font-mono ${
-        session.is_next
+        isNext
           ? 'bg-[#0FA3B1] text-white'
           : 'text-gray-400 border border-gray-200'
       }`}
@@ -185,22 +183,26 @@ export function SessionTimeline({ sessions }: SessionTimelineProps) {
 
   if (sessions.length === 0) return null;
 
+  const now = new Date();
+
   return (
     <div>
       {sessions.map((session) => {
         const isOpen = openId === session.id;
-        const isCompleted = session.attendance_status === 'checked_in';
+        const isPast = new Date(session.end_at) < now;
+        const isCompleted = session.attendance_status === 'checked_in' || isPast;
+        const isNext = !isCompleted && session.is_next;
 
         return (
           <div key={session.id}>
             {/* Row */}
             <div
               className={`flex items-center gap-4 py-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg px-3 -mx-3 ${
-                session.is_next ? 'bg-[#0FA3B1]/5' : ''
+                isNext ? 'bg-[#0FA3B1]/5' : ''
               }`}
               onClick={() => setOpenId(isOpen ? null : session.id)}
             >
-              <StatusDot session={session} />
+              <StatusDot isCompleted={isCompleted} isNext={isNext} />
 
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium leading-snug truncate ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>
@@ -213,7 +215,7 @@ export function SessionTimeline({ sessions }: SessionTimelineProps) {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <StatusBadge session={session} />
+                <StatusBadge isCompleted={isCompleted} isNext={isNext} />
                 <ChevronDown
                   size={14}
                   className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}

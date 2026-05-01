@@ -361,9 +361,10 @@ function MyWorkshopsPageInner() {
                     </h2>
                     {data.active_workshop.sessions.length > 0 && (
                       <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">
-                        {data.active_workshop.sessions.filter(
-                          (s) => s.attendance_status === 'checked_in'
-                        ).length}{' '}
+                        {data.active_workshop.sessions.filter((s) => {
+                          const now = new Date();
+                          return s.attendance_status === 'checked_in' || new Date(s.end_at) < now;
+                        }).length}{' '}
                         / {data.active_workshop.sessions.length} complete
                       </span>
                     )}

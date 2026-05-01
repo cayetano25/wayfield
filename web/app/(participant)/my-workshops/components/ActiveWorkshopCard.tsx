@@ -143,7 +143,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                   publicUrl={`/workshops/${workshop.public_slug}`}
                   variant="organizer"
                   showLabel
-                  className="border-white/55 text-white bg-transparent hover:bg-white/10 hover:border-white/70 active:scale-[0.98]"
+                  className="border-white/55 text-white !bg-transparent hover:!bg-white/10 hover:border-white/70 active:scale-[0.98]"
                 />
               )}
             </div>
