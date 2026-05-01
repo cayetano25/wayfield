@@ -467,24 +467,26 @@ export function PricingClient() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center">
           <p
-            className="font-mono font-bold uppercase mb-5"
+            className="font-mono font-bold uppercase mb-5 animate-fade-in-up"
             style={{ fontSize: 11, letterSpacing: '0.15em', color: '#0FA3B1' }}
           >
             Pricing
           </p>
           <h1
-            className="font-heading font-bold text-white mb-4 leading-tight"
+            className="font-heading font-bold text-white mb-4 leading-tight animate-fade-in-up delay-80"
             style={{ fontSize: 'clamp(30px, 5.5vw, 52px)', maxWidth: 680 }}
           >
             Simple pricing that grows with you.
           </h1>
           <p
-            className="font-sans mb-10 leading-relaxed"
+            className="font-sans mb-10 leading-relaxed animate-fade-in-up delay-160"
             style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', maxWidth: 480 }}
           >
             No hidden fees. No per-participant charges. Just tools that grow with your workshop program.
           </p>
-          <BillingToggle period={period} onChange={setPeriod} />
+          <div className="animate-fade-in-up delay-240">
+            <BillingToggle period={period} onChange={setPeriod} />
+          </div>
         </div>
       </section>
 
