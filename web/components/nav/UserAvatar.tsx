@@ -6,6 +6,7 @@ interface UserAvatarProps {
   firstName:        string
   lastName:         string
   profileImageUrl?: string | null
+  photoUrl?:        string | null   // preferred alias; takes precedence when provided
   size?:            number
 }
 
@@ -13,19 +14,21 @@ export function UserAvatar({
   firstName,
   lastName,
   profileImageUrl,
+  photoUrl,
   size = 32,
 }: UserAvatarProps) {
   const initials = buildInitials(firstName, lastName)
   const fontSize = size <= 32 ? 12 : size <= 40 ? 14 : 16
+  const effectivePhotoUrl = photoUrl ?? profileImageUrl
 
-  if (profileImageUrl) {
+  if (effectivePhotoUrl) {
     return (
       <div
         className="relative rounded-full overflow-hidden flex-shrink-0"
         style={{ width: size, height: size }}
       >
         <Image
-          src={profileImageUrl}
+          src={effectivePhotoUrl}
           alt={`${firstName} ${lastName}`}
           fill
           className="object-cover"

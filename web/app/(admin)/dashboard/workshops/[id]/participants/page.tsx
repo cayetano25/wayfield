@@ -47,6 +47,7 @@ interface Participant {
   last_name: string;
   email: string;
   phone_number?: string | null;
+  photo_url?: string | null;
   registration_status: RegistrationStatus;
   registered_at: string;
   sessions_count: number;
@@ -68,7 +69,25 @@ const ACTIVE_STATUSES: RegistrationStatus[] = ['confirmed', 'registered', 'waitl
 
 /* --- Avatar ----------------------------------------------------------- */
 
-function ParticipantAvatar({ first_name, last_name }: { first_name: string; last_name: string }) {
+function ParticipantAvatar({
+  first_name,
+  last_name,
+  photo_url,
+}: {
+  first_name: string;
+  last_name: string;
+  photo_url?: string | null;
+}) {
+  if (photo_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo_url}
+        alt={`${first_name} ${last_name}`}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+      />
+    );
+  }
   const initials = `${first_name[0] ?? ''}${last_name[0] ?? ''}`.toUpperCase();
   return (
     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center shrink-0 select-none">
@@ -490,9 +509,18 @@ function ParticipantSlideOver({
             {/* Profile */}
             <div className="px-6 py-5 border-b border-border-gray">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-full bg-primary/10 text-primary font-semibold text-lg flex items-center justify-center shrink-0 select-none">
-                  {`${participant.first_name[0] ?? ''}${participant.last_name[0] ?? ''}`.toUpperCase()}
-                </div>
+                {participant.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={participant.photo_url}
+                    alt={`${participant.first_name} ${participant.last_name}`}
+                    className="w-14 h-14 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-primary/10 text-primary font-semibold text-lg flex items-center justify-center shrink-0 select-none">
+                    {`${participant.first_name[0] ?? ''}${participant.last_name[0] ?? ''}`.toUpperCase()}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <h3 className="font-heading font-semibold text-dark text-base">{fullName}</h3>
                   <p className="text-sm text-medium-gray truncate">{participant.email}</p>
@@ -819,7 +847,7 @@ export default function WorkshopParticipantsPage() {
                       >
                         <td className="px-4 py-3 sticky left-0 bg-white">
                           <div className="flex items-center gap-3">
-                            <ParticipantAvatar first_name={p.first_name} last_name={p.last_name} />
+                            <ParticipantAvatar first_name={p.first_name} last_name={p.last_name} photo_url={p.photo_url} />
                             <span className="font-medium text-dark whitespace-nowrap">
                               {p.first_name} {p.last_name}
                             </span>
