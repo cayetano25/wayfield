@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { PageHeading } from './PageHeading';
 
 export function AdminShellClient({ children, banner }: { children: React.ReactNode; banner?: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,6 +50,7 @@ export function AdminShellClient({ children, banner }: { children: React.ReactNo
         {banner}
         <TopBar onMenuOpen={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-auto bg-surface p-4 lg:p-8">
+          <PageHeading />
           {children}
         </main>
       </div>
