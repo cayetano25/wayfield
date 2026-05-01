@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin } from 'lucide-react';
 import type { ParticipantLogistics } from '@/lib/types/participant';
 
@@ -33,7 +34,7 @@ export function WorkshopInfoCard({ logistics, workshopId, publicSlug, publicPage
     >
       {/* Left: cover image or gradient — 40% */}
       <div
-        className="shrink-0 overflow-hidden"
+        className="relative shrink-0 overflow-hidden"
         style={{
           width: '40%',
           minHeight: 160,
@@ -41,10 +42,11 @@ export function WorkshopInfoCard({ logistics, workshopId, publicSlug, publicPage
         }}
       >
         {logistics?.workshop_image_url ? (
-          <img
+          <Image
             src={logistics.workshop_image_url}
             alt="Workshop"
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
         ) : (
           <div

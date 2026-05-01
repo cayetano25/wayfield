@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, User, Backpack, LogOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -22,11 +23,14 @@ function UserAvatar({
   size?: 'sm' | 'md';
 }) {
   const dim = size === 'md' ? 'w-9 h-9 text-sm' : 'w-8 h-8 text-xs';
+  const px = size === 'md' ? 36 : 32;
   if (imageUrl) {
     return (
-      <img
+      <Image
         src={imageUrl}
         alt={`${firstName} ${lastName}`}
+        width={px}
+        height={px}
         className={`${dim} rounded-full object-cover shrink-0`}
       />
     );
@@ -68,10 +72,12 @@ function UserMenuDropdown({
         style={{ borderBottom: '1px solid #F3F4F6' }}
       >
         {user.profile_image_url ? (
-          <img
+          <Image
             src={user.profile_image_url}
             alt=""
-            className="w-9 h-9 rounded-full object-cover shrink-0"
+            width={36}
+            height={36}
+            className="rounded-full object-cover shrink-0"
           />
         ) : (
           <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold shrink-0">

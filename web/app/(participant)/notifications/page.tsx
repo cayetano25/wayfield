@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { AlertCircle, Bell, Building2, Check, CheckCheck, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { acceptOrgInvitation, declineOrgInvitation } from '@/lib/api/notifications';
@@ -94,11 +95,12 @@ function Avatar({ sender, size }: { sender: NotificationSender; size: number }) 
 
   if (sender.profile_image_url) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={sender.profile_image_url}
         alt={sender.display_label}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        width={size}
+        height={size}
+        style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
     );
   }

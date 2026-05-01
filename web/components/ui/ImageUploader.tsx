@@ -201,6 +201,7 @@ export function ImageUploader({
           title="Click to upload photo"
         >
           {hasImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayUrl!}
               alt="Profile"
@@ -300,6 +301,7 @@ export function ImageUploader({
         onDrop={handleDrop}
       >
         {hasImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={displayUrl!}
             alt="Header"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import {
   Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal,
@@ -110,12 +111,15 @@ function LeaderAvatar({
     md: 'w-11 h-11 text-sm',
     lg: 'w-16 h-16 text-lg',
   };
+  const sizePx = { sm: 32, md: 44, lg: 64 };
 
   if (leader.profile_image_url) {
     return (
-      <img
+      <Image
         src={leader.profile_image_url}
         alt={`${leader.first_name} ${leader.last_name}`}
+        width={sizePx[size]}
+        height={sizePx[size]}
         className={`${sizeClasses[size]} rounded-full object-cover shrink-0`}
       />
     );

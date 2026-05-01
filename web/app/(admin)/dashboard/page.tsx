@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSetPage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
@@ -250,10 +251,11 @@ function NextUpWorkshopCard({
         style={{ width: '40%', minHeight: 180, borderRadius: '12px 0 0 12px' }}
       >
         {workshop.header_image_url ? (
-          <img
+          <Image
             src={workshop.header_image_url}
             alt={workshop.title}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
         ) : (
           <div
