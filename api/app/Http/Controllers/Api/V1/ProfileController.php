@@ -26,12 +26,18 @@ class ProfileController extends Controller
         $user = $request->user();
         $user->loadMissing('profile.address', 'leader');
 
+        $initials = strtoupper(
+            substr($user->first_name, 0, 1) . substr($user->last_name, 0, 1)
+        );
+
         // Merge the UserResource fields with the role context summary.
         // Per ROLE_MODEL.md Section 0: one account, all roles, context-determined.
         return response()->json(array_merge(
             (new UserResource($user))->resolve($request),
             [
                 'pronouns' => $user->pronouns,
+                'photo_url' => $user->profile_image_url ?: null,
+                'avatar_initials' => $initials,
                 'onboarding_completed' => $user->hasCompletedOnboarding(),
                 'profile' => $user->profile ? [
                     'phone_number' => $user->profile->phone_number,
@@ -101,7 +107,7 @@ class ProfileController extends Controller
         $data = $request->validated();
 
         // Update users-table fields.
-        $userFields = array_intersect_key($data, array_flip(['first_name', 'last_name', 'profile_image_url']));
+        $userFields = array_intersect_key($data, array_flip(['first_name', 'last_name', 'pronouns', 'profile_image_url']));
         if (! empty($userFields)) {
             $user->update($userFields);
         }
@@ -130,6 +136,13 @@ class ProfileController extends Controller
         }
 
         return $this->show($request);
+    }
+
+    public function deletePhoto(Request $request): JsonResponse
+    {
+        $request->user()->update(['profile_image_url' => null]);
+
+        return response()->json(['message' => 'Photo removed.']);
     }
 
     public function changePassword(Request $request): JsonResponse

@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { MapPin } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPatch, apiPost, ApiError } from '@/lib/api/client';
+import { getToken } from '@/lib/auth/session';
 import { type AddressApiResponse, type AddressFormData } from '@/lib/types/address';
+import { PRONOUN_OPTIONS } from '@/lib/pronouns';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { ImageUploader } from '@/components/ui/ImageUploader';
 import { AddressForm } from '@/components/ui/AddressForm';
+import { ProfilePhotoUpload } from '@/components/profile/ProfilePhotoUpload';
+import { useProfilePhoto } from '@/hooks/useProfilePhoto';
 
 const BIO_MAX = 2000;
 
@@ -20,6 +24,7 @@ interface MeDetail {
   first_name: string;
   last_name: string;
   email: string;
+  pronouns: string | null;
   profile_image_url: string | null;
   profile: {
     phone_number: string | null;
@@ -29,15 +34,11 @@ interface MeDetail {
   leader_profile: { exists: boolean; leader_id: number | null } | null;
 }
 
-// Full leader profile returned by GET /leader/profile
 interface LeaderProfileDetail {
   id: number;
   bio: string | null;
   display_name: string | null;
   website_url: string | null;
-  phone_number: string | null;
-  city: string | null;
-  state_or_region: string | null;
   profile_image_url: string | null;
 }
 
@@ -50,9 +51,6 @@ interface LeaderProfileForm {
   bio: string;
   display_name: string;
   website_url: string;
-  city: string;
-  state_or_region: string;
-  phone_number: string;
 }
 
 /* --- Helpers --------------------------------------------------------- */
@@ -72,10 +70,55 @@ const EMPTY_LEADER_FORM: LeaderProfileForm = {
   bio: '',
   display_name: '',
   website_url: '',
-  city: '',
-  state_or_region: '',
-  phone_number: '',
 };
+
+/* --- Profile Photo Card (local component) --------------------------
+   Extracted so useProfilePhoto hook initialises with the correct URL
+   after the page loading guard — avoids the hooks-before-guard problem.
+-------------------------------------------------------------------- */
+
+function ProfilePhotoCard({
+  me,
+  onRefresh,
+}: {
+  me: MeDetail;
+  onRefresh: () => Promise<void>;
+}) {
+  const authToken = getToken() ?? '';
+  const photoHook = useProfilePhoto(me.profile_image_url ?? null, authToken);
+
+  const handleUpload = useCallback(
+    async (file: File) => {
+      await photoHook.handleUpload(file);
+      await onRefresh();
+    },
+    [photoHook, onRefresh],
+  );
+
+  const handleRemove = useCallback(async () => {
+    await photoHook.handleRemove();
+    await onRefresh();
+  }, [photoHook, onRefresh]);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Profile Photo</h2>
+      <p className="text-sm text-gray-500 mb-5">
+        Shown in the navigation and to workshop organizers.
+      </p>
+      <ProfilePhotoUpload
+        photoUrl={photoHook.photoUrl}
+        firstName={me.first_name}
+        lastName={me.last_name}
+        onUpload={handleUpload}
+        onRemove={handleRemove}
+        isUploading={photoHook.isUploading}
+        uploadProgress={photoHook.uploadProgress}
+        error={photoHook.error}
+      />
+    </div>
+  );
+}
 
 /* --- Page ------------------------------------------------------------ */
 
@@ -85,15 +128,16 @@ export default function ProfilePage() {
   const [me, setMe] = useState<MeDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Leader profile image tracked separately so ImageUploader can update it locally
-  const [leaderProfileImageUrl, setLeaderProfileImageUrl] = useState<string | null>(null);
-  const [leaderId, setLeaderId] = useState<number | null>(null);
-
   // Personal info
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoErrors, setInfoErrors] = useState<Record<string, string>>({});
 
-  // Contact info — non-leaders only
+  // Pronouns
+  const [pronouns, setPronouns] = useState<string | null>(null);
+  const [pronounsChanged, setPronounsChanged] = useState(false);
+  const [isSavingPronouns, setIsSavingPronouns] = useState(false);
+
+  // Contact info — all users
   const [contactForm, setContactForm] = useState<ContactForm>({ phone_number: '', address: null });
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
@@ -118,26 +162,24 @@ export default function ProfilePage() {
         const meData = await apiGet<MeDetail>('/me');
         setMe(meData);
 
-        const isLeader = meData.leader_profile?.exists === true;
+        // Pronouns
+        setPronouns(meData.pronouns ?? null);
 
-        if (isLeader) {
+        // Contact info — always loaded for all users
+        setContactForm({
+          phone_number: meData.profile?.phone_number ?? '',
+          address: meData.profile?.address
+            ? addressFromApiResponse(meData.profile.address)
+            : null,
+        });
+
+        // Leader profile (bio, display name, website only)
+        if (meData.leader_profile?.exists === true) {
           const lp = await apiGet<LeaderProfileDetail>('/leader/profile');
-          setLeaderId(lp.id);
-          setLeaderProfileImageUrl(lp.profile_image_url);
           setLeaderForm({
             bio: lp.bio ?? '',
             display_name: lp.display_name ?? '',
             website_url: lp.website_url ?? '',
-            city: lp.city ?? '',
-            state_or_region: lp.state_or_region ?? '',
-            phone_number: lp.phone_number ?? '',
-          });
-        } else {
-          setContactForm({
-            phone_number: meData.profile?.phone_number ?? '',
-            address: meData.profile?.address
-              ? addressFromApiResponse(meData.profile.address)
-              : null,
           });
         }
       } catch {
@@ -149,10 +191,21 @@ export default function ProfilePage() {
     loadAll();
   }, []);
 
+  // Track pronouns changes against loaded value
+  useEffect(() => {
+    if (me) {
+      setPronounsChanged(pronouns !== (me.pronouns ?? null));
+    }
+  }, [pronouns, me]);
+
   function setLeaderField<K extends keyof LeaderProfileForm>(k: K, v: string) {
     setLeaderForm((prev) => ({ ...prev, [k]: v }));
     if (leaderErrors[k]) {
-      setLeaderErrors((prev) => { const n = { ...prev }; delete n[k]; return n; });
+      setLeaderErrors((prev) => {
+        const n = { ...prev };
+        delete n[k];
+        return n;
+      });
     }
   }
 
@@ -190,9 +243,22 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleSavePronouns() {
+    setIsSavingPronouns(true);
+    try {
+      await apiPatch('/me', { pronouns });
+      setMe((prev) => (prev ? { ...prev, pronouns } : prev));
+      setPronounsChanged(false);
+      toast.success('Pronouns saved');
+    } catch {
+      toast.error('Failed to save pronouns');
+    } finally {
+      setIsSavingPronouns(false);
+    }
+  }
+
   async function handleSaveContact(e: React.FormEvent) {
     e.preventDefault();
-    if (!me) return;
     setContactError(null);
     setSavingContact(true);
     try {
@@ -221,9 +287,6 @@ export default function ProfilePage() {
         bio: leaderForm.bio.trim() || null,
         display_name: leaderForm.display_name.trim() || null,
         website_url: leaderForm.website_url.trim() || null,
-        city: leaderForm.city.trim() || null,
-        state_or_region: leaderForm.state_or_region.trim() || null,
-        phone_number: leaderForm.phone_number.trim() || null,
       });
       toast.success('Leader profile saved.');
     } catch (err) {
@@ -246,7 +309,8 @@ export default function ProfilePage() {
     const errs: Record<string, string> = {};
     if (!passwordForm.current_password) errs.current_password = 'Current password is required';
     if (!passwordForm.new_password) errs.new_password = 'New password is required';
-    else if (passwordForm.new_password.length < 8) errs.new_password = 'Password must be at least 8 characters';
+    else if (passwordForm.new_password.length < 8)
+      errs.new_password = 'Password must be at least 8 characters';
     if (passwordForm.new_password !== passwordForm.new_password_confirmation) {
       errs.new_password_confirmation = 'Passwords do not match';
     }
@@ -286,7 +350,10 @@ export default function ProfilePage() {
     return (
       <div className="max-w-[720px] mx-auto px-4 sm:px-6 py-8 space-y-5">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-40 bg-white rounded-xl border border-border-gray animate-pulse" />
+          <div
+            key={i}
+            className="h-40 bg-white rounded-xl border border-border-gray animate-pulse"
+          />
         ))}
       </div>
     );
@@ -323,39 +390,10 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      {/* Card 1: Profile Photo — non-leaders only (leaders get profile photo in Leader Profile card) */}
-      {!isLeader && (
-        <Card>
-          <div className="px-6 py-5 border-b border-border-gray">
-            <h2 className="font-heading text-base font-semibold text-dark">Profile Photo</h2>
-            <p className="text-sm text-medium-gray mt-0.5">
-              Shown in the navigation bar and across the platform.
-            </p>
-          </div>
-          <div className="px-6 py-6 flex justify-center">
-            <ImageUploader
-              currentUrl={me.profile_image_url}
-              entityType="user"
-              entityId={me.id}
-              fieldName="profile_image_url"
-              shape="circle"
-              width={96}
-              height={96}
-              onUploadComplete={async (url) => {
-                setMe((prev) => prev ? { ...prev, profile_image_url: url } : prev);
-                await refreshUser();
-              }}
-              onRemove={async () => {
-                await apiPatch('/me', { profile_image_url: null });
-                setMe((prev) => prev ? { ...prev, profile_image_url: null } : prev);
-                await refreshUser();
-              }}
-            />
-          </div>
-        </Card>
-      )}
+      {/* Section 1: Profile Photo — all users */}
+      <ProfilePhotoCard me={me} onRefresh={refreshUser} />
 
-      {/* Card 2: Personal Info */}
+      {/* Section 2: Personal Info — all users */}
       <Card>
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Personal Info</h2>
@@ -365,14 +403,18 @@ export default function ProfilePage() {
             <Input
               label="First Name"
               value={me.first_name}
-              onChange={(e) => setMe((prev) => prev ? { ...prev, first_name: e.target.value } : prev)}
+              onChange={(e) =>
+                setMe((prev) => (prev ? { ...prev, first_name: e.target.value } : prev))
+              }
               error={infoErrors.first_name}
               required
             />
             <Input
               label="Last Name"
               value={me.last_name}
-              onChange={(e) => setMe((prev) => prev ? { ...prev, last_name: e.target.value } : prev)}
+              onChange={(e) =>
+                setMe((prev) => (prev ? { ...prev, last_name: e.target.value } : prev))
+              }
               error={infoErrors.last_name}
               required
             />
@@ -392,13 +434,52 @@ export default function ProfilePage() {
         </form>
       </Card>
 
-      {/* Card 3: Contact Info — non-leaders only (leaders manage contact in Leader Profile) */}
-      {!isLeader && (
+      {/* Section 3: Pronouns — all users */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Pronouns</h2>
+        <p className="text-sm text-gray-500 mb-4">Optional. Not displayed publicly.</p>
+
+        <div className="flex flex-wrap gap-2">
+          {PRONOUN_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setPronouns(pronouns === option.value ? null : option.value)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors
+                ${
+                  pronouns === option.value
+                    ? 'bg-[#0FA3B1] text-white border-[#0FA3B1]'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#0FA3B1]'
+                }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {pronounsChanged && (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSavePronouns}
+              disabled={isSavingPronouns}
+              className="bg-[#0FA3B1] text-white font-semibold px-5 py-2.5 rounded-xl text-sm
+                hover:bg-[#0c8a96] transition-colors disabled:opacity-60"
+            >
+              {isSavingPronouns ? 'Saving...' : 'Save Pronouns'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Section 4: Contact Info — all users */}
+      <div id="contact-info-section">
         <Card>
           <div className="px-6 py-5 border-b border-border-gray">
             <h2 className="font-heading text-base font-semibold text-dark">Contact Info</h2>
             <p className="text-sm text-medium-gray mt-0.5">
-              Your contact details are private and only visible to workshop organizers for workshops you join.
+              Your contact details are private and only visible to workshop organizers for
+              workshops you join.
             </p>
           </div>
           <form onSubmit={handleSaveContact} className="px-6 py-6 space-y-5">
@@ -420,9 +501,7 @@ export default function ProfilePage() {
               required={false}
             />
 
-            {contactError && (
-              <p className="text-sm text-danger">{contactError}</p>
-            )}
+            {contactError && <p className="text-sm text-danger">{contactError}</p>}
 
             <div className="flex justify-end">
               <Button type="submit" loading={savingContact}>
@@ -431,9 +510,9 @@ export default function ProfilePage() {
             </div>
           </form>
         </Card>
-      )}
+      </div>
 
-      {/* Card 4: Leader Profile — only when user has a leader profile */}
+      {/* Section 5: Leader Profile — conditional */}
       {isLeader && (
         <Card>
           <div className="px-6 py-5 border-b border-border-gray">
@@ -444,38 +523,10 @@ export default function ProfilePage() {
           </div>
 
           <div className="px-6 py-6 space-y-6">
-            {/* Profile Photo (for leaders, managed here rather than a separate card) */}
-            {leaderId !== null && (
-              <div>
-                <p className="text-sm font-medium text-dark mb-3">Profile Photo</p>
-                <ImageUploader
-                  currentUrl={leaderProfileImageUrl}
-                  entityType="leader"
-                  entityId={leaderId}
-                  fieldName="profile_image_url"
-                  shape="circle"
-                  width={96}
-                  height={96}
-                  onUploadComplete={async (url) => {
-                    await apiPatch('/leader/profile', { profile_image_url: url });
-                    setLeaderProfileImageUrl(url);
-                    await refreshUser();
-                  }}
-                  onRemove={async () => {
-                    await apiPatch('/leader/profile', { profile_image_url: null });
-                    setLeaderProfileImageUrl(null);
-                    await refreshUser();
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Account note */}
             <p className="text-xs text-gray-500">
               Your name and email come from your account settings.
             </p>
 
-            {/* Leader profile form */}
             <form onSubmit={handleSaveLeader} className="space-y-5">
               {/* Bio */}
               <div className="flex flex-col gap-1.5">
@@ -498,11 +549,14 @@ export default function ProfilePage() {
                   `}
                 />
                 <div className="flex justify-between items-center">
-                  {leaderErrors.bio
-                    ? <p className="text-xs text-danger">{leaderErrors.bio}</p>
-                    : <span />
-                  }
-                  <p className="text-xs text-gray-400">{leaderForm.bio.length} / {BIO_MAX}</p>
+                  {leaderErrors.bio ? (
+                    <p className="text-xs text-danger">{leaderErrors.bio}</p>
+                  ) : (
+                    <span />
+                  )}
+                  <p className="text-xs text-gray-400">
+                    {leaderForm.bio.length} / {BIO_MAX}
+                  </p>
                 </div>
               </div>
 
@@ -527,35 +581,6 @@ export default function ProfilePage() {
                 disabled={savingLeader}
               />
 
-              {/* City + State / Region */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <Input
-                  label="City"
-                  value={leaderForm.city}
-                  onChange={(e) => setLeaderField('city', e.target.value)}
-                  error={leaderErrors.city}
-                  disabled={savingLeader}
-                />
-                <Input
-                  label="State / Region"
-                  value={leaderForm.state_or_region}
-                  onChange={(e) => setLeaderField('state_or_region', e.target.value)}
-                  error={leaderErrors.state_or_region}
-                  disabled={savingLeader}
-                />
-              </div>
-
-              {/* Phone Number */}
-              <Input
-                label="Phone Number"
-                type="tel"
-                value={leaderForm.phone_number}
-                onChange={(e) => setLeaderField('phone_number', e.target.value)}
-                helper="Private — only visible to participants in your assigned sessions."
-                error={leaderErrors.phone_number}
-                disabled={savingLeader}
-              />
-
               <div className="flex justify-end">
                 <Button type="submit" loading={savingLeader}>
                   Save Leader Profile
@@ -563,19 +588,39 @@ export default function ProfilePage() {
               </div>
             </form>
 
+            {/* Location note */}
+            <div className="mt-4 rounded-xl bg-gray-50 border border-gray-200 p-3 text-sm text-gray-500 flex items-start gap-2">
+              <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+              <span>
+                Your location on leader cards comes from your{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    document
+                      .getElementById('contact-info-section')
+                      ?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-[#0FA3B1] underline underline-offset-2"
+                >
+                  Contact Info
+                </button>{' '}
+                above.
+              </span>
+            </div>
+
             {/* Public visibility note */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h3 className="text-sm font-medium text-gray-900">What participants see</h3>
               <p className="text-sm text-gray-500 mt-1">
-                Participants can see your name, bio, display name, website, city, and
-                state/region. Your phone number and address are kept private.
+                Participants can see your name, bio, display name, website, and location from your
+                contact info. Your phone number and full address are kept private.
               </p>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Card 5: Change Password */}
+      {/* Section 6: Change Password — all users */}
       <Card>
         <div className="px-6 py-5 border-b border-border-gray">
           <h2 className="font-heading text-base font-semibold text-dark">Change Password</h2>
@@ -602,7 +647,9 @@ export default function ProfilePage() {
             label="Confirm New Password"
             type="password"
             value={passwordForm.new_password_confirmation}
-            onChange={(e) => setPasswordForm((p) => ({ ...p, new_password_confirmation: e.target.value }))}
+            onChange={(e) =>
+              setPasswordForm((p) => ({ ...p, new_password_confirmation: e.target.value }))
+            }
             error={passwordErrors.new_password_confirmation}
             autoComplete="new-password"
           />

@@ -20,17 +20,32 @@ class PublicLeaderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Photo: user's profile photo takes precedence; fall back to leader-specific photo.
+        $photoUrl = ($this->user?->profile_image_url) ?? $this->profile_image_url;
+
+        // Location: use leader city/state; if not set, try user's canonical address.
+        $city  = $this->city;
+        $state = $this->state_or_region;
+        if (! $city && ! $state && $this->user?->profile?->address) {
+            $addr  = $this->user->profile->address;
+            $city  = $addr->locality;
+            $state = $addr->administrative_area;
+        }
+        $locationParts = array_filter([$city, $state]);
+        $formattedLocation = $locationParts ? implode(', ', $locationParts) : null;
+
         return [
             'id'                => $this->id,
             'first_name'        => $this->first_name,
             'last_name'         => $this->last_name,
             'display_name'      => $this->display_name,
             'slug'              => $this->slug,
-            'profile_image_url' => $this->profile_image_url,
+            'profile_image_url' => $photoUrl,
             'bio'               => $this->bio,
             'website_url'       => $this->website_url,
-            'city'              => $this->city,
-            'state_or_region'   => $this->state_or_region,
+            'city'              => $city,
+            'state_or_region'   => $state,
+            'formatted_location' => $formattedLocation,
             // Confirmed, publicly visible workshops only — no private workshop data.
             'confirmed_workshops' => $this->when(
                 $this->relationLoaded('workshopLeaders'),

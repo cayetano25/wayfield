@@ -169,4 +169,22 @@ class User extends Authenticatable
     {
         return $this->onboarding_completed_at !== null;
     }
+
+    /**
+     * The profile photo URL. Photos are stored as direct S3/CDN URLs in
+     * profile_image_url — there is no separate files table in this schema.
+     */
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        return $this->profile_image_url ?: null;
+    }
+
+    /**
+     * Convenience alias used by nav shells and API resources that want a
+     * single consistent accessor regardless of underlying storage strategy.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->profile_image_url ?: null;
+    }
 }

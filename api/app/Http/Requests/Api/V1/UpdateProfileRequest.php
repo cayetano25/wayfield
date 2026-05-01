@@ -16,6 +16,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'first_name'                   => ['sometimes', 'required', 'string', 'max:100'],
             'last_name'                    => ['sometimes', 'required', 'string', 'max:100'],
+            'pronouns'                     => ['sometimes', 'nullable', 'string', 'max:50'],
             'profile_image_url'            => ['sometimes', 'nullable', 'string', 'max:2048'],
             'phone_number'                 => ['sometimes', 'nullable', 'string', 'max:50'],
             'address'                      => ['sometimes', 'nullable', 'array'],
