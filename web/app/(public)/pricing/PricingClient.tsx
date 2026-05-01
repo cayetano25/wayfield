@@ -38,7 +38,7 @@ function AuthBanner() {
           : <>You&apos;re signed in.</>
         }{' '}
         <Link
-          href="/dashboard/settings/billing"
+          href="/organization/billing"
           className="text-[#0FA3B1] font-semibold underline underline-offset-2 hover:text-[#0c8a96]"
         >
           Manage your subscription →
