@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import type { ParticipantSession, ParticipantSessionLeader } from '@/lib/types/participant';
@@ -21,79 +22,32 @@ function formatSessionTime(startAt: string, endAt: string): string {
   return `${dateStr} · ${startTime} – ${endTime}`;
 }
 
-function truncate(str: string | null | undefined, max: number): string {
-  if (!str) return '';
-  return str.length > max ? `${str.slice(0, max)}…` : str;
-}
+/* --- Status dot -------------------------------------------------------- */
 
-/* --- Status dot ------------------------------------------------------- */
-
-function StatusDot({ session }: { session: ParticipantSession }) {
-  if (session.attendance_status === 'checked_in') {
-    return (
-      <div
-        className="shrink-0"
-        style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#10B981' }}
-      />
-    );
+function StatusDot({ isCompleted, isNext }: { isCompleted: boolean; isNext: boolean }) {
+  if (isCompleted) {
+    return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-300" />;
   }
-  if (session.is_next) {
-    return (
-      <div
-        className="shrink-0"
-        style={{
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#0FA3B1',
-          animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
-        }}
-      />
-    );
+  if (isNext) {
+    return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-[#0FA3B1]" />;
   }
-  return (
-    <div
-      className="shrink-0"
-      style={{
-        width: 12,
-        height: 12,
-        borderRadius: '50%',
-        border: '1.5px solid #D1D5DB',
-        backgroundColor: 'white',
-      }}
-    />
-  );
+  return <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 border-gray-300 bg-white" />;
 }
 
 /* --- Status badge ------------------------------------------------------ */
 
-function StatusBadge({ session }: { session: ParticipantSession }) {
-  if (session.attendance_status === 'checked_in') {
-    return (
-      <span
-        className="inline-flex items-center px-2 py-0.5 rounded-full font-sans font-semibold shrink-0"
-        style={{ fontSize: 10, backgroundColor: '#D1FAE5', color: '#065F46' }}
-      >
-        DONE
-      </span>
-    );
-  }
-  if (session.is_next) {
-    return (
-      <span
-        className="inline-flex items-center px-2 py-0.5 rounded-full font-sans font-semibold shrink-0"
-        style={{ fontSize: 10, backgroundColor: '#0FA3B1', color: 'white' }}
-      >
-        NEXT
-      </span>
-    );
-  }
+function StatusBadge({ isCompleted, isNext }: { isCompleted: boolean; isNext: boolean }) {
+  const label = isCompleted ? 'Done' : isNext ? 'Next' : 'Upcoming';
+
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full font-sans font-semibold shrink-0"
-      style={{ fontSize: 10, backgroundColor: '#F3F4F6', color: '#6B7280' }}
+      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex-shrink-0 font-mono ${
+        isNext
+          ? 'bg-[#0FA3B1] text-white'
+          : 'text-gray-400 border border-gray-200'
+      }`}
     >
-      UPCOMING
+      {label}
     </span>
   );
 }
@@ -102,10 +56,7 @@ function StatusBadge({ session }: { session: ParticipantSession }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p
-      className="font-sans font-semibold uppercase"
-      style={{ fontSize: 10, letterSpacing: '0.06em', color: '#9CA3AF', marginBottom: 4 }}
-    >
+    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono mb-1">
       {children}
     </p>
   );
@@ -118,14 +69,13 @@ function LocationBlock({ location }: { location: SessionLocationResponse | null 
     return (
       <div>
         <SectionLabel>Location</SectionLabel>
-        <p className="font-sans" style={{ fontSize: 13, color: '#9CA3AF' }}>Location TBD</p>
+        <p className="text-sm text-gray-400">Location TBD</p>
       </div>
     );
   }
 
   const { type, name, notes, address, maps_url, latitude, longitude } = location;
 
-  // Build the address text from the canonical address, or coords as fallback.
   let addressLines: string[] = [];
   if (address?.formatted_address) {
     addressLines = [address.formatted_address];
@@ -141,43 +91,25 @@ function LocationBlock({ location }: { location: SessionLocationResponse | null 
   return (
     <div>
       <SectionLabel>Location</SectionLabel>
-
       {type === 'hotel' && (
-        <p className="font-sans italic" style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 2 }}>
-          Workshop hotel
-        </p>
+        <p className="text-xs text-gray-400 italic mb-0.5">Workshop hotel</p>
       )}
-
-      {name && (
-        <p className="font-sans font-semibold" style={{ fontSize: 13, color: '#2E2E2E' }}>
-          {name}
-        </p>
-      )}
-
+      {name && <p className="text-sm font-medium text-gray-900">{name}</p>}
       {addressLines.length > 0 && (
-        <div className="font-sans" style={{ fontSize: 13, color: '#6B7280' }}>
+        <div className="text-xs text-gray-500 mt-0.5">
           {addressLines.map((line, i) => <p key={i}>{line}</p>)}
         </div>
       )}
-
-      {notes && (
-        <p className="font-sans" style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
-          📌 {notes}
-        </p>
-      )}
-
+      {notes && <p className="text-xs text-gray-400 mt-1">📌 {notes}</p>}
       {maps_url && (
-        <div className="flex items-center" style={{ minHeight: 44 }}>
-          <a
-            href={maps_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-sans font-medium hover:underline"
-            style={{ fontSize: 13, color: '#0FA3B1' }}
-          >
-            Open in Maps ↗
-          </a>
-        </div>
+        <a
+          href={maps_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-[#0FA3B1] hover:underline mt-1 inline-block"
+        >
+          Open in Maps ↗
+        </a>
       )}
     </div>
   );
@@ -191,8 +123,8 @@ function LeaderAvatar({ leader }: { leader: ParticipantSessionLeader }) {
       <Image
         src={leader.profile_image_url}
         alt={`${leader.first_name} ${leader.last_name}`}
-        width={36}
-        height={36}
+        width={32}
+        height={32}
         style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
     );
@@ -200,8 +132,8 @@ function LeaderAvatar({ leader }: { leader: ParticipantSessionLeader }) {
   const initials = `${leader.first_name[0] ?? ''}${leader.last_name[0] ?? ''}`.toUpperCase();
   return (
     <div
-      className="flex items-center justify-center font-sans font-semibold shrink-0"
-      style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#0FA3B1', color: 'white', fontSize: 13 }}
+      className="flex items-center justify-center font-sans font-semibold shrink-0 text-white"
+      style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#0FA3B1', fontSize: 12 }}
     >
       {initials}
     </div>
@@ -212,28 +144,22 @@ function LeaderAvatar({ leader }: { leader: ParticipantSessionLeader }) {
 
 function LeadersBlock({ leaders }: { leaders: ParticipantSessionLeader[] }) {
   if (!leaders || leaders.length === 0) return null;
-
   return (
     <div>
       <SectionLabel>{leaders.length === 1 ? 'Session Leader' : 'Session Leaders'}</SectionLabel>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {leaders.map((leader) => {
           const locationLine = [leader.city, leader.state_or_region].filter(Boolean).join(', ');
           return (
-            <div key={leader.id} className="flex items-start gap-3">
+            <div key={leader.id} className="flex items-start gap-2.5">
               <LeaderAvatar leader={leader} />
               <div className="min-w-0">
-                <p className="font-sans font-medium" style={{ fontSize: 13, color: '#2E2E2E' }}>
+                <p className="text-sm font-medium text-gray-900">
                   {leader.first_name} {leader.last_name}
                 </p>
-                {locationLine && (
-                  <p className="font-sans" style={{ fontSize: 12, color: '#9CA3AF' }}>{locationLine}</p>
-                )}
+                {locationLine && <p className="text-xs text-gray-400">{locationLine}</p>}
                 {leader.bio && (
-                  <p
-                    className="font-sans line-clamp-2"
-                    style={{ fontSize: 12, color: '#6B7280', marginTop: 2, lineHeight: 1.5 }}
-                  >
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
                     {leader.bio}
                   </p>
                 )}
@@ -257,114 +183,59 @@ export function SessionTimeline({ sessions }: SessionTimelineProps) {
 
   if (sessions.length === 0) return null;
 
-  const showPhase = sessions.length > 1;
-  const nextIdx = sessions.findIndex((s) => s.is_next);
-  const phaseNum = nextIdx >= 0 ? nextIdx + 1 : sessions.filter((s) => s.attendance_status === 'checked_in').length;
-  const totalPhases = sessions.length;
+  const now = new Date();
 
   return (
     <div>
-      {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-heading font-bold" style={{ fontSize: 18, color: '#2E2E2E' }}>
-          Your Schedule
-        </h2>
-        {showPhase && phaseNum > 0 && (
-          <span
-            className="font-sans font-semibold uppercase"
-            style={{ fontSize: 11, letterSpacing: '0.06em', color: '#9CA3AF' }}
-          >
-            PHASE {phaseNum} / {totalPhases}
-          </span>
-        )}
-      </div>
+      {sessions.map((session) => {
+        const isOpen = openId === session.id;
+        const isPast = new Date(session.end_at) < now;
+        const isCompleted = session.attendance_status === 'checked_in' || isPast;
+        const isNext = !isCompleted && session.is_next;
 
-      {/* Session list */}
-      <div
-        className="bg-white overflow-hidden"
-        style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
-      >
-        {sessions.map((session, i) => {
-          const isOpen = openId === session.id;
-
-          return (
+        return (
+          <div key={session.id}>
+            {/* Row */}
             <div
-              key={session.id}
-              style={{ borderBottom: i < sessions.length - 1 ? '1px solid #F3F4F6' : undefined }}
+              className={`flex items-center gap-4 py-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg px-3 -mx-3 ${
+                isNext ? 'bg-[#0FA3B1]/5' : ''
+              }`}
+              onClick={() => setOpenId(isOpen ? null : session.id)}
             >
-              <button
-                type="button"
-                onClick={() => setOpenId(isOpen ? null : session.id)}
-                className="w-full text-left flex items-center gap-4 transition-colors duration-150 hover:bg-teal-50"
-                style={{
-                  padding: '14px 20px',
-                  cursor: 'pointer',
-                  background: 'none',
-                  border: 'none',
-                }}
-              >
-                {/* Status dot */}
-                <StatusDot session={session} />
+              <StatusDot isCompleted={isCompleted} isNext={isNext} />
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="font-sans font-medium truncate"
-                    style={{ fontSize: 14, color: '#2E2E2E' }}
-                  >
-                    {session.title}
-                  </p>
-                  <p
-                    className="font-sans mt-0.5 truncate"
-                    style={{ fontSize: 12, color: '#9CA3AF' }}
-                  >
-                    {formatSessionTime(session.start_at, session.end_at)}
-                    {session.location_display
-                      ? ` · ${truncate(session.location_display, 20)}`
-                      : ''}
-                  </p>
-                </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium leading-snug truncate ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>
+                  {session.title}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {formatSessionTime(session.start_at, session.end_at)}
+                  {session.location_display ? ` · ${session.location_display}` : ''}
+                </p>
+              </div>
 
-                {/* Badge + chevron */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge session={session} />
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    style={{
-                      color: '#9CA3AF',
-                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </button>
-
-              {/* Expanded detail panel */}
-              {isOpen && (
-                <div
-                  className="flex flex-col gap-4"
-                  style={{ padding: '0 20px 16px 48px', transition: 'all 0.2s ease' }}
-                >
-                  {session.description && (
-                    <RichTextDisplay
-                      html={session.description}
-                      className="text-gray-500 text-sm"
-                    />
-                  )}
-                  <LocationBlock location={session.location ?? null} />
-                  <LeadersBlock leaders={session.leaders ?? []} />
-                </div>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge isCompleted={isCompleted} isNext={isNext} />
+                <ChevronDown
+                  size={14}
+                  className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                />
+              </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Expanded detail panel */}
+            {isOpen && (
+              <div className="px-3 pb-4 pt-2 ml-6 flex flex-col gap-4">
+                {session.description && (
+                  <RichTextDisplay html={session.description} className="text-gray-500 text-sm" />
+                )}
+                <LocationBlock location={session.location ?? null} />
+                <LeadersBlock leaders={session.leaders ?? []} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

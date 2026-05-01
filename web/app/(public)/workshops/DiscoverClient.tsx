@@ -14,6 +14,7 @@ import { DiscoverSidebar } from '@/components/discover/DiscoverSidebar';
 import { WorkshopCard } from '@/components/discover/WorkshopCard';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import type { FeaturedWorkshop } from '@/components/discover/DiscoverHero';
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 
 /* --- Pagination helpers ---------------------------------------------------- */
 
@@ -344,6 +345,18 @@ export function DiscoverClient() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <DiscoverHero featuredWorkshop={featuredWorkshop} onSearch={handleHeroSearch} />
+
+      {/* ── Breadcrumbs — below hero ──────────────────────────────────────── */}
+      <div className="bg-gray-50 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <Breadcrumbs
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Workshops', href: '/workshops' },
+            ]}
+          />
+        </div>
+      </div>
 
       {/* ── Content area ──────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">

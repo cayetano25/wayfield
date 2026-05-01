@@ -20,8 +20,8 @@ export function WorkshopTabs() {
   const base = `/dashboard/workshops/${id}`;
 
   return (
-    <div className="bg-white border-b border-border-gray">
-      <nav className="flex overflow-x-auto scrollbar-none">
+    <div style={{ backgroundColor: '#F0F9FA', borderBottom: '1px solid #C8E8EC' }}>
+      <nav className="flex overflow-x-auto scrollbar-none px-4 lg:px-6">
         {TABS.map(({ label, slug }) => {
           const href = slug ? `${base}/${slug}` : base;
           const isActive = slug === ''
@@ -32,13 +32,14 @@ export function WorkshopTabs() {
               key={label}
               href={href}
               className={`
-                flex-shrink-0 h-12 px-5 flex items-center text-sm font-medium
+                flex-shrink-0 h-10 px-4 flex items-center text-sm font-medium
                 border-b-2 transition-colors whitespace-nowrap
                 ${isActive
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-medium-gray hover:text-dark'
+                  : 'border-transparent hover:text-dark'
                 }
               `}
+              style={{ color: isActive ? '#0FA3B1' : '#4B6A6E' }}
             >
               {label}
             </Link>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Loader2, ShoppingBag, Tag, Trash2, X } from 'lucide-react';
+import { Loader2, ShoppingBag, Tag, Trash2, X } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { formatCents } from '@/lib/utils/currency';
 import type { CartCouponData, CartItem } from '@/lib/api/cart';
@@ -151,7 +151,6 @@ export function CartDrawer() {
   const { cart, isLoading, isOpen, organizationSlug, closeCart, removeItem, updateCart } =
     useCart();
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const [feesOpen, setFeesOpen] = useState(false);
   const router = useRouter();
 
   // Close on Escape
@@ -225,9 +224,7 @@ export function CartDrawer() {
   const cartHasDepositItem = items.some((item) => item.is_deposit);
   const subtotal = cart?.subtotal_cents ?? 0;
   const discountedSubtotal = cart?.discounted_total_cents ?? subtotal;
-  const fees = cart?.fee_breakdown;
-  const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = discountedSubtotal + totalFees;
+  const total = discountedSubtotal;
   const discountCents = cart?.discount_cents ?? 0;
   const isEmpty = items.length === 0;
   const canCheckout = !isEmpty && !!organizationSlug;
@@ -424,69 +421,6 @@ export function CartDrawer() {
                 </span>
                 <span>— {formatCents(discountCents)}</span>
               </div>
-            )}
-
-            {/* Fee breakdown toggle */}
-            {fees && discountedSubtotal > 0 && (
-              <>
-                <button
-                  onClick={() => setFeesOpen((v) => !v)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    color: '#6B7280',
-                    fontSize: 12,
-                    padding: '2px 0 8px',
-                    width: '100%',
-                    textAlign: 'left',
-                  }}
-                  aria-expanded={feesOpen}
-                >
-                  {feesOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  {feesOpen ? 'Hide' : 'View'} fee breakdown
-                </button>
-
-                {feesOpen && (
-                  <div
-                    style={{
-                      backgroundColor: '#F9FAFB',
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                      marginBottom: 12,
-                      fontSize: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        color: '#6B7280',
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span>Processing fee</span>
-                      <span>{formatCents(fees.total_fee_cents)}</span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontWeight: 600,
-                        color: '#111827',
-                        paddingTop: 8,
-                        borderTop: '1px solid #E5E7EB',
-                      }}
-                    >
-                      <span>Total due today</span>
-                      <span>{formatCents(total)}</span>
-                    </div>
-                  </div>
-                )}
-              </>
             )}
 
             {/* CTA */}

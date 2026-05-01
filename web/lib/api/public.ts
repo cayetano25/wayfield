@@ -111,6 +111,7 @@ export interface PublicWorkshop {
   logistics?: PublicLogistics;
   pricing?: WorkshopPricingDisplay | null;
   organization?: { id: number; slug: string } | null;
+  participant_status?: DiscoverWorkshopParticipantStatus | null;
 }
 
 export interface DiscoverWorkshopTaxonomy {
@@ -191,9 +192,10 @@ async function publicFetch<T>(
 
 export const getPublicWorkshop = cache(async function getPublicWorkshop(
   slug: string,
+  token?: string,
 ): Promise<PublicWorkshop | null> {
   return publicFetch<PublicWorkshop>(`/public/workshops/${slug}`, {
-    next: { revalidate: 600, tags: [`workshop:${slug}`] },
+    ...(token ? { token } : { next: { revalidate: 600, tags: [`workshop:${slug}`] } }),
   });
 });
 
@@ -441,4 +443,9 @@ export async function getSitemapLeaders(): Promise<SitemapLeader[]> {
     { next: { revalidate: false } }
   );
   return res?.data ?? [];
+}
+
+export async function cancelRegistration(workshopId: number): Promise<void> {
+  const { apiDelete } = await import('@/lib/api/client');
+  await apiDelete<void>(`/workshops/${workshopId}/registration`);
 }

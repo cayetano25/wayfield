@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useSessionSelection } from '@/lib/hooks/useSessionSelection';
 import type { SelectionDay } from '@/lib/types/session-selection';
 import { DayTabBar } from './components/DayTabBar';
@@ -64,7 +64,7 @@ function LoadingSkeleton() {
       </div>
 
       {/* Card skeletons */}
-      <div className="flex-1 overflow-hidden px-4 pt-4" style={{ backgroundColor: '#F5F5F5' }}>
+      <div className="px-4 pt-4" style={{ backgroundColor: '#F5F5F5' }}>
         <SkeletonCard />
         <SkeletonCard />
         <SkeletonCard />
@@ -75,15 +75,9 @@ function LoadingSkeleton() {
 
 /* -- Error state ---------------------------------------------------------- */
 
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex items-center justify-center p-8" style={{ minHeight: '40vh' }}>
       <div
         className="bg-white flex flex-col items-center text-center gap-4"
         style={{ borderRadius: 12, padding: '40px 32px', maxWidth: 360 }}
@@ -115,7 +109,7 @@ function ErrorState({
 function EventBasedState() {
   const router = useRouter();
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex items-center justify-center p-8" style={{ minHeight: '40vh' }}>
       <div
         className="bg-white flex flex-col items-center text-center gap-4"
         style={{ borderRadius: 12, padding: '40px 32px', maxWidth: 360 }}
@@ -178,6 +172,7 @@ export default function SelectSessionsPage() {
     toggleSession,
     getEffectiveState,
     selectedCount,
+    slotCounts,
     pendingSessionIds,
     sessionErrors,
     clearSessionError,
@@ -188,7 +183,6 @@ export default function SelectSessionsPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // Set initial active day once data loads
   useEffect(() => {
     if (data && !activeDayDate) {
       setActiveDayDate(data.days[0]?.date ?? '');
@@ -197,7 +191,6 @@ export default function SelectSessionsPage() {
 
   async function handleConfirm() {
     setIsConfirming(true);
-    // Selections are already saved optimistically — brief polish delay
     await new Promise<void>((r) => setTimeout(r, 600));
     setIsConfirming(false);
     setIsConfirmed(true);
@@ -207,7 +200,7 @@ export default function SelectSessionsPage() {
     router.push('/my-workshops');
   }
 
-  // -- Render: confirmation overlay --
+  // -- Confirmation overlay (fixed, full-screen) --
   if (isConfirmed) {
     return (
       <SelectionConfirmation
@@ -217,18 +210,11 @@ export default function SelectSessionsPage() {
     );
   }
 
-  // -- Loading skeleton --
+  // -- Loading --
   if (isLoading) {
     return (
-      <div
-        className="flex flex-col"
-        style={{ height: 'calc(100vh - 56px)', overflow: 'hidden', backgroundColor: '#F5F5F5' }}
-      >
-        {/* Placeholder header */}
-        <div
-          className="bg-white shrink-0"
-          style={{ height: 80, borderBottom: '1px solid #E5E7EB' }}
-        />
+      <div style={{ backgroundColor: '#F5F5F5' }}>
+        <div className="bg-white" style={{ height: 80, borderBottom: '1px solid #E5E7EB' }} />
         <LoadingSkeleton />
       </div>
     );
@@ -236,29 +222,12 @@ export default function SelectSessionsPage() {
 
   // -- Error --
   if (error || !data) {
-    return (
-      <div
-        className="flex flex-col"
-        style={{ height: 'calc(100vh - 56px)', overflow: 'hidden', backgroundColor: '#F5F5F5' }}
-      >
-        <ErrorState
-          message={error ?? 'Unknown error'}
-          onRetry={() => window.location.reload()}
-        />
-      </div>
-    );
+    return <ErrorState message={error ?? 'Unknown error'} onRetry={() => window.location.reload()} />;
   }
 
-  // -- Not registered (403 results in error string, handle event_based here) --
+  // -- Event-based (no session selection needed) --
   if (data.workshop.workshop_type === 'event_based') {
-    return (
-      <div
-        className="flex flex-col"
-        style={{ height: 'calc(100vh - 56px)', overflow: 'hidden', backgroundColor: '#F5F5F5' }}
-      >
-        <EventBasedState />
-      </div>
-    );
+    return <EventBasedState />;
   }
 
   const dayCounts = buildDayCounts(data.days, data.selected_session_ids);
@@ -266,40 +235,36 @@ export default function SelectSessionsPage() {
 
   // -- Main render --
   return (
-    <div
-      className="flex flex-col"
-      style={{ height: 'calc(100vh - 56px)', overflow: 'hidden', backgroundColor: '#F5F5F5' }}
-    >
-      {/* Full-width header */}
+    <div style={{ backgroundColor: '#F5F5F5' }}>
+      {/* Page header */}
       <SelectionPageHeader
         workshop={data.workshop}
-        selectedCount={selectedCount}
-        totalSelectable={data.selection_summary.total_selectable}
+        selectedCount={slotCounts.selected}
+        totalSelectable={slotCounts.selectable}
         onDone={handleDone}
       />
 
-      {/* Body row: content + sidebar */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left: day tabs + session list */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <DayTabBar
-            days={data.days}
-            activeDate={effectiveActiveDate}
-            onDayChange={setActiveDayDate}
-            sessionCountsByDay={dayCounts}
-          />
+      {/* Body: session list (left) + schedule sidebar (right, desktop only) */}
+      <div className="flex" style={{ alignItems: 'flex-start' }}>
 
-          {/* Scrollable session list */}
-          <div
-            className="flex-1 overflow-y-auto min-h-0 px-4 md:px-6 pt-4 pb-24 md:pb-6"
-            style={{ backgroundColor: '#F5F5F5' }}
-          >
+        {/* Left: sticky day tabs + session list */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Day tab bar — sticky below the nav */}
+          <div style={{ position: 'sticky', top: 56, zIndex: 10 }}>
+            <DayTabBar
+              days={data.days}
+              activeDate={effectiveActiveDate}
+              onDayChange={setActiveDayDate}
+              sessionCountsByDay={dayCounts}
+            />
+          </div>
+
+          {/* Session list — natural height, page scrolls */}
+          <div className="px-4 md:px-6 pt-4 pb-8" style={{ backgroundColor: '#F5F5F5' }}>
             <SessionList
               days={data.days}
               activeDayDate={effectiveActiveDate}
-              onToggle={(sessionId, currentState) =>
-                toggleSession(sessionId, currentState)
-              }
+              onToggle={(sessionId, currentState) => toggleSession(sessionId, currentState)}
               getEffectiveState={getEffectiveState}
               pendingSessionIds={pendingSessionIds}
               sessionErrors={sessionErrors}
@@ -307,14 +272,50 @@ export default function SelectSessionsPage() {
               showAllDays={false}
             />
           </div>
+
+          {/* Mobile: confirm button below session list */}
+          <div
+            className="md:hidden px-4 pb-8"
+            style={{ backgroundColor: '#F5F5F5' }}
+          >
+            <div
+              className="bg-white rounded-xl p-4"
+              style={{ border: '1px solid #E5E7EB' }}
+            >
+              <p className="font-sans text-sm mb-3" style={{ color: '#6B7280' }}>
+                {selectedCount} session{selectedCount !== 1 ? 's' : ''} selected
+              </p>
+              <button
+                type="button"
+                onClick={selectedCount > 0 ? handleConfirm : undefined}
+                disabled={isConfirming || selectedCount === 0}
+                className="w-full font-sans font-bold rounded-lg flex items-center justify-center gap-2"
+                style={{
+                  height: 48,
+                  fontSize: 15,
+                  backgroundColor: selectedCount > 0 ? '#0FA3B1' : '#E5E7EB',
+                  color: selectedCount > 0 ? 'white' : '#9CA3AF',
+                  cursor: selectedCount > 0 && !isConfirming ? 'pointer' : 'default',
+                }}
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  'Confirm Selections'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Right: MyScheduleSheet handles desktop sidebar + mobile bottom sheet */}
+        {/* Right: sticky schedule sidebar (desktop only) */}
         <MyScheduleSheet
           selectedSessions={selectedSessions}
           workshopTitle={data.workshop.title}
           onDeselect={(sessionId) => {
-            // Find and deselect the session
             const allSessions = data.days.flatMap((d) =>
               d.time_slots.flatMap((t) => t.sessions),
             );

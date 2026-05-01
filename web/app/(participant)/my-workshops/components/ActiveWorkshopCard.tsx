@@ -2,27 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { apiPost } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
+import { NextSessionCard, formatSessionDateTime } from '@/components/workshops/NextSessionCard';
 import toast from 'react-hot-toast';
 import type { ParticipantActiveWorkshop } from '@/lib/types/participant';
-
-/* --- Helpers ----------------------------------------------------------- */
-
-function formatSessionWindow(startAt: string, endAt: string): string {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  const now = new Date();
-  const isToday = start.toDateString() === now.toDateString();
-  const timeOpts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-  const startTime = start.toLocaleTimeString('en-US', timeOpts);
-  const endTime = end.toLocaleTimeString('en-US', timeOpts);
-  if (isToday) return `Today · ${startTime} – ${endTime}`;
-  const dateOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-  return `${start.toLocaleDateString('en-US', dateOpts)} · ${startTime} – ${endTime}`;
-}
 
 /* --- ActiveWorkshopCard ------------------------------------------------ */
 
@@ -41,7 +27,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
     workshop.total_selected > 0 &&
     workshop.total_selected < workshop.total_selectable;
 
-  const selectSessionsHref = `/workshops/${workshop.workshop_id}/select-sessions`;
+  const selectSessionsHref = `/my-workshops/${workshop.workshop_id}/select-sessions`;
 
   async function handleCheckIn() {
     if (!next_session) return;
@@ -61,179 +47,195 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
     ? workshop.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
     : null;
   const descriptionExcerpt = plainDescription
-    ? plainDescription.slice(0, 120) + (plainDescription.length > 120 ? '…' : '')
+    ? plainDescription.slice(0, 160) + (plainDescription.length > 160 ? '…' : '')
     : null;
 
   return (
-    <div
-      className="bg-white overflow-hidden"
-      style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
-    >
-      {/* Header band — teal gradient */}
-      <div
-        className="relative"
-        style={{
-          background: 'linear-gradient(135deg, #0FA3B1 0%, #0074A6 100%)',
-          padding: '20px 24px',
-        }}
+    <>
+      {/* ── Photography hero ─────────────────────────────────────── */}
+      <section
+        className="relative w-full overflow-hidden"
+        style={{ borderRadius: 16, minHeight: '50vh' }}
       >
-        {/* Featured badge */}
-        <span
-          className="inline-flex items-center px-2.5 py-1 rounded-full font-sans font-semibold mb-3"
-          style={{ fontSize: 10, color: 'white', backgroundColor: 'rgba(255,255,255,0.2)' }}
-        >
-          FEATURED WORKSHOP
-        </span>
-
-        <h2
-          className="font-heading font-bold leading-snug"
-          style={{ fontSize: 22, color: 'white' }}
-        >
-          {workshop.title}
-        </h2>
-        {descriptionExcerpt && (
-          <p className="font-sans mt-1.5 leading-relaxed" style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
-            {descriptionExcerpt}
-          </p>
-        )}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: '20px 24px' }}>
-        {checkedIn ? (
-          /* Checked-in success state */
-          <div className="flex items-center gap-3 py-2">
-            <CheckCircle2 className="w-6 h-6 shrink-0" style={{ color: '#10B981' }} />
-            <div>
-              <p className="font-sans font-semibold" style={{ fontSize: 15, color: '#2E2E2E' }}>
-                You&apos;re checked in!
-              </p>
-              <p className="font-sans" style={{ fontSize: 13, color: '#9CA3AF' }}>
-                {next_session?.title ?? 'Session'}
-              </p>
-            </div>
-          </div>
-        ) : allCheckedIn ? (
-          /* All sessions complete */
-          <div className="flex items-center gap-3 py-2">
-            <CheckCircle2 className="w-6 h-6 shrink-0" style={{ color: '#10B981' }} />
-            <p className="font-sans font-medium" style={{ fontSize: 15, color: '#6B7280' }}>
-              All sessions complete
-            </p>
-          </div>
-        ) : noSessionsSelected ? (
-          /* -- Amber prompt: no sessions selected yet -- */
-          <div
-            className="flex items-start gap-3 rounded-lg"
-            style={{
-              borderLeft: '3px solid #E67E22',
-              backgroundColor: '#FFFBF5',
-              padding: '12px 14px',
-            }}
-          >
-            <AlertTriangle
-              className="shrink-0 mt-0.5"
-              size={16}
-              style={{ color: '#E67E22' }}
+        {/* Background */}
+        <div className="absolute inset-0">
+          {workshop.header_image_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${workshop.header_image_url})` }}
             />
-            <div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0FA3B1] via-[#0c8a96] to-[#1a3a4a]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/72" />
+        </div>
+
+        {/* Content */}
+        <div
+          className="relative z-10 flex flex-col lg:flex-row lg:items-end px-6 lg:px-8 pt-14 pb-8 gap-5"
+          style={{ minHeight: '50vh' }}
+        >
+          {/* ── Left: workshop identity ───────────────────────────── */}
+          <div className="flex-1 min-w-0 lg:pr-6">
+
+            {/* Featured Workshop badge */}
+            <div
+              className="inline-flex items-center px-3 py-1 rounded-full mb-4"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                fontSize: 10,
+                color: 'white',
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              Featured Workshop
+            </div>
+
+            {/* Title */}
+            <h1
+              className="font-heading font-bold text-white leading-tight mb-2"
+              style={{ fontSize: 'clamp(22px, 4vw, 36px)' }}
+            >
+              {workshop.title}
+            </h1>
+
+            {/* Description */}
+            {descriptionExcerpt && (
               <p
-                className="font-sans font-medium"
-                style={{ fontSize: 14, color: '#2E2E2E', marginBottom: 4 }}
+                className="font-sans leading-relaxed mb-5 line-clamp-2"
+                style={{ fontSize: 14, color: 'rgba(255,255,255,0.72)', maxWidth: 480 }}
               >
-                You haven&apos;t selected your sessions yet.
+                {descriptionExcerpt}
               </p>
-              <Link
-                href={selectSessionsHref}
-                className="font-sans font-bold hover:underline"
-                style={{ fontSize: 14, color: '#0FA3B1' }}
-              >
-                Select sessions →
-              </Link>
-            </div>
-          </div>
-        ) : next_session ? (
-          /* -- Next session -- */
-          <div>
-            <p
-              className="font-sans font-semibold uppercase mb-2"
-              style={{ fontSize: 11, letterSpacing: '0.08em', color: '#9CA3AF' }}
-            >
-              Your Next Session:
-            </p>
-            <h3
-              className="font-heading font-bold mb-3 leading-snug"
-              style={{ fontSize: 18, color: '#2E2E2E' }}
-            >
-              {next_session.title}
-            </h3>
+            )}
 
-            <div className="flex flex-col gap-1.5 mb-5">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-3.5 h-3.5 shrink-0" style={{ color: '#9CA3AF' }} />
-                <span className="font-sans" style={{ fontSize: 13, color: '#6B7280' }}>
-                  {formatSessionWindow(next_session.start_at, next_session.end_at)}
-                </span>
-              </div>
-              {next_session.location_display && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: '#9CA3AF' }} />
-                  <span className="font-sans" style={{ fontSize: 13, color: '#6B7280' }}>
-                    {next_session.location_display}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              {next_session.check_in_open && (
+            {/* Action buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Check In — shown when session is imminent and not yet checked in */}
+              {next_session?.check_in_open && !checkedIn && (
                 <Button size="md" onClick={handleCheckIn} loading={checkingIn}>
                   Check In
                 </Button>
               )}
+
               {workshop.public_slug && workshop.public_page_enabled && (
-                <Link href={`/workshops/${workshop.public_slug}`}>
-                  <Button variant="secondary" size="md">
-                    View Details
-                  </Button>
+                <Link
+                  href={`/workshops/${workshop.public_slug}`}
+                  className="inline-flex items-center font-sans font-bold rounded-lg transition-all hover:bg-white/10 active:scale-[0.98]"
+                  style={{
+                    fontSize: 14,
+                    padding: '9px 20px',
+                    border: '1.5px solid rgba(255,255,255,0.55)',
+                    color: 'white',
+                  }}
+                >
+                  View Details
                 </Link>
               )}
+
               {workshop.public_slug && workshop.public_page_enabled && (
                 <ShareWorkshopButton
                   workshopTitle={workshop.title}
                   publicUrl={`/workshops/${workshop.public_slug}`}
-                  variant="participant"
+                  variant="organizer"
+                  showLabel
+                  className="border-white/55 text-white !bg-transparent hover:!bg-white/10 hover:border-white/70 active:scale-[0.98]"
                 />
               )}
             </div>
 
-            {/* -- Soft nudge when partial selection -- */}
+            {/* Checked-in success indicator */}
+            {checkedIn && (
+              <div className="flex items-center gap-2 mt-4">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <p className="font-sans font-semibold text-white" style={{ fontSize: 13 }}>
+                  You&apos;re checked in!
+                </p>
+              </div>
+            )}
+
+            {/* All sessions complete indicator */}
+            {!checkedIn && allCheckedIn && (
+              <div className="flex items-center gap-2 mt-4">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <p className="font-sans font-medium text-white/80" style={{ fontSize: 13 }}>
+                  All sessions complete
+                </p>
+              </div>
+            )}
+
+            {/* No sessions selected — prompt */}
+            {noSessionsSelected && (
+              <Link
+                href={selectSessionsHref}
+                className="inline-flex items-center mt-4 font-sans font-bold rounded-lg bg-white text-[#0FA3B1] hover:bg-white/90 transition-colors"
+                style={{ fontSize: 13, padding: '8px 16px' }}
+              >
+                Select Sessions →
+              </Link>
+            )}
+
+            {/* Partial-selection nudge */}
             {partialSelection && (
               <div
-                className="flex items-center justify-between rounded-lg mt-4"
+                className="flex items-center justify-between rounded-xl mt-5"
                 style={{
-                  backgroundColor: '#F0FDFF',
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.2)',
                   padding: '10px 14px',
-                  border: '1px solid #BAE6F0',
                 }}
               >
-                <p className="font-sans" style={{ fontSize: 13, color: '#374151' }}>
+                <p className="font-sans text-white/80" style={{ fontSize: 13 }}>
                   You&apos;ve selected{' '}
                   <strong>{workshop.total_selected}</strong> of{' '}
-                  <strong>{workshop.total_selectable}</strong> available sessions.
+                  <strong>{workshop.total_selectable}</strong> available time slots.
                 </p>
                 <Link
                   href={selectSessionsHref}
-                  className="font-sans font-semibold hover:underline shrink-0 ml-3"
-                  style={{ fontSize: 13, color: '#0FA3B1' }}
+                  className="font-sans font-semibold hover:underline shrink-0 ml-3 text-white"
+                  style={{ fontSize: 13 }}
                 >
                   Add more →
                 </Link>
               </div>
             )}
           </div>
-        ) : null}
-      </div>
-    </div>
+
+          {/* ── Right: glass card (desktop only) ─────────────────── */}
+          <div className="hidden lg:block w-72 flex-shrink-0">
+            <NextSessionCard session={next_session} workshop={workshop} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Mobile: simplified next-session strip ────────────────── */}
+      {next_session && (
+        <div className="lg:hidden px-4 py-4 bg-white border-b border-gray-100 rounded-xl mt-2"
+          style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+        >
+          <p
+            className="font-bold uppercase mb-1"
+            style={{
+              fontSize: 10,
+              letterSpacing: '0.15em',
+              color: '#9CA3AF',
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            Your Next Session
+          </p>
+          <p className="font-sans font-semibold text-gray-900" style={{ fontSize: 14 }}>
+            {next_session.title}
+          </p>
+          <p className="font-sans mt-0.5" style={{ fontSize: 13, color: '#6B7280' }}>
+            {formatSessionDateTime(next_session)}
+          </p>
+        </div>
+      )}
+    </>
   );
 }

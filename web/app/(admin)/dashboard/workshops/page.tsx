@@ -28,6 +28,13 @@ interface WorkshopSummary {
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
+const PLAN_DISPLAY: Record<string, string> = {
+  free:       'Foundation',
+  starter:    'Creator',
+  pro:        'Studio',
+  enterprise: 'Enterprise',
+};
+
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -149,7 +156,7 @@ export default function WorkshopsPage() {
                 <span className="text-xs text-medium-gray">
                   {workshopUsed}/{workshopLimit} active workshops
                 </span>
-                <span className="text-xs font-medium text-primary capitalize">{planCode}</span>
+                <span className="text-xs font-medium text-primary">{PLAN_DISPLAY[planCode] ?? planCode}</span>
               </div>
               <div className="w-48 h-1.5 bg-surface rounded-full overflow-hidden">
                 <div
@@ -160,7 +167,7 @@ export default function WorkshopsPage() {
             </div>
           )}
           {workshopLimit === null && planCode !== 'free' && (
-            <span className="text-xs text-medium-gray capitalize">{planCode} · Unlimited</span>
+            <span className="text-xs text-medium-gray">{PLAN_DISPLAY[planCode] ?? planCode} · Unlimited</span>
           )}
         </div>
       </div>

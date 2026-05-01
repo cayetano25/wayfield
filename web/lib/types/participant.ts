@@ -61,6 +61,8 @@ export interface ParticipantActiveWorkshop {
   public_page_enabled: boolean;
   total_selectable: number;
   total_selected: number;
+  start_date: string | null;
+  end_date: string | null;
   default_location_id: number | null;
   next_session: ParticipantNextSession | null;
   sessions: ParticipantSession[];

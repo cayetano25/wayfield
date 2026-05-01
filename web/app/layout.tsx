@@ -38,7 +38,7 @@ export default function RootLayout({
       lang="en"
       className={`${sora.variable} ${jakarta.variable} ${jetbrains.variable} h-full`}
     >
-      <body className="h-full antialiased">{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

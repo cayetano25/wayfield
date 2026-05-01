@@ -12,7 +12,7 @@ const WORKSHOP_ID = 1
 test.describe('Session Selection (Mobile)', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/workshops/${WORKSHOP_ID}/select-sessions`)
+    await page.goto(`/my-workshops/${WORKSHOP_ID}/select-sessions`)
   })
 
   test('session selection page loads without 404', async ({ page }) => {
@@ -125,7 +125,7 @@ test.describe('Session Selection (Mobile)', () => {
 
   test('organizer without registration cannot access this page', async ({ page, context }) => {
     await context.storageState({ path: 'e2e/.auth/owner.json' })
-    await page.goto(`/workshops/${WORKSHOP_ID}/select-sessions`)
+    await page.goto(`/my-workshops/${WORKSHOP_ID}/select-sessions`)
     await expect(page.getByText(/not registered/i)).toBeVisible()
   })
 

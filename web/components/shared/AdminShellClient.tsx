@@ -3,8 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { PageHeading } from './PageHeading';
+import { SiteFooter } from '@/components/layout/SiteFooter';
+import { usePage } from '@/contexts/PageContext';
 
 export function AdminShellClient({ children, banner }: { children: React.ReactNode; banner?: React.ReactNode }) {
+  const { toolbar } = usePage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
@@ -23,7 +27,7 @@ export function AdminShellClient({ children, banner }: { children: React.ReactNo
   }, [sidebarOpen]);
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col min-h-screen">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -33,25 +37,33 @@ export function AdminShellClient({ children, banner }: { children: React.ReactNo
         />
       )}
 
-      {/* Sidebar — fixed drawer on mobile, static on desktop */}
-      <div
-        className={`
-          fixed inset-y-0 left-0 z-50 lg:static lg:z-auto
-          transition-transform duration-200 ease-in-out lg:transition-none
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-      >
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+      {/* Sidebar + content row — grows naturally with page content */}
+      <div className="flex flex-1">
+        {/* Sidebar — fixed drawer on mobile, static in flow on desktop */}
+        <div
+          className={`
+            fixed inset-y-0 left-0 z-50 lg:static lg:z-auto lg:shrink-0
+            transition-transform duration-200 ease-in-out lg:transition-none
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          `}
+        >
+          <Sidebar onClose={() => setSidebarOpen(false)} />
+        </div>
+
+        {/* Main content column — no independent scroll, flows with page */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {banner}
+          <TopBar onMenuOpen={() => setSidebarOpen(true)} />
+          {toolbar}
+          <main className="flex-1 bg-surface p-4 lg:p-8">
+            <PageHeading />
+            {children}
+          </main>
+        </div>
       </div>
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {banner}
-        <TopBar onMenuOpen={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-auto bg-surface p-4 lg:p-8">
-          {children}
-        </main>
-      </div>
+      {/* Full-width footer — spans sidebar + content */}
+      <SiteFooter />
     </div>
   );
 }

@@ -58,6 +58,31 @@ function flattenSessions(data: SelectionOptionsResponse): SelectableSession[] {
   );
 }
 
+function computeSlotCounts(
+  data: SelectionOptionsResponse,
+  selectedIds: number[],
+): { selectable: number; selected: number } {
+  const selectedSet = new Set(selectedIds);
+  let selectable = 0;
+  let selected = 0;
+
+  for (const day of data.days) {
+    for (const slot of day.time_slots) {
+      // A slot is selectable if at least one session is not at capacity
+      const hasAvailable = slot.sessions.some(
+        (s) => s.capacity === null || s.enrolled_count < s.capacity,
+      );
+      if (!hasAvailable) continue;
+      selectable++;
+      if (slot.sessions.some((s) => selectedSet.has(s.session_id))) {
+        selected++;
+      }
+    }
+  }
+
+  return { selectable, selected };
+}
+
 function deriveMySchedule(
   data: SelectionOptionsResponse,
   selectedIds: number[],
@@ -275,6 +300,9 @@ export function useSessionSelection(workshopId: number) {
   }, []);
 
   const selectedSessions = data ? deriveMySchedule(data, selectedIds) : [];
+  const slotCounts = data
+    ? computeSlotCounts(data, selectedIds)
+    : { selectable: 0, selected: 0 };
 
   return {
     data,
@@ -283,6 +311,7 @@ export function useSessionSelection(workshopId: number) {
     toggleSession,
     getEffectiveState,
     selectedCount: selectedIds.length,
+    slotCounts,
     pendingSessionIds,
     sessionErrors,
     clearSessionError,

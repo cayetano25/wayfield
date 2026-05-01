@@ -3,13 +3,14 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { cookies } from 'next/headers';
+import { MapPin, Calendar } from 'lucide-react';
 import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
-import { WorkshopPriceDisplay } from '@/components/workshops/public/WorkshopPriceDisplay';
-import { AddToCartButton } from '@/components/workshops/public/AddToCartButton';
 import { ScheduleItem } from '@/components/workshops/public/ScheduleItem';
+import { PricingDetailsCard } from '@/components/workshops/public/PricingDetailsCard';
+import { MapLink } from '@/components/workshops/public/MapLink';
 import { buildCategoryMetadata } from '@/lib/seo/metadata';
 import { buildEventJsonLd, buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '@/lib/seo/jsonld';
 import { JsonLd } from '@/components/seo/JsonLd';
@@ -80,54 +81,21 @@ function formatDateRange(start: string, end: string, timezone: string): string {
   return s === e ? s : `${s} – ${e}`;
 }
 
-function LeaderCard({ leader: raw }: { leader: PublicLeader }) {
-  // Sanitize before rendering — double-check no private fields slip through
-  const leader = sanitizeLeader(raw);
-  const initials = `${leader.first_name?.[0] ?? ''}${leader.last_name?.[0] ?? ''}`.toUpperCase();
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  // US/CA 10-digit: (555) 123-4567
+  if (digits.length === 10) return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
+  // US/CA with leading 1: +1 (555) 123-4567
+  if (digits.length === 11 && digits[0] === '1') {
+    return `+1 (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
+  }
+  return raw
+}
 
-  return (
-    <div className="bg-white rounded-xl border border-border-gray p-5 flex flex-col gap-3 shadow-sm">
-      <div className="flex items-center gap-3">
-        {leader.profile_image_url ? (
-          <Image
-            src={leader.profile_image_url}
-            alt={`${leader.first_name} ${leader.last_name}, Workshop Leader`}
-            width={48}
-            height={48}
-            className="rounded-full object-cover border border-border-gray"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
-            {initials}
-          </div>
-        )}
-        <div className="min-w-0">
-          <p className="font-heading font-semibold text-dark leading-tight">
-            {leader.display_name ?? `${leader.first_name} ${leader.last_name}`}
-          </p>
-          {formatLeaderLocation(leader) && (
-            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-              <MapPin size={10} />
-              {formatLeaderLocation(leader)}
-            </p>
-          )}
-        </div>
-      </div>
-      {leader.bio && (
-        <p className="text-sm text-medium-gray leading-relaxed line-clamp-3">{leader.bio}</p>
-      )}
-      {leader.website_url && (
-        <a
-          href={leader.website_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary font-medium hover:underline truncate"
-        >
-          {leader.website_url.replace(/^https?:\/\//, '')}
-        </a>
-      )}
-    </div>
-  );
+function phoneHref(raw: string): string {
+  // Preserve leading + for international; strip everything else
+  const sign = raw.trimStart().startsWith('+') ? '+' : ''
+  return `tel:${sign}${raw.replace(/\D/g, '')}`
 }
 
 // --- generateMetadata --------------------------------------------------------
@@ -190,7 +158,9 @@ export default async function PublicWorkshopPage(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const workshop = await getPublicWorkshop(id);
+  const cookieStore = await cookies();
+  const token = cookieStore.get('wayfield_token')?.value;
+  const workshop = await getPublicWorkshop(id, token);
 
   // Category fallback — try slug as a category before calling notFound()
   if (!workshop) {
@@ -226,6 +196,11 @@ export default async function PublicWorkshopPage(
   const standardSessions = workshop.sessions.filter(s => !s.is_addon);
   const addonSessions = workshop.sessions.filter(s => s.is_addon);
 
+  // Compute ordered unique dates for DAY 01 / DAY 02 labels
+  const sessionDates = [...new Set(
+    workshop.sessions.map(s => new Date(s.start_at).toDateString())
+  )].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
   const locationLine = [
     workshop.default_location?.city,
     workshop.default_location?.state_or_region,
@@ -236,13 +211,6 @@ export default async function PublicWorkshopPage(
 
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { label: 'Home', href: '/' },
-          { label: 'Workshops', href: '/workshops' },
-          { label: workshop.title, href: `/workshops/${slug}` },
-        ]}
-      />
       <JsonLd data={buildEventJsonLd(workshop)} />
       <JsonLd
         data={buildBreadcrumbJsonLd([
@@ -252,147 +220,349 @@ export default async function PublicWorkshopPage(
         ])}
       />
       {/* Hero */}
-      <div className="relative overflow-hidden" style={{ minHeight: '420px' }}>
-        {workshop.hero_image_url ? (
-          <Image
-            src={workshop.hero_image_url}
-            alt={`${workshop.title} workshop`}
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-          />
-        ) : null}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: workshop.hero_image_url
-              ? 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 100%)'
-              : 'linear-gradient(135deg, #006972 0%, #0FA3B1 100%)',
-          }}
-        />
-        <div className="relative z-10 max-w-4xl mx-auto px-6 py-24 flex flex-col gap-6">
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-sm">
-              {workshop.workshop_type === 'session_based' ? 'Session-Based' : 'Event-Based'}
-            </span>
-          </div>
-          <h1 className="font-heading text-4xl sm:text-5xl font-bold text-white leading-tight">
-            {workshop.hero_title ?? workshop.title}
-          </h1>
-          {workshop.hero_subtitle && (
-            <p className="text-lg text-white/90 max-w-2xl">{workshop.hero_subtitle}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
-            <span className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-base">calendar_today</span>
-              {dateRange}
-            </span>
-            {locationLine && (
-              <span className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-base">location_on</span>
-                {locationLine}
-              </span>
-            )}
-          </div>
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 bg-white text-primary font-bold px-6 py-3 rounded-lg shadow-lg hover:bg-white/90 active:scale-[0.98] transition-all text-sm"
-            >
-              <span className="material-symbols-outlined text-base">key</span>
-              Join with a code
-            </Link>
-            <ShareWorkshopButton
-              workshopTitle={workshop.title}
-              publicUrl={workshop.canonical_url}
-              variant="participant"
-              showLabel
-              className="inline-flex items-center gap-2 bg-white/10 border border-white/30 text-white hover:bg-white/20 active:scale-[0.98] transition-all px-5 py-3 rounded-lg text-sm font-bold"
+      <section className="relative w-full" style={{ minHeight: '36vh' }}>
+        {/* Background — overflow-hidden here so the image is contained without
+            clipping absolutely-positioned children like the share dropdown */}
+        <div className="absolute inset-0 overflow-hidden">
+          {workshop.hero_image_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${workshop.hero_image_url})` }}
             />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0FA3B1] to-[#1a3a4a]" />
+          )}
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/75" />
+        </div>
+
+        {/* Content row */}
+        <div
+          className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 flex items-end pb-8 pt-12"
+          style={{ minHeight: '36vh' }}
+        >
+          {/* Left: title and meta */}
+          <div className="flex-1 max-w-3xl">
+
+            {/* Type badge */}
+            <div className="inline-flex items-center px-3 py-1 rounded-full
+              border border-[#0FA3B1] text-[#0FA3B1] text-xs font-bold
+              uppercase tracking-wider font-mono mb-4">
+              {workshop.workshop_type === 'session_based' ? 'Session-Based' : 'Event-Based'}
+            </div>
+
+            {/* Title */}
+            <h1 className="font-heading text-4xl lg:text-5xl font-bold text-white leading-tight mb-3">
+              {workshop.hero_title ?? workshop.title}
+            </h1>
+
+            {/* Subtitle */}
+            {workshop.hero_subtitle && (
+              <p className="text-lg text-white/80 max-w-2xl mb-4">{workshop.hero_subtitle}</p>
+            )}
+
+            {/* Date · Location row */}
+            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm mb-6">
+              <span className="flex items-center gap-1.5">
+                <Calendar size={14} />
+                {dateRange}
+              </span>
+              {locationLine && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={14} />
+                  {locationLine}
+                </span>
+              )}
+            </div>
+
+            {/* Action buttons — unchanged handlers, restyled to outlined white */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 border border-white/60 text-white font-bold px-6 py-3 rounded-lg hover:bg-white/10 active:scale-[0.98] transition-all text-sm"
+              >
+                <span className="material-symbols-outlined text-base">key</span>
+                Join with a code
+              </Link>
+              <ShareWorkshopButton
+                workshopTitle={workshop.title}
+                publicUrl={workshop.canonical_url}
+                variant="participant"
+                showLabel
+                className="inline-flex items-center gap-2 border border-white/60 text-white hover:bg-white/10 active:scale-[0.98] transition-all px-5 py-3 rounded-lg text-sm font-bold"
+              />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Breadcrumbs — below hero */}
+      <div className="bg-gray-50 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <Breadcrumbs
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Workshops', href: '/workshops' },
+              { label: workshop.title, href: `/workshops/${slug}` },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Two-column content area */}
+      <div className="bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-12">
+          <div className="flex gap-10 items-start">
+
+            {/* LEFT COLUMN — description, schedule, leaders */}
+            <div className="flex-1 min-w-0">
+
+              {/* Description */}
+              {(workshop.description || workshop.body_content) && (
+                <div>
+                  <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4">
+                    About This Workshop
+                  </h2>
+                  <RichTextDisplay
+                    html={workshop.description ?? ''}
+                    className="text-medium-gray mb-6"
+                  />
+                  {workshop.body_content && (
+                    <div
+                      className="prose prose-sm max-w-none text-medium-gray leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: workshop.body_content }}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Schedule */}
+              {workshop.sessions.length > 0 && (
+                <div>
+                  {standardSessions.length > 0 && (
+                    <>
+                      <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4 mt-10">
+                        Schedule
+                      </h2>
+                      <div className="space-y-2">
+                        {standardSessions.map((session) => {
+                          const dayIdx = sessionDates.indexOf(
+                            new Date(session.start_at).toDateString()
+                          )
+                          return (
+                            <ScheduleItem
+                              key={session.id}
+                              session={session}
+                              dayLabel={`DAY ${String(dayIdx + 1).padStart(2, '0')}`}
+                            />
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                  {addonSessions.length > 0 && (
+                    <>
+                      <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4 mt-10">
+                        Add-On Sessions
+                      </h2>
+                      <div className="space-y-2">
+                        {addonSessions.map((session) => {
+                          const dayIdx = sessionDates.indexOf(
+                            new Date(session.start_at).toDateString()
+                          )
+                          return (
+                            <ScheduleItem
+                              key={session.id}
+                              session={session}
+                              dayLabel={`DAY ${String(dayIdx + 1).padStart(2, '0')}`}
+                            />
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Leaders */}
+              {workshop.leaders.length > 0 && (
+                <div>
+                  <h2 className="font-heading text-2xl font-bold text-gray-900 mb-6 mt-10">
+                    Workshop Leaders
+                  </h2>
+                  <div className="space-y-3">
+                    {workshop.leaders.map((raw) => {
+                      const leader = sanitizeLeader(raw)
+                      const initials = `${leader.first_name?.[0] ?? ''}${leader.last_name?.[0] ?? ''}`.toUpperCase()
+                      const location = formatLeaderLocation(leader)
+                      return (
+                        <div key={leader.id}
+                          className="flex items-start gap-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                          {leader.profile_image_url ? (
+                            <Image
+                              src={leader.profile_image_url}
+                              alt={`${leader.first_name} ${leader.last_name}, Workshop Leader`}
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-primary/10
+                              flex items-center justify-center text-primary
+                              font-semibold text-xs flex-shrink-0">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900">
+                              {leader.display_name ?? `${leader.first_name} ${leader.last_name}`}
+                            </p>
+                            {leader.bio && (
+                              <p className="text-gray-500 text-sm italic mt-0.5">
+                                &ldquo;{leader.bio.substring(0, 100)}{leader.bio.length > 100 ? '…' : ''}&rdquo;
+                              </p>
+                            )}
+                            {location && (
+                              <p className="text-gray-400 text-xs mt-1 flex items-center gap-1">
+                                <MapPin size={10} />
+                                {location}
+                              </p>
+                            )}
+                            {leader.website_url && (
+                              <a
+                                href={leader.website_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary font-medium
+                                  hover:underline truncate block mt-0.5"
+                              >
+                                {leader.website_url.replace(/^https?:\/\//, '')}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </div>{/* end LEFT COLUMN */}
+
+            {/* RIGHT COLUMN — sticky pricing details */}
+            <div className="hidden lg:block w-80 flex-shrink-0">
+              <div className="sticky top-6">
+                <PricingDetailsCard workshop={workshop} />
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* Pricing + Add to Cart */}
-      {workshop.organization && (
-        <section className="max-w-4xl mx-auto px-6 pt-10 pb-0">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 max-w-2xl">
-            {/* Only render the price card when it's a paid workshop */}
-            {workshop.pricing && workshop.pricing.current_price_cents > 0 && (
-              <div className="flex-1">
-                <WorkshopPriceDisplay pricing={workshop.pricing} />
-              </div>
-            )}
-            <div className={workshop.pricing && workshop.pricing.current_price_cents > 0 ? 'sm:flex-shrink-0' : 'w-full sm:max-w-sm'}>
-              <AddToCartButton
-                workshopId={workshop.id}
-                orgId={workshop.organization.id}
-                orgSlug={workshop.organization.slug}
-                publicSlug={workshop.public_slug}
-                pricing={workshop.pricing}
-                fullWidth
-              />
+      {/* Hotel & Logistics section */}
+      {(workshop.logistics?.hotel_name || workshop.logistics?.meetup_instructions) && (
+        <section className="w-full py-12 bg-gradient-to-br from-[#0FA3B1] to-[#1a3a4a]">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
+
+            <h2 className="font-heading text-2xl font-bold text-white mb-8">
+              Hotel &amp; Logistics
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+              {/* Accommodation */}
+              {workshop.logistics.hotel_name && (
+                <div>
+                  <p className="font-heading text-2xl font-bold text-white mb-2">
+                    Accommodation
+                  </p>
+                  <p className="text-white font-bold text-lg mb-1">
+                    {workshop.logistics.hotel_name}
+                  </p>
+
+                  {/* Address + map link */}
+                  {(workshop.logistics.hotel_address_object?.formatted_address ||
+                    workshop.logistics.hotel_address) && (() => {
+                    const address =
+                      workshop.logistics!.hotel_address_object?.formatted_address ??
+                      workshop.logistics!.hotel_address!;
+                    return (
+                      <div className="mb-3">
+                        <p className="text-white/80 text-sm leading-snug mb-2">
+                          {address}
+                        </p>
+                        <MapLink address={address} />
+                      </div>
+                    );
+                  })()}
+
+                  {workshop.logistics.hotel_notes && (
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      {workshop.logistics.hotel_notes}
+                    </p>
+                  )}
+                  {workshop.logistics.hotel_phone && (
+                    <p className="text-white/60 text-sm mt-2">
+                      <a
+                        href={phoneHref(workshop.logistics.hotel_phone)}
+                        className="hover:text-white transition-colors"
+                      >
+                        {formatPhone(workshop.logistics.hotel_phone)}
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Travel & Parking */}
+              {(workshop.logistics.parking_details ||
+                workshop.logistics.meetup_instructions ||
+                workshop.logistics.meeting_room_details) && (
+                <div>
+                  <p className="font-heading text-2xl font-bold text-white mb-2">
+                    Travel &amp; Parking
+                  </p>
+                  {workshop.logistics.meetup_instructions && (
+                    <div className="mb-4">
+                      <p className="text-white font-bold text-sm mb-1">
+                        Getting Here
+                      </p>
+                      <p className="text-white/80 text-sm leading-relaxed">
+                        {workshop.logistics.meetup_instructions}
+                      </p>
+                    </div>
+                  )}
+                  {workshop.logistics.parking_details && (
+                    <div>
+                      <p className="text-white font-bold text-sm mb-1">
+                        Ground Transportation
+                      </p>
+                      <p className="text-white/80 text-sm leading-relaxed">
+                        {workshop.logistics.parking_details}
+                      </p>
+                    </div>
+                  )}
+                  {workshop.logistics.meeting_room_details && (
+                    <div className="mt-4">
+                      <p className="text-white font-bold text-sm mb-1">
+                        Meeting Room
+                      </p>
+                      <p className="text-white/80 text-sm leading-relaxed">
+                        {workshop.logistics.meeting_room_details}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         </section>
       )}
 
-      {/* About */}
-      {(workshop.description || workshop.body_content) && (
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="font-heading text-2xl font-bold text-dark mb-6">About This Workshop</h2>
-          <RichTextDisplay html={workshop.description ?? ''} className="text-medium-gray mb-6" />
-          {workshop.body_content && (
-            <div
-              className="prose prose-sm max-w-none text-medium-gray leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: workshop.body_content }}
-            />
-          )}
-        </section>
-      )}
-
-      {/* Schedule */}
-      {workshop.sessions.length > 0 && (
-        <section className="bg-surface py-16">
-          <div className="max-w-4xl mx-auto px-6">
-            {standardSessions.length > 0 && (
-              <>
-                <h2 className="font-heading text-2xl font-bold text-dark mb-8">Schedule</h2>
-                <div className="space-y-3">
-                  {standardSessions.map((session) => (
-                    <ScheduleItem key={session.id} session={session} />
-                  ))}
-                </div>
-              </>
-            )}
-            {addonSessions.length > 0 && (
-              <section>
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <h2 className="font-heading text-2xl font-bold text-dark mb-8">Add-On Sessions</h2>
-                </div>
-                <div className="space-y-3">
-                  {addonSessions.map((session) => (
-                    <ScheduleItem key={session.id} session={session} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Leaders */}
-      {workshop.leaders.length > 0 && (
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="font-heading text-2xl font-bold text-dark mb-8">Workshop Leaders</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {workshop.leaders.map((leader) => (
-              <LeaderCard key={leader.id} leader={leader} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* TODO: More workshops section — requires related workshops API data */}
 
       {/* Footer CTA */}
       <section

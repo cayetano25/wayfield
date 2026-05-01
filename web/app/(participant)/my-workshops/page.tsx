@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { ActiveWorkshopCard } from './components/ActiveWorkshopCard';
 import { SessionTimeline } from './components/SessionTimeline';
-import { WorkshopInfoCard } from './components/WorkshopInfoCard';
+import { WorkshopInfoCard } from '@/components/workshops/WorkshopInfoCard';
 import { OtherWorkshopsGrid } from './components/OtherWorkshopsGrid';
 import type { ParticipantDashboard } from '@/lib/types/participant';
 import toast from 'react-hot-toast';
@@ -202,11 +202,11 @@ function JoinedBanner({ workshopTitle, isSessionBased, selectHref, onDismiss }: 
 
 /* --- Quick Actions row -------------------------------------------------- */
 
-function QuickActions({ workshopId }: { workshopId: number }) {
+function QuickActions({ workshopId, hasSelections }: { workshopId: number; hasSelections: boolean }) {
   return (
     <div className="flex gap-3 mb-6">
       <Link
-        href={`/workshops/${workshopId}/select-sessions`}
+        href={`/my-workshops/${workshopId}/select-sessions`}
         className="inline-flex items-center gap-2 font-sans font-semibold rounded-lg transition-colors hover:bg-[#F0FDFF]"
         style={{
           fontSize: 14,
@@ -218,7 +218,7 @@ function QuickActions({ workshopId }: { workshopId: number }) {
         }}
       >
         <CalendarDays size={15} />
-        Select Sessions
+        {hasSelections ? 'Adjust Sessions' : 'Select Sessions'}
       </Link>
     </div>
   );
@@ -288,12 +288,14 @@ function MyWorkshopsPageInner() {
           : null)
       : null;
 
-  // Show Quick Actions when active workshop is session-based with unselected sessions
-  const showQuickActions =
-    !loading &&
-    !error &&
-    data?.active_workshop?.workshop_type === 'session_based' &&
-    (data.active_workshop.total_selected < data.active_workshop.total_selectable);
+  // Show Quick Actions for session-based workshops that are not yet over
+  const showQuickActions = (() => {
+    if (loading || error) return false;
+    const aw = data?.active_workshop;
+    if (!aw || aw.workshop_type !== 'session_based') return false;
+    if (!aw.end_date) return true; // no end date — assume ongoing
+    return aw.end_date >= new Date().toISOString().slice(0, 10);
+  })();
 
   return (
     <>
@@ -312,7 +314,7 @@ function MyWorkshopsPageInner() {
             isSessionBased={
               (joinedWorkshop?.workshop_type ?? '') === 'session_based'
             }
-            selectHref={`/workshops/${joinedWorkshopId}/select-sessions`}
+            selectHref={`/my-workshops/${joinedWorkshopId}/select-sessions`}
             onDismiss={() => setBannerVisible(false)}
           />
         )}
@@ -331,7 +333,10 @@ function MyWorkshopsPageInner() {
           <div className="flex flex-col gap-6">
             {/* Quick Actions row */}
             {showQuickActions && data?.active_workshop && (
-              <QuickActions workshopId={data.active_workshop.workshop_id} />
+              <QuickActions
+                workshopId={data.active_workshop.workshop_id}
+                hasSelections={data.active_workshop.total_selected > 0}
+              />
             )}
 
             {/* Section 1 — Active workshop hero */}
@@ -339,33 +344,72 @@ function MyWorkshopsPageInner() {
               <ActiveWorkshopCard workshop={data.active_workshop} />
             )}
 
-            {/* Section 2 — Session timeline */}
-            {data?.active_workshop && data.active_workshop.sessions.length > 0 && (
-              <SessionTimeline sessions={data.active_workshop.sessions} />
-            )}
-
-            {/* Section 3 — Workshop info / logistics */}
+            {/* Section 2+3 — Schedule + workshop info two-column */}
             {data?.active_workshop && (
-              <WorkshopInfoCard
-                logistics={data.active_workshop.logistics}
-                workshopId={data.active_workshop.workshop_id}
-                publicSlug={data.active_workshop.public_slug}
-                publicPageEnabled={data.active_workshop.public_page_enabled}
-              />
+              <div
+                className="bg-white rounded-2xl overflow-hidden"
+                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+              >
+                <div className="p-6 lg:p-8">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-5">
+                    <h2
+                      className="font-heading font-bold text-gray-900"
+                      style={{ fontSize: 18 }}
+                    >
+                      Your Schedule
+                    </h2>
+                    {data.active_workshop.sessions.length > 0 && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">
+                        {data.active_workshop.sessions.filter((s) => {
+                          const now = new Date();
+                          return s.attendance_status === 'checked_in' || new Date(s.end_at) < now;
+                        }).length}{' '}
+                        / {data.active_workshop.sessions.length} complete
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Two-column */}
+                  <div className="flex gap-10 items-start">
+                    {/* Left: session timeline */}
+                    <div className="flex-1 min-w-0">
+                      {data.active_workshop.sessions.length > 0 ? (
+                        <SessionTimeline sessions={data.active_workshop.sessions} />
+                      ) : (
+                        <p className="text-sm text-gray-400">No sessions scheduled yet.</p>
+                      )}
+
+                      {/* Mobile: Workshop Info below schedule */}
+                      <div className="lg:hidden mt-8">
+                        <WorkshopInfoCard
+                          logistics={data.active_workshop.logistics}
+                          workshopId={data.active_workshop.workshop_id}
+                          publicSlug={data.active_workshop.public_slug}
+                          publicPageEnabled={data.active_workshop.public_page_enabled}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: sticky workshop info */}
+                    <div className="hidden lg:block w-80 flex-shrink-0 sticky top-6">
+                      <WorkshopInfoCard
+                        logistics={data.active_workshop.logistics}
+                        workshopId={data.active_workshop.workshop_id}
+                        publicSlug={data.active_workshop.public_slug}
+                        publicPageEnabled={data.active_workshop.public_page_enabled}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Section 4 — Other workshops */}
-            {(data?.other_workshops ?? []).length > 0 && (
-              <OtherWorkshopsGrid
-                workshops={data!.other_workshops}
-                onJoined={fetchDashboard}
-              />
-            )}
-
-            {/* Join CTA when no other workshops section */}
-            {(data?.other_workshops ?? []).length === 0 && data?.active_workshop && (
-              <OtherWorkshopsGrid workshops={[]} onJoined={fetchDashboard} />
-            )}
+            {/* Section 4 — Other workshops + Discover strip */}
+            <OtherWorkshopsGrid
+              workshops={data!.other_workshops}
+              onJoined={fetchDashboard}
+            />
           </div>
         )}
       </div>

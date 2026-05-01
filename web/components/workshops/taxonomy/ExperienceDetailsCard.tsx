@@ -24,11 +24,11 @@ interface Props {
 
 // Maps to the 'format' tag group (key: 'format'), multi-select
 const LEARNING_FORMAT_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
-  { display: 'Hands-On', tagName: 'hands_on', Icon: Camera },
+  { display: 'Hands-On', tagName: 'handson', Icon: Camera },
   { display: 'Lecture', tagName: 'lecture_discussion', Icon: School },
   { display: 'Critique', tagName: 'critique_feedback', Icon: MessageCircle },
   { display: 'Demo & Watch', tagName: 'demo_watch', Icon: Pencil },
-  { display: 'One-on-One', tagName: 'one_on_one', Icon: Users },
+  { display: 'One-on-One', tagName: 'oneonone', Icon: Users },
 ];
 
 const ENVIRONMENT_OPTIONS: { display: string; tagName: string; Icon: LucideIcon }[] = [
@@ -47,7 +47,7 @@ const EXPERIENCE_STYLE_RADIO_OPTIONS = [
 const PACE_OPTIONS = [
   { display: 'Relaxed', tagName: 'go_at_your_own_pace' },
   { display: 'Moderate', tagName: 'instructor_led_pacing' },
-  { display: 'Intensive', tagName: 'fast_paced' },
+  { display: 'Intensive', tagName: 'fastpaced' },
 ];
 
 export function ExperienceDetailsCard({ tagGroups, tagIds, onTagIdsChange }: Props) {

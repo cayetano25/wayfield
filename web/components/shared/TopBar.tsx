@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Megaphone, ChevronRight, CheckCheck, Menu, User, LogOut } from 'lucide-react';
+import { Bell, Megaphone, CheckCheck, Menu, User, LogOut, Heart, Receipt } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import type { AdminUser } from '@/lib/auth/session';
-import { usePage } from '@/contexts/PageContext';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiGet, apiPatch } from '@/lib/api/client';
 import { formatDistanceToNow } from 'date-fns';
 import { UserAvatar } from '@/components/nav/UserAvatar';
+import { NavLink } from '@/components/nav/NavLink';
+import { useNavContext } from '@/lib/hooks/useNavContext';
 
 /* --- Types ---------------------------------------------------------------- */
 
@@ -89,6 +90,24 @@ function UserMenuDropdown({
         >
           <Bell className="w-4 h-4 shrink-0 text-[#6B7280]" />
           Notifications
+        </Link>
+
+        <Link
+          href="/account/favorites"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+        >
+          <Heart className="w-4 h-4 shrink-0 text-[#6B7280]" />
+          My Favorites
+        </Link>
+
+        <Link
+          href="/account/receipts"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+        >
+          <Receipt className="w-4 h-4 shrink-0 text-[#6B7280]" />
+          My Receipts
         </Link>
       </div>
 
@@ -203,7 +222,7 @@ interface TopBarProps {
 
 export function TopBar({ onMenuOpen }: TopBarProps) {
   const { user, logout } = useUser();
-  const { title, breadcrumbs } = usePage();
+  const nav = useNavContext();
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
@@ -291,8 +310,8 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
   }, [notifications]);
 
   return (
-    <header className="h-16 bg-white border-b border-border-gray flex items-center px-4 lg:px-8 shrink-0 gap-3">
-      {/* Hamburger — mobile only */}
+    <header className="h-16 bg-white border-b border-border-gray flex items-center px-4 lg:px-8 shrink-0">
+      {/* Hamburger — below lg */}
       <button
         type="button"
         onClick={onMenuOpen}
@@ -302,30 +321,16 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Left: title + breadcrumbs */}
-      <div className="flex-1 min-w-0">
-        {breadcrumbs.length > 0 ? (
-          <nav className="flex items-center gap-1 text-sm">
-            {breadcrumbs.map((crumb, i) => {
-              const isLast = i === breadcrumbs.length - 1;
-              return (
-                <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight className="w-3 h-3 text-light-gray" />}
-                  {isLast || !crumb.href ? (
-                    <span className="font-heading text-sm font-semibold text-dark">{crumb.label}</span>
-                  ) : (
-                    <Link href={crumb.href} className="text-medium-gray hover:text-dark transition-colors">
-                      {crumb.label}
-                    </Link>
-                  )}
-                </span>
-              );
-            })}
-          </nav>
-        ) : (
-          <h1 className="font-heading text-xl font-semibold text-dark truncate">{title}</h1>
-        )}
-      </div>
+      {/* Center: nav links (sm+) */}
+      <nav className="hidden sm:flex items-center gap-6 h-full flex-1 justify-center" aria-label="Main navigation">
+        <NavLink href="/discover" label="Explore Workshops" />
+        {nav.isAuthenticated && <NavLink href="/my-workshops" label="My Workshops" />}
+        {nav.showMySessions && <NavLink href="/leader/dashboard" label="My Sessions" />}
+        {nav.showMyOrganization && <NavLink href="/my-organizations" label="My Organizations" />}
+      </nav>
+
+      {/* Spacer on mobile keeps right section right-aligned when nav is hidden */}
+      <div className="flex-1 sm:hidden" />
 
       {/* Right: icons + user */}
       <div className="flex items-center gap-2">

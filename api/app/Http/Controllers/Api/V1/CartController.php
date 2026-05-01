@@ -7,7 +7,9 @@ use App\Domain\Payments\Exceptions\CartExpiredException;
 use App\Domain\Payments\Exceptions\CartOrgMismatchException;
 use App\Domain\Payments\Exceptions\DuplicateWorkshopInCartException;
 use App\Domain\Payments\Exceptions\WorkshopNotPublishedException;
+use App\Domain\Payments\Models\Cart;
 use App\Domain\Payments\Models\CartItem;
+use App\Domain\Payments\Models\WorkshopPricing;
 use App\Domain\Payments\Services\CartService;
 use App\Domain\Payments\Services\CheckoutService;
 use App\Domain\Payments\Services\CouponService;
@@ -35,8 +37,17 @@ class CartController extends Controller
      */
     public function show(Request $request, Organization $organization): JsonResponse
     {
-        $user    = $request->user();
-        $cart    = $this->cartService->getOrCreateCart($user, $organization);
+        $user = $request->user();
+        $cart = $this->resolveCart($user, $organization);
+
+        if ($cart === null) {
+            // Conflicting paid cart from another org — cannot merge.
+            return response()->json([
+                'error'   => 'CART_ORG_MISMATCH',
+                'message' => 'An active cart already exists for a different organization.',
+            ], 409);
+        }
+
         $summary = $this->cartService->getCartSummary($cart);
 
         return response()->json(
@@ -49,24 +60,86 @@ class CartController extends Controller
      */
     public function addItem(AddCartItemRequest $request, Organization $organization): JsonResponse
     {
-        $user = $request->user();
+        $user     = $request->user();
+        $itemType = $request->input('item_type');
 
-        try {
-            $cart = $this->cartService->getOrCreateCart($user, $organization);
-        } catch (CartOrgMismatchException $e) {
-            return response()->json([
-                'error'            => 'CART_ORG_MISMATCH',
-                'message'          => $e->getMessage(),
-                'existing_org_id'  => $e->existingOrgId,
-                'existing_org_name' => $e->existingOrgName,
-            ], 409);
+        // Resolve the workshop up-front so we can determine whether it's free.
+        // Free workshops have no Stripe payment, so the cross-org cart guard does not apply.
+        $workshop = null;
+        if ($itemType === 'workshop_registration') {
+            $workshop = Workshop::find($request->input('workshop_id'));
+        }
+
+        $isFreeItem = $workshop && (function () use ($workshop): bool {
+            $pricing = WorkshopPricing::where('workshop_id', $workshop->id)->first();
+            return $pricing === null || $pricing->base_price_cents === 0;
+        })();
+
+        if ($isFreeItem) {
+            // Free item: no Stripe payment needed.
+            // If a paid cart from another org is active, auto-complete this free registration
+            // immediately (disposable cart → checkout → done) and return the paid cart unchanged.
+            // This avoids ever having two active carts coexist, which breaks the show endpoint.
+            $existingPaidCart = Cart::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'active')
+                ->where('organization_id', '!=', $organization->id)
+                ->where('discounted_total_cents', '>', 0)
+                ->first();
+
+            if ($existingPaidCart) {
+                $workshop = $workshop ?? Workshop::findOrFail($request->input('workshop_id'));
+                $tempCart = null;
+                try {
+                    $tempCart = $this->cartService->getOrCreateCart($user, $organization, skipOrgMismatchCheck: true);
+                    $this->cartService->addWorkshop($tempCart, $workshop);
+                    $this->checkoutService->checkout($tempCart, $user);
+                } catch (DuplicateWorkshopInCartException) {
+                    // Already registered — treat as success.
+                    // Delete the temp cart if still active so it doesn't block future show/add calls.
+                    if ($tempCart !== null && $tempCart->fresh()->status === 'active') {
+                        $tempCart->items()->delete();
+                        $tempCart->delete();
+                    }
+                } catch (\Throwable $e) {
+                    // Delete the temp cart so it doesn't block future show/add calls.
+                    if ($tempCart !== null && $tempCart->fresh()->status === 'active') {
+                        $tempCart->items()->delete();
+                        $tempCart->delete();
+                    }
+                    return response()->json(['error' => 'CHECKOUT_FAILED', 'message' => $e->getMessage()], 422);
+                }
+                // Return the paid cart so the frontend stays anchored to it.
+                $existingPaidCart->load('items.workshop', 'items.session', 'organization');
+                $summary = $this->cartService->getCartSummary($existingPaidCart);
+                return response()->json(
+                    (new CartResource($summary['cart']))->withFees($summary['fees'])->additional(['auto_registered' => true]),
+                    201
+                );
+            }
+
+            // No paid conflict — create/get the free cart normally.
+            try {
+                $cart = $this->cartService->getOrCreateCart($user, $organization, skipOrgMismatchCheck: true);
+            } catch (CartExpiredException $e) {
+                return response()->json(['error' => 'CART_EXPIRED', 'message' => $e->getMessage()], 410);
+            }
+        } else {
+            // Paid item: attempt to resolve the cart, auto-completing any free conflicting cart first.
+            $cart = $this->resolveCart($user, $organization);
+
+            if ($cart === null) {
+                return response()->json([
+                    'error'   => 'CART_ORG_MISMATCH',
+                    'message' => 'You have an active cart with paid items for a different organization. '
+                        . 'Complete or clear that order before adding items here.',
+                ], 409);
+            }
         }
 
         try {
-            $itemType = $request->input('item_type');
-
             if ($itemType === 'workshop_registration') {
-                $workshop = Workshop::findOrFail($request->input('workshop_id'));
+                $workshop = $workshop ?? Workshop::findOrFail($request->input('workshop_id'));
                 $item     = $this->cartService->addWorkshop($cart, $workshop);
             } else {
                 $session = Session::findOrFail($request->input('session_id'));
@@ -227,5 +300,46 @@ class CartController extends Controller
             'client_secret'         => $result->clientSecret,
             'stripe_publishable_key' => $result->stripePublishableKey,
         ]);
+    }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * Get or create a cart for the given org, automatically completing any
+     * conflicting free cart from a different org first.
+     *
+     * Returns null if the conflict is a paid cart that cannot be auto-resolved.
+     */
+    private function resolveCart(\App\Models\User $user, Organization $organization): ?Cart
+    {
+        try {
+            return $this->cartService->getOrCreateCart($user, $organization);
+        } catch (CartOrgMismatchException $e) {
+            // There is an active cart for a different org. If it's entirely free
+            // (no payment needed), auto-complete it so the user can proceed.
+            $conflicting = Cart::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'active')
+                ->where('organization_id', $e->existingOrgId)
+                ->first();
+
+            if ($conflicting === null || $conflicting->discounted_total_cents > 0) {
+                // Paid conflict — cannot auto-resolve.
+                return null;
+            }
+
+            // Free conflict — delete the cart and its items (no payment was ever taken,
+            // so no registration is lost). Deleting avoids the unique constraint on
+            // (user_id, organization_id, status) that prevents setting to 'abandoned'
+            // when an abandoned cart for the same user+org already exists.
+            $conflicting->items()->delete();
+            $conflicting->delete();
+
+            try {
+                return $this->cartService->getOrCreateCart($user, $organization);
+            } catch (CartOrgMismatchException) {
+                return null;
+            }
+        }
     }
 }

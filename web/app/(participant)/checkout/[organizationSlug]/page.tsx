@@ -83,9 +83,7 @@ function OrderSummarySection({
   pricingData: WorkshopPricing | null;
 }) {
   const [refundOpen, setRefundOpen] = useState(false);
-  const fees = cart.fee_breakdown;
-  const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = cart.discounted_total_cents + totalFees;
+  const total = cart.discounted_total_cents;
 
   return (
     <div>
@@ -200,19 +198,6 @@ function OrderSummarySection({
                 {cart.coupon.code}
               </span>
               <span>— {formatCents(cart.discount_cents)}</span>
-            </div>
-          )}
-          {fees && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                color: '#6B7280',
-                marginBottom: 8,
-              }}
-            >
-              <span>Processing fee</span>
-              <span>{formatCents(fees.total_fee_cents)}</span>
             </div>
           )}
           <div
@@ -657,9 +642,7 @@ export default function CheckoutPage() {
 
   if (!cart || !org) return null;
 
-  const fees = cart.fee_breakdown;
-  const totalFees = fees ? fees.total_fee_cents : 0;
-  const total = cart.discounted_total_cents + totalFees;
+  const total = cart.discounted_total_cents;
   const isFree = cart.discounted_total_cents === 0;
   const clientSecret = clientSecretRef.current;
 

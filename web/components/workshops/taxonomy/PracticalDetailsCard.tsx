@@ -15,14 +15,14 @@ const DURATION_OPTIONS = [
   { display: 'Half Day', tagName: 'half_day' },
   { display: 'Full Day', tagName: 'full_day' },
   { display: 'Weekend', tagName: 'weekend' },
-  { display: 'Multi-Day', tagName: 'multi_day_3_5_days' },
+  { display: 'Multi-Day', tagName: 'multiday_35_days' },
 ];
 
 const GROUP_SIZE_OPTIONS = [
   { display: '1–4', tagName: 'solo_1on1' },
-  { display: '5–10', tagName: 'small_6_12' },
-  { display: '11–20', tagName: 'medium_13_25' },
-  { display: '20+', tagName: 'large_26_50' },
+  { display: '5–10', tagName: 'small_612' },
+  { display: '11–20', tagName: 'medium_1325' },
+  { display: '20+', tagName: 'large_2650' },
 ];
 
 const PRICE_MODEL_OPTIONS = [
@@ -33,14 +33,14 @@ const PRICE_MODEL_OPTIONS = [
 const ACCESSIBILITY_OPTIONS = [
   { value: 'wheelchair_accessible', label: 'Wheelchair Accessible', description: 'Venue and all activities are wheelchair accessible' },
   { value: 'low_sensory', label: 'Low Sensory', description: 'Reduced noise, lighting, and sensory stimulation' },
-  { value: 'neurodivergent_friendly', label: 'Neurodivergent-Friendly', description: 'Environment adapted for neurodivergent participants' },
+  { value: 'neurodivergentfriendly', label: 'Neurodivergent-Friendly', description: 'Environment adapted for neurodivergent participants' },
   { value: 'interpreter_available', label: 'Interpreter Available', description: 'Sign language or language interpretation available' },
   { value: 'closed_captioning', label: 'Closed Captioning', description: 'Live captions or captioned materials provided' },
   { value: 'service_animals_welcome', label: 'Service Animals Welcome', description: 'Service animals are welcome at this workshop' },
   { value: 'child_care_available', label: 'Child Care Available', description: 'Child care available during the workshop' },
   { value: 'sliding_scale_pricing', label: 'Sliding Scale Pricing', description: 'Flexible pricing based on ability to pay' },
   { value: 'free_or_subsidized', label: 'Free or Subsidized', description: 'Workshop is free or subsidized for qualifying participants' },
-  { value: 'mobility_friendly', label: 'Mobility-Friendly', description: 'Accessible for participants with mobility limitations' },
+  { value: 'mobilityfriendly', label: 'Mobility-Friendly', description: 'Accessible for participants with mobility limitations' },
   { value: 'vision_accessible_materials', label: 'Vision-Accessible Materials', description: 'Large print, digital, or alternative formats available' },
 ];
 
