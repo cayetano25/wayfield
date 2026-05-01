@@ -229,6 +229,7 @@ Route::prefix('v1')->group(function () {
         // Profile
         Route::get('me', [ProfileController::class, 'show']);
         Route::patch('me', [ProfileController::class, 'update']);
+        Route::delete('me/photo', [ProfileController::class, 'deletePhoto']);
         Route::post('me/password', [ProfileController::class, 'changePassword']);
         Route::get('me/organizations', [ProfileController::class, 'organizations']);
 

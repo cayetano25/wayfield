@@ -18,6 +18,7 @@ class PublicLeaderController extends Controller
         $leader = Leader::where('slug', $slug)
             ->whereHas('organizationLeaders', fn ($q) => $q->where('status', 'active'))
             ->with([
+                'user.profile.address',
                 'workshopLeaders' => fn ($q) => $q->where('is_confirmed', true)
                     ->with(['workshop' => fn ($wq) => $wq->publiclyVisible()
                         ->with(['defaultLocation', 'categories'])]),

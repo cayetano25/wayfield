@@ -15,14 +15,12 @@ class UpdateLeaderProfileRequest extends FormRequest
     {
         return [
             // first_name / last_name are on the users table — update via PATCH /api/v1/me
+            // phone_number, city, state_or_region — update via PATCH /api/v1/me (user profile)
             // profile_image_url is handled via the dedicated image-upload endpoint
             'bio'            => ['nullable', 'string', 'max:2000'],
             'website_url'    => ['nullable', 'url', 'max:500'],
-            'phone_number'   => ['nullable', 'string', 'max:50'],
             'address_line_1' => ['nullable', 'string', 'max:255'],
             'address_line_2' => ['nullable', 'string', 'max:255'],
-            'city'           => ['nullable', 'string', 'max:100'],
-            'state_or_region' => ['nullable', 'string', 'max:100'],
             'postal_code'    => ['nullable', 'string', 'max:30'],
             'country'        => ['nullable', 'string', 'max:100'],
             // Structured address (Phase 16)
