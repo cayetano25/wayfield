@@ -450,7 +450,7 @@ export function PricingClient() {
       {/* ── Section 1: Hero ─────────────────────────────────────── */}
       <section
         className="relative w-full overflow-hidden flex flex-col items-center justify-center text-center"
-        style={{ minHeight: '55vh', paddingTop: 80, paddingBottom: 64, paddingLeft: 24, paddingRight: 24 }}
+        style={{ minHeight: '36vh', paddingTop: 52, paddingBottom: 44, paddingLeft: 24, paddingRight: 24 }}
       >
         {/* Background image */}
         <div className="absolute inset-0">
