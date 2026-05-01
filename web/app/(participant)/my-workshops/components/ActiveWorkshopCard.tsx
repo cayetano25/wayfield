@@ -41,7 +41,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
     workshop.total_selected > 0 &&
     workshop.total_selected < workshop.total_selectable;
 
-  const selectSessionsHref = `/workshops/${workshop.workshop_id}/select-sessions`;
+  const selectSessionsHref = `/my-workshops/${workshop.workshop_id}/select-sessions`;
 
   async function handleCheckIn() {
     if (!next_session) return;
@@ -220,7 +220,7 @@ export function ActiveWorkshopCard({ workshop }: { workshop: ParticipantActiveWo
                 <p className="font-sans" style={{ fontSize: 13, color: '#374151' }}>
                   You&apos;ve selected{' '}
                   <strong>{workshop.total_selected}</strong> of{' '}
-                  <strong>{workshop.total_selectable}</strong> available sessions.
+                  <strong>{workshop.total_selectable}</strong> available time slots.
                 </p>
                 <Link
                   href={selectSessionsHref}

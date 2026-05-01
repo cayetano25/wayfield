@@ -27,6 +27,7 @@ function formatChangeDate(iso: string): string {
 export function PricingDetailsCard({ workshop }: { workshop: PublicWorkshop }) {
   const pricing = workshop.pricing
   const org = workshop.organization
+  const isRegistered = workshop.participant_status?.registration_status === 'registered'
 
   const locationLine = [
     workshop.default_location?.city,
@@ -127,7 +128,7 @@ export function PricingDetailsCard({ workshop }: { workshop: PublicWorkshop }) {
         </div>
       )}
 
-      {/* Register / Cart button — exact same props as the original page pricing section */}
+      {/* Register / Cart button */}
       {org && (
         <AddToCartButton
           workshopId={workshop.id}
@@ -136,10 +137,12 @@ export function PricingDetailsCard({ workshop }: { workshop: PublicWorkshop }) {
           publicSlug={workshop.public_slug}
           pricing={pricing}
           fullWidth
+          isRegistered={isRegistered}
+          workshopStartDate={workshop.start_date}
         />
       )}
 
-      {!isFree && (
+      {!isFree && !isRegistered && (
         <p className="text-xs text-gray-400 text-center mt-2">
           Registration fee per person
         </p>

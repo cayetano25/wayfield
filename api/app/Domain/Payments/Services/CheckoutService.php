@@ -428,7 +428,15 @@ class CheckoutService
         // The specific notification codes (N-01 through N-04) are dispatched
         // through the existing notification pipeline from their respective jobs.
         // Here we dispatch the order-confirmation job which handles routing.
-        \App\Jobs\SendOrderConfirmationJob::dispatch($order->id);
+        // Wrapped in try/catch so a notification failure never rolls back a completed order.
+        try {
+            \App\Jobs\SendOrderConfirmationJob::dispatch($order->id);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('CheckoutService: failed to dispatch order confirmation', [
+                'order_id' => $order->id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
     }
 
     // ─── Cart validation ──────────────────────────────────────────────────────

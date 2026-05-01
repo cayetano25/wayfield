@@ -3,12 +3,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { MapPin, Calendar } from 'lucide-react';
 import { getPublicWorkshop, getPublicCategory, getSitemapWorkshops, type PublicLeader } from '@/lib/api/public';
 import { ShareWorkshopButton } from '@/components/workshops/ShareWorkshopButton';
 import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import { ScheduleItem } from '@/components/workshops/public/ScheduleItem';
-import { RegistrationCard } from '@/components/workshops/public/RegistrationCard';
 import { PricingDetailsCard } from '@/components/workshops/public/PricingDetailsCard';
 import { MapLink } from '@/components/workshops/public/MapLink';
 import { buildCategoryMetadata } from '@/lib/seo/metadata';
@@ -158,7 +158,9 @@ export default async function PublicWorkshopPage(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const workshop = await getPublicWorkshop(id);
+  const cookieStore = await cookies();
+  const token = cookieStore.get('wayfield_token')?.value;
+  const workshop = await getPublicWorkshop(id, token);
 
   // Category fallback — try slug as a category before calling notFound()
   if (!workshop) {
@@ -239,8 +241,8 @@ export default async function PublicWorkshopPage(
           className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 flex items-end pb-8 pt-12"
           style={{ minHeight: '36vh' }}
         >
-          {/* Left: title and meta — ~60% width */}
-          <div className="flex-1 max-w-[60%] pr-8">
+          {/* Left: title and meta */}
+          <div className="flex-1 max-w-3xl">
 
             {/* Type badge */}
             <div className="inline-flex items-center px-3 py-1 rounded-full
@@ -292,10 +294,6 @@ export default async function PublicWorkshopPage(
             </div>
           </div>
 
-          {/* Right: registration card — desktop only */}
-          <div className="hidden lg:block w-72 flex-shrink-0">
-            <RegistrationCard workshop={workshop} />
-          </div>
         </div>
       </section>
 
@@ -310,11 +308,6 @@ export default async function PublicWorkshopPage(
             ]}
           />
         </div>
-      </div>
-
-      {/* Mobile registration card — visible below hero on small screens */}
-      <div className="lg:hidden px-4 -mt-4 relative z-10">
-        <RegistrationCard workshop={workshop} />
       </div>
 
       {/* Two-column content area */}

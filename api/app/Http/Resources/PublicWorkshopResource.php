@@ -170,7 +170,7 @@ class PublicWorkshopResource extends JsonResource
         return [
             'registration_status' => $registration->registration_status,
             'payment_status'      => $order?->getPaymentStatusLabel() ?? 'free',
-            'is_paid'             => $order !== null,
+            'is_paid'             => $order !== null && $order->payment_method !== 'free',
             'order_number'        => $order?->order_number,
             'is_deposit_only'     => $order?->isDepositOnly() ?? false,
             'balance_due_date'    => $order?->balance_due_date?->toDateString(),

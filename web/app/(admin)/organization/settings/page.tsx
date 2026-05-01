@@ -27,6 +27,16 @@ interface OrgDetail {
 
 const EDIT_ROLES = ['owner', 'admin'];
 
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export default function OrganizationSettingsPage() {
   useSetPage('Settings', [
     { label: 'Organization' },
@@ -79,7 +89,11 @@ export default function OrganizationSettingsPage() {
   }, [currentOrg]);
 
   function handleChange(field: keyof typeof form, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'name') updated.slug = nameToSlug(value);
+      return updated;
+    });
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
@@ -184,7 +198,6 @@ export default function OrganizationSettingsPage() {
               <div className="px-6 py-6 space-y-6">
                 {/* Logo */}
                 <div>
-                  <p className="text-sm font-medium text-dark mb-3">Organization Logo</p>
                   <ImageUploader
                     currentUrl={org.logo_url}
                     entityType="organization"
@@ -219,7 +232,7 @@ export default function OrganizationSettingsPage() {
                     )}
                   </div>
                   {isStudioOrAbove ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <div className="relative">
                         <input
                           type="color"
@@ -246,6 +259,14 @@ export default function OrganizationSettingsPage() {
                         disabled={!/^#[0-9A-Fa-f]{6}$/.test(primaryColor)}
                       >
                         Save color
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setPrimaryColor('#0FA3B1')}
+                        disabled={primaryColor === '#0FA3B1' || savingColor}
+                      >
+                        Revert to default
                       </Button>
                     </div>
                   ) : (
@@ -284,15 +305,17 @@ export default function OrganizationSettingsPage() {
               disabled={!canEdit}
               required
             />
-            <Input
-              label="Slug"
-              value={form.slug}
-              onChange={(e) => handleChange('slug', e.target.value)}
-              error={errors.slug}
-              disabled={!canEdit}
-              helper="Used in URLs — lowercase letters, numbers, and hyphens only"
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">
+                Slug
+              </label>
+              <div className="flex items-center h-10 px-3 rounded-lg border border-border-gray bg-surface text-sm font-mono text-medium-gray select-all">
+                {form.slug || <span className="text-light-gray italic">generated from name</span>}
+              </div>
+              <p className="mt-1 text-xs text-medium-gray">
+                Auto-generated from the organization name. Used in public URLs.
+              </p>
+            </div>
           </div>
         </Card>
 

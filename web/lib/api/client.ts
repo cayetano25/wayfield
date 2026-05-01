@@ -7,6 +7,7 @@ export class ApiError extends Error {
     public readonly status: number,
     message: string,
     public readonly errors?: Record<string, string[]>,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -47,17 +48,19 @@ async function request<T>(
   if (!res.ok) {
     let message = `Request failed with status ${res.status}`;
     let errors: Record<string, string[]> | undefined;
+    let code: string | undefined;
     try {
       const json = await res.json();
       message = json.message ?? message;
       errors = json.errors;
+      code = json.error;
       if (json.error === 'plan_limit_reached' && typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('wayfield:plan_limit_reached', { detail: json }));
       }
     } catch {
       // ignore parse errors
     }
-    throw new ApiError(res.status, message, errors);
+    throw new ApiError(res.status, message, errors, code);
   }
 
   if (res.status === 204) {

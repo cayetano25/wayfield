@@ -91,7 +91,7 @@ function ParticipantStatusBadge({ status }: { status: ParticipantStatus }) {
 
   if (status.registration_status === 'registered') {
     const isDepositOnly = status.is_deposit_only;
-    const isFree = status.payment_status === 'free';
+    const isFree = !status.is_paid;
     return (
       <span className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full
         px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase font-[JetBrains_Mono]
@@ -111,11 +111,15 @@ function CartButton({
   orgId,
   orgSlug,
   publicSlug,
+  isFreeWorkshop,
+  onRegistered,
 }: {
   workshopId: number;
   orgId: number;
   orgSlug: string;
   publicSlug: string;
+  isFreeWorkshop: boolean;
+  onRegistered: (isFree: boolean) => void;
 }) {
   const cart = useOptionalCart();
   const router = useRouter();
@@ -136,15 +140,23 @@ function CartButton({
 
     setLoading(true);
     try {
-      await cart.addWorkshop(orgId, workshopId, orgSlug);
-      cart.openCart();
+      const updatedCart = await cart.addWorkshop(orgId, workshopId, orgSlug);
+      const workshopInCart = updatedCart.items.some((item) => item.workshop_id === workshopId);
+      if (workshopInCart) {
+        cart.openCart();
+      } else {
+        // Free workshop auto-completed alongside a paid cart — no cart drawer needed
+        onRegistered(true);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.push(`/login?return=/w/${publicSlug}`);
-      } else if (err instanceof ApiError && err.status === 409) {
-        // Already in cart (e.g. after page refresh) — sync state then show cart
-        await cart.refreshCart(orgId, orgSlug);
-        cart.openCart();
+      } else if (err instanceof ApiError && err.status === 409 && err.code === 'DUPLICATE_WORKSHOP') {
+        // Already registered — reflect that in the card without touching the cart
+        onRegistered(isFreeWorkshop);
+      } else if (err instanceof ApiError && err.status === 409 && err.code === 'CART_ORG_MISMATCH') {
+        // Paid conflict — navigate to detail page where the full error message is shown
+        router.push(`/workshops/${publicSlug}`);
       }
     } finally {
       setLoading(false);
@@ -200,6 +212,20 @@ export function WorkshopCard({
   participantStatus,
 }: WorkshopCardProps) {
   const { isFavorited: favorited, toggle, isLoading: favoriteLoading } = useWorkshopFavorite(id, isFavorited);
+  const [localParticipantStatus, setLocalParticipantStatus] = useState<ParticipantStatus | null>(participantStatus ?? null);
+
+  const handleRegistered = (isFreeWorkshop: boolean) => {
+    setLocalParticipantStatus({
+      registration_status: 'registered',
+      payment_status: isFreeWorkshop ? 'free' : 'paid',
+      is_paid: !isFreeWorkshop,
+      order_number: null,
+      is_deposit_only: false,
+      balance_due_date: null,
+    });
+  };
+
+  const isRegistered = localParticipantStatus?.registration_status === 'registered';
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
@@ -218,8 +244,8 @@ export function WorkshopCard({
         )}
 
         {/* Participant status badge takes priority over availability badge */}
-        {participantStatus ? (
-          <ParticipantStatusBadge status={participantStatus} />
+        {localParticipantStatus ? (
+          <ParticipantStatusBadge status={localParticipantStatus} />
         ) : (
           <AvailabilityBadge spotsLeft={spotsLeft} totalCapacity={totalCapacity} />
         )}
@@ -275,13 +301,29 @@ export function WorkshopCard({
           <span className="font-bold text-gray-900 text-base flex-1">
             {price > 0 ? `$${price.toLocaleString()}` : 'Free'}
           </span>
-          {!isWaitlistOnly && orgId != null && orgSlug ? (
+          {isRegistered ? (
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                <Check size={11} />
+                Registered
+              </span>
+              <Link
+                href={`/workshops/${publicSlug}`}
+                className="text-[#0FA3B1] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
+                onClick={(e) => e.stopPropagation()}
+              >
+                View <ArrowRight size={13} />
+              </Link>
+            </>
+          ) : !isWaitlistOnly && orgId != null && orgSlug ? (
             <>
               <CartButton
                 workshopId={id}
                 orgId={orgId}
                 orgSlug={orgSlug}
                 publicSlug={publicSlug}
+                isFreeWorkshop={price === 0}
+                onRegistered={handleRegistered}
               />
               <Link
                 href={`/workshops/${publicSlug}`}

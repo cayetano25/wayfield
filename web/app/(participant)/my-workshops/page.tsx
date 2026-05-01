@@ -202,11 +202,11 @@ function JoinedBanner({ workshopTitle, isSessionBased, selectHref, onDismiss }: 
 
 /* --- Quick Actions row -------------------------------------------------- */
 
-function QuickActions({ workshopId }: { workshopId: number }) {
+function QuickActions({ workshopId, hasSelections }: { workshopId: number; hasSelections: boolean }) {
   return (
     <div className="flex gap-3 mb-6">
       <Link
-        href={`/workshops/${workshopId}/select-sessions`}
+        href={`/my-workshops/${workshopId}/select-sessions`}
         className="inline-flex items-center gap-2 font-sans font-semibold rounded-lg transition-colors hover:bg-[#F0FDFF]"
         style={{
           fontSize: 14,
@@ -218,7 +218,7 @@ function QuickActions({ workshopId }: { workshopId: number }) {
         }}
       >
         <CalendarDays size={15} />
-        Select Sessions
+        {hasSelections ? 'Adjust Sessions' : 'Select Sessions'}
       </Link>
     </div>
   );
@@ -288,12 +288,14 @@ function MyWorkshopsPageInner() {
           : null)
       : null;
 
-  // Show Quick Actions when active workshop is session-based with unselected sessions
-  const showQuickActions =
-    !loading &&
-    !error &&
-    data?.active_workshop?.workshop_type === 'session_based' &&
-    (data.active_workshop.total_selected < data.active_workshop.total_selectable);
+  // Show Quick Actions for session-based workshops that are not yet over
+  const showQuickActions = (() => {
+    if (loading || error) return false;
+    const aw = data?.active_workshop;
+    if (!aw || aw.workshop_type !== 'session_based') return false;
+    if (!aw.end_date) return true; // no end date — assume ongoing
+    return aw.end_date >= new Date().toISOString().slice(0, 10);
+  })();
 
   return (
     <>
@@ -312,7 +314,7 @@ function MyWorkshopsPageInner() {
             isSessionBased={
               (joinedWorkshop?.workshop_type ?? '') === 'session_based'
             }
-            selectHref={`/workshops/${joinedWorkshopId}/select-sessions`}
+            selectHref={`/my-workshops/${joinedWorkshopId}/select-sessions`}
             onDismiss={() => setBannerVisible(false)}
           />
         )}
@@ -331,7 +333,10 @@ function MyWorkshopsPageInner() {
           <div className="flex flex-col gap-6">
             {/* Quick Actions row */}
             {showQuickActions && data?.active_workshop && (
-              <QuickActions workshopId={data.active_workshop.workshop_id} />
+              <QuickActions
+                workshopId={data.active_workshop.workshop_id}
+                hasSelections={data.active_workshop.total_selected > 0}
+              />
             )}
 
             {/* Section 1 — Active workshop hero */}

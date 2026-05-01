@@ -94,10 +94,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         workshop_id: workshopId,
       });
       setCart(updated);
-      lastOrgId.current = orgId;
-      if (orgSlug) {
-        setOrganizationSlug(orgSlug);
-        persistCartOrg(orgId, orgSlug);
+      // When a free workshop is auto-registered, the backend returns the existing
+      // paid cart (from a different org). Use the returned cart's org — not the
+      // requested org — so context stays anchored to the active paid cart.
+      const effectiveOrgId = updated.organization_id;
+      const effectiveSlug = updated.organization_slug ?? orgSlug;
+      lastOrgId.current = effectiveOrgId;
+      if (effectiveSlug) {
+        setOrganizationSlug(effectiveSlug);
+        persistCartOrg(effectiveOrgId, effectiveSlug);
       }
       return updated;
     },

@@ -129,7 +129,7 @@ export function WorkshopForm({
     tag_ids: [],
     ...initialValues,
   });
-  const [locationExpanded, setLocationExpanded] = useState(false);
+  const [locationExpanded, setLocationExpanded] = useState(true);
   const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(initialHeaderImageUrl);
   const [copied, setCopied] = useState(false);
 
@@ -411,14 +411,14 @@ export function WorkshopForm({
               </label>
               <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500">
                 <span className="text-gray-400 select-none">
-                  {typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? ''}/w/
+                  {typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? ''}/workshops/
                 </span>
                 <span className="font-mono text-gray-700 font-medium">{publicSlug}</span>
                 <button
                   type="button"
                   onClick={() => {
                     const base = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? '';
-                    navigator.clipboard.writeText(`${base}/w/${publicSlug}`);
+                    navigator.clipboard.writeText(`${base}/workshops/${publicSlug}`);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}

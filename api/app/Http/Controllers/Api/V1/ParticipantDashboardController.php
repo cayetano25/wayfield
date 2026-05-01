@@ -127,9 +127,18 @@ class ParticipantDashboardController extends Controller
             return ($record?->status ?? 'not_checked_in') !== 'checked_in';
         });
 
-        // Count all published sessions available for selection (session_based workshops).
+        // Count selectable time slots: slots (grouped by start_at) where at least
+        // one session has remaining capacity. This matches what the selection UI shows.
         $totalSelectable = $workshop->workshop_type === 'session_based'
-            ? Session::where('workshop_id', $workshop->id)->where('is_published', true)->count()
+            ? Session::where('workshop_id', $workshop->id)
+                ->where('is_published', true)
+                ->withCount(['selections as enrolled_count' => fn ($q) => $q->where('selection_status', 'selected')])
+                ->get(['id', 'start_at', 'capacity'])
+                ->groupBy(fn ($s) => $s->start_at->toIso8601String())
+                ->filter(fn ($slot) => $slot->contains(
+                    fn ($s) => $s->capacity === null || $s->enrolled_count < $s->capacity
+                ))
+                ->count()
             : 0;
 
         $totalSelected = $sessionIds->count();

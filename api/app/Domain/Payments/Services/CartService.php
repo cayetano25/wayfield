@@ -35,22 +35,27 @@ class CartService
      * Throws CartOrgMismatchException if the user has an active cart for a
      * different organization — the frontend must warn and allow the user to
      * abandon the other cart first.
+     *
+     * Pass $skipOrgMismatchCheck = true for free items: since no Stripe payment
+     * is involved, there is no cross-account routing concern.
      */
-    public function getOrCreateCart(User $user, Organization $org): Cart
+    public function getOrCreateCart(User $user, Organization $org, bool $skipOrgMismatchCheck = false): Cart
     {
-        // Check for any active cart belonging to a *different* org.
-        $otherCart = Cart::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->where('organization_id', '!=', $org->id)
-            ->with('organization')
-            ->first();
+        if (! $skipOrgMismatchCheck) {
+            // Check for any active cart belonging to a *different* org.
+            $otherCart = Cart::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'active')
+                ->where('organization_id', '!=', $org->id)
+                ->with('organization')
+                ->first();
 
-        if ($otherCart !== null) {
-            throw new CartOrgMismatchException(
-                existingOrgId: $otherCart->organization_id,
-                existingOrgName: $otherCart->organization->name,
-            );
+            if ($otherCart !== null) {
+                throw new CartOrgMismatchException(
+                    existingOrgId: $otherCart->organization_id,
+                    existingOrgName: $otherCart->organization->name,
+                );
+            }
         }
 
         $cart = Cart::query()
