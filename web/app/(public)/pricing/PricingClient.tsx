@@ -18,7 +18,6 @@ import { useNavContext } from '@/lib/hooks/useNavContext';
 type BillingPeriod = 'monthly' | 'annual';
 
 const PLAN_KEYS = ['foundation', 'creator', 'studio', 'enterprise'] as const;
-type PlanKey = (typeof PLAN_KEYS)[number];
 
 /* ─── Auth banner ─────────────────────────────────────────────────────── */
 
