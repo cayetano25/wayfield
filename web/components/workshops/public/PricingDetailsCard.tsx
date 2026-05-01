@@ -37,7 +37,7 @@ export function PricingDetailsCard({ workshop }: { workshop: PublicWorkshop }) {
   const priceDisplay = isFree ? 'Free' : formatCents(pricing!.current_price_cents)
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
       {/* Label */}
       <p className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase

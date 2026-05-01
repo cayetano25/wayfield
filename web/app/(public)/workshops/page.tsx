@@ -4,7 +4,6 @@ import { getPublicCategories } from '@/lib/api/public';
 import { buildWorkshopsListingMetadata } from '@/lib/seo/metadata';
 import { buildOrganizationJsonLd } from '@/lib/seo/jsonld';
 import { JsonLd } from '@/components/seo/JsonLd';
-import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 
 export const revalidate = 300;
 
@@ -36,12 +35,6 @@ export async function generateMetadata({
 export default function DiscoverPage() {
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { label: 'Home', href: '/' },
-          { label: 'Workshops', href: '/workshops' },
-        ]}
-      />
       <JsonLd data={buildOrganizationJsonLd()} />
       {/* existing Suspense + DiscoverClient — do not remove */}
       <Suspense>

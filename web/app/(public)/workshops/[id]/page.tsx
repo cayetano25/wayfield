@@ -10,6 +10,7 @@ import { RichTextDisplay } from '@/components/ui/RichTextDisplay';
 import { ScheduleItem } from '@/components/workshops/public/ScheduleItem';
 import { RegistrationCard } from '@/components/workshops/public/RegistrationCard';
 import { PricingDetailsCard } from '@/components/workshops/public/PricingDetailsCard';
+import { MapLink } from '@/components/workshops/public/MapLink';
 import { buildCategoryMetadata } from '@/lib/seo/metadata';
 import { buildEventJsonLd, buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '@/lib/seo/jsonld';
 import { JsonLd } from '@/components/seo/JsonLd';
@@ -78,6 +79,23 @@ function formatDateRange(start: string, end: string, timezone: string): string {
   const s = new Date(`${start}T00:00:00`).toLocaleDateString('en-US', opts);
   const e = new Date(`${end}T00:00:00`).toLocaleDateString('en-US', opts);
   return s === e ? s : `${s} – ${e}`;
+}
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  // US/CA 10-digit: (555) 123-4567
+  if (digits.length === 10) return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
+  // US/CA with leading 1: +1 (555) 123-4567
+  if (digits.length === 11 && digits[0] === '1') {
+    return `+1 (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
+  }
+  return raw
+}
+
+function phoneHref(raw: string): string {
+  // Preserve leading + for international; strip everything else
+  const sign = raw.trimStart().startsWith('+') ? '+' : ''
+  return `tel:${sign}${raw.replace(/\D/g, '')}`
 }
 
 // --- generateMetadata --------------------------------------------------------
@@ -200,19 +218,21 @@ export default async function PublicWorkshopPage(
         ])}
       />
       {/* Hero */}
-      <section className="relative w-full overflow-hidden" style={{ minHeight: '36vh' }}>
-        {/* Background image or teal gradient fallback */}
-        {workshop.hero_image_url ? (
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${workshop.hero_image_url})` }}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0FA3B1] to-[#1a3a4a]" />
-        )}
-
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/75" />
+      <section className="relative w-full" style={{ minHeight: '36vh' }}>
+        {/* Background — overflow-hidden here so the image is contained without
+            clipping absolutely-positioned children like the share dropdown */}
+        <div className="absolute inset-0 overflow-hidden">
+          {workshop.hero_image_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${workshop.hero_image_url})` }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0FA3B1] to-[#1a3a4a]" />
+          )}
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/75" />
+        </div>
 
         {/* Content row */}
         <div
@@ -280,7 +300,7 @@ export default async function PublicWorkshopPage(
       </section>
 
       {/* Breadcrumbs — below hero */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <Breadcrumbs
             items={[
@@ -298,7 +318,7 @@ export default async function PublicWorkshopPage(
       </div>
 
       {/* Two-column content area */}
-      <div className="bg-white">
+      <div className="bg-gray-50">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 py-12">
           <div className="flex gap-10 items-start">
 
@@ -332,7 +352,7 @@ export default async function PublicWorkshopPage(
                       <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4 mt-10">
                         Schedule
                       </h2>
-                      <div className="divide-y divide-gray-100">
+                      <div className="space-y-2">
                         {standardSessions.map((session) => {
                           const dayIdx = sessionDates.indexOf(
                             new Date(session.start_at).toDateString()
@@ -353,7 +373,7 @@ export default async function PublicWorkshopPage(
                       <h2 className="font-heading text-2xl font-bold text-gray-900 mb-4 mt-10">
                         Add-On Sessions
                       </h2>
-                      <div className="divide-y divide-gray-100">
+                      <div className="space-y-2">
                         {addonSessions.map((session) => {
                           const dayIdx = sessionDates.indexOf(
                             new Date(session.start_at).toDateString()
@@ -378,13 +398,14 @@ export default async function PublicWorkshopPage(
                   <h2 className="font-heading text-2xl font-bold text-gray-900 mb-6 mt-10">
                     Workshop Leaders
                   </h2>
-                  <div className="space-y-6">
+                  <div className="space-y-3">
                     {workshop.leaders.map((raw) => {
                       const leader = sanitizeLeader(raw)
                       const initials = `${leader.first_name?.[0] ?? ''}${leader.last_name?.[0] ?? ''}`.toUpperCase()
                       const location = formatLeaderLocation(leader)
                       return (
-                        <div key={leader.id} className="flex items-start gap-4">
+                        <div key={leader.id}
+                          className="flex items-start gap-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                           {leader.profile_image_url ? (
                             <Image
                               src={leader.profile_image_url}
@@ -449,7 +470,7 @@ export default async function PublicWorkshopPage(
 
       {/* Hotel & Logistics section */}
       {(workshop.logistics?.hotel_name || workshop.logistics?.meetup_instructions) && (
-        <section className="bg-[#0FA3B1] w-full py-12">
+        <section className="w-full py-12 bg-gradient-to-br from-[#0FA3B1] to-[#1a3a4a]">
           <div className="max-w-6xl mx-auto px-6 lg:px-8">
 
             <h2 className="font-heading text-2xl font-bold text-white mb-8">
@@ -464,9 +485,26 @@ export default async function PublicWorkshopPage(
                   <p className="font-heading text-2xl font-bold text-white mb-2">
                     Accommodation
                   </p>
-                  <p className="text-white font-bold text-lg mb-2">
+                  <p className="text-white font-bold text-lg mb-1">
                     {workshop.logistics.hotel_name}
                   </p>
+
+                  {/* Address + map link */}
+                  {(workshop.logistics.hotel_address_object?.formatted_address ||
+                    workshop.logistics.hotel_address) && (() => {
+                    const address =
+                      workshop.logistics!.hotel_address_object?.formatted_address ??
+                      workshop.logistics!.hotel_address!;
+                    return (
+                      <div className="mb-3">
+                        <p className="text-white/80 text-sm leading-snug mb-2">
+                          {address}
+                        </p>
+                        <MapLink address={address} />
+                      </div>
+                    );
+                  })()}
+
                   {workshop.logistics.hotel_notes && (
                     <p className="text-white/80 text-sm leading-relaxed">
                       {workshop.logistics.hotel_notes}
@@ -474,7 +512,12 @@ export default async function PublicWorkshopPage(
                   )}
                   {workshop.logistics.hotel_phone && (
                     <p className="text-white/60 text-sm mt-2">
-                      {workshop.logistics.hotel_phone}
+                      <a
+                        href={phoneHref(workshop.logistics.hotel_phone)}
+                        className="hover:text-white transition-colors"
+                      >
+                        {formatPhone(workshop.logistics.hotel_phone)}
+                      </a>
                     </p>
                   )}
                 </div>
