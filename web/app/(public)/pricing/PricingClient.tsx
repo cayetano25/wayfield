@@ -22,10 +22,15 @@ const PLAN_KEYS = ['foundation', 'creator', 'studio', 'enterprise'] as const;
 /* ─── Auth banner ─────────────────────────────────────────────────────── */
 
 function AuthBanner() {
+  const [mounted, setMounted] = useState(false);
   const nav = useNavContext();
   const [dismissed, setDismissed] = useState(false);
 
-  if (!nav.isAuthenticated || nav.isLoading || dismissed) return null;
+  React.useEffect(() => { setMounted(true); }, []);
+
+  // Keep server and client initial render identical (both null) so
+  // hydration never mismatches — banner appears after mount only.
+  if (!mounted || !nav.isAuthenticated || nav.isLoading || dismissed) return null;
 
   const orgName = nav.memberships[0]?.organization_name;
 
