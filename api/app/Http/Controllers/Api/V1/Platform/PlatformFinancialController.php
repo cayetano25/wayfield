@@ -3,52 +3,94 @@
 namespace App\Http\Controllers\Api\V1\Platform;
 
 use App\Http\Controllers\Controller;
-use App\Models\Invoice;
-use App\Models\Subscription;
+use App\Models\StripeInvoice;
+use App\Models\StripeSubscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PlatformFinancialController extends Controller
 {
-    /**
-     * GET /api/v1/platform/financials/invoices
-     * Paginated listing of all invoices.
-     * Accessible by: super_admin, finance
-     */
-    public function invoices(Request $request): JsonResponse
-    {
-        $invoices = Invoice::query()
-            ->with(['organization'])
-            ->when($request->input('organization_id'), fn ($q, $orgId) => $q->where('organization_id', $orgId)
-            )
-            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status)
-            )
-            ->when($request->input('from'), fn ($q, $from) => $q->where('issued_at', '>=', $from)
-            )
-            ->when($request->input('to'), fn ($q, $to) => $q->where('issued_at', '<=', $to)
-            )
-            ->orderBy('issued_at', 'desc')
-            ->paginate($request->integer('per_page', 50));
+    // Monthly revenue (cents) per plan code
+    private const PLAN_MRR = [
+        'free'       => 0,
+        'starter'    => 4900,
+        'pro'        => 12900,
+        'enterprise' => 49900,
+    ];
 
-        return response()->json($invoices);
+    public function overview(): JsonResponse
+    {
+        $activeStatuses = ['active', 'trialing'];
+
+        $byStatus = StripeSubscription::query()
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $byPlan = StripeSubscription::query()
+            ->whereIn('status', $activeStatuses)
+            ->selectRaw('plan_code, count(*) as count')
+            ->groupBy('plan_code')
+            ->pluck('count', 'plan_code');
+
+        // MRR: null when no subscriptions exist at all (tables empty/never seeded)
+        $totalSubs = StripeSubscription::count();
+        $mrrCents = null;
+        $arrCents = null;
+
+        if ($totalSubs > 0) {
+            $mrrCents = StripeSubscription::whereIn('status', $activeStatuses)
+                ->get(['plan_code'])
+                ->sum(fn ($s) => self::PLAN_MRR[$s->plan_code] ?? 0);
+            $arrCents = $mrrCents * 12;
+        }
+
+        $webhookConnected = DB::table('stripe_events')
+            ->whereNotNull('processed_at')
+            ->exists();
+
+        return response()->json([
+            'mrr_cents'               => $mrrCents,
+            'arr_cents'               => $arrCents,
+            'subscriptions'           => [
+                'active'   => (int) ($byStatus['active']   ?? 0),
+                'trialing' => (int) ($byStatus['trialing'] ?? 0),
+                'past_due' => (int) ($byStatus['past_due'] ?? 0),
+                'canceled' => (int) ($byStatus['canceled'] ?? 0),
+                'by_plan'  => [
+                    'free'       => (int) ($byPlan['free']       ?? 0),
+                    'starter'    => (int) ($byPlan['starter']    ?? 0),
+                    'pro'        => (int) ($byPlan['pro']        ?? 0),
+                    'enterprise' => (int) ($byPlan['enterprise'] ?? 0),
+                ],
+            ],
+            'stripe_webhook_connected' => $webhookConnected,
+        ]);
     }
 
-    /**
-     * GET /api/v1/platform/financials/subscriptions
-     * Active and recent subscriptions overview.
-     * Accessible by: super_admin, finance
-     */
-    public function subscriptions(Request $request): JsonResponse
+    public function invoices(Request $request): JsonResponse
     {
-        $subscriptions = Subscription::query()
-            ->with(['organization'])
-            ->when($request->input('plan'), fn ($q, $plan) => $q->where('plan', $plan)
-            )
-            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status)
-            )
+        $invoices = StripeInvoice::query()
+            ->with('organization:id,name')
+            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status))
+            ->when($request->input('organization_id'), fn ($q, $id) => $q->where('organization_id', $id))
             ->orderBy('created_at', 'desc')
-            ->paginate($request->integer('per_page', 50));
+            ->paginate($request->integer('per_page', 25));
 
-        return response()->json($subscriptions);
+        $invoices->getCollection()->transform(fn (StripeInvoice $inv) => [
+            'id'                => $inv->id,
+            'stripe_invoice_id' => $inv->stripe_invoice_id,
+            'organization_id'   => $inv->organization_id,
+            'organization_name' => $inv->organization?->name,
+            'amount_due'        => $inv->amount_due,
+            'amount_paid'       => $inv->amount_paid,
+            'currency'          => $inv->currency,
+            'status'            => $inv->status,
+            'invoice_pdf_url'   => $inv->invoice_pdf_url,
+            'invoice_date'      => $inv->created_at?->toIso8601String(),
+        ]);
+
+        return response()->json($invoices);
     }
 }
