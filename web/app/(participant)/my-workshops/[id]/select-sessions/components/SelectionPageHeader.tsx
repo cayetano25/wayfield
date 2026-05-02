@@ -2,143 +2,68 @@
 
 import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { SelectionOptionsResponse } from '@/lib/types/session-selection';
 
 interface Props {
-  workshop: SelectionOptionsResponse['workshop'];
+  workshopTitle: string;
   selectedCount: number;
-  totalSelectable: number;
-  onDone: () => void;
+  requiredCount: number;
+  onConfirm: () => void;
 }
 
 export function SelectionPageHeader({
-  workshop,
+  workshopTitle,
   selectedCount,
-  totalSelectable,
-  onDone,
+  requiredCount,
+  onConfirm,
 }: Props) {
   const router = useRouter();
-  const titleDisplay =
-    workshop.title.length > 28 ? `${workshop.title.slice(0, 28)}…` : workshop.title;
 
   return (
-    <div
-      className="bg-white z-50 shrink-0"
-      style={{ borderBottom: '1px solid #E5E7EB' }}
-    >
-      {/* -- Mobile: two-row header ----------------------------------- */}
-      <div className="md:hidden">
-        {/* Row 1 */}
-        <div
-          className="flex items-center justify-between px-4"
-          style={{ height: 48 }}
-        >
+    <div className="sticky top-14 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex items-center h-14 gap-4">
+
+          {/* Back button */}
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center justify-center"
-            aria-label="Go back"
-            style={{ color: '#6B7280' }}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600
+              transition-colors flex-shrink-0"
+            aria-label="Back"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
-          <span
-            className="font-heading font-semibold"
-            style={{ fontSize: 15, color: '#2E2E2E' }}
-          >
-            Select Sessions
-          </span>
-          <button
-            type="button"
-            onClick={selectedCount > 0 ? onDone : undefined}
-            className="font-sans font-bold"
-            style={{
-              fontSize: 14,
-              color: selectedCount > 0 ? '#0FA3B1' : '#D1D5DB',
-              cursor: selectedCount > 0 ? 'pointer' : 'default',
-              minWidth: 40,
-              textAlign: 'right',
-            }}
-          >
-            DONE
-          </button>
-        </div>
 
-        {/* Row 2 — context bar */}
-        <div
-          className="flex items-center justify-between"
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#F0FDFF',
-            borderBottom: '2px solid #0FA3B1',
-          }}
-        >
-          <span
-            className="font-sans font-semibold truncate"
-            style={{ fontSize: 13, color: '#0FA3B1', maxWidth: '60%' }}
-          >
-            {titleDisplay}
-          </span>
-          <span
-            className="font-heading font-bold shrink-0"
-            style={{ fontSize: 13, color: '#2E2E2E' }}
-          >
-            {selectedCount} / {totalSelectable} selected
-          </span>
-        </div>
-      </div>
+          {/* Workshop name — full, not truncated */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm font-semibold text-gray-900 truncate font-[Sora]">
+              {workshopTitle}
+            </h1>
+            <p className="text-[11px] text-gray-400 font-[JetBrains_Mono] uppercase tracking-wide">
+              Select Sessions
+            </p>
+          </div>
 
-      {/* -- Desktop: single-row header -------------------------------- */}
-      <div
-        className="hidden md:flex items-center justify-between px-6"
-        style={{ height: 56 }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors shrink-0"
-            aria-label="Go back"
-            style={{ width: 32, height: 32, color: '#6B7280' }}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <span
-            className="font-heading font-semibold truncate"
-            style={{ fontSize: 15, color: '#2E2E2E', maxWidth: 240 }}
-          >
-            {workshop.title}
-          </span>
-          <span style={{ color: '#D1D5DB', flexShrink: 0 }}>·</span>
-          <span
-            className="font-sans shrink-0"
-            style={{ fontSize: 13, color: '#6B7280' }}
-          >
-            Select Sessions
-          </span>
-        </div>
+          {/* Selection counter + confirm button */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-xs text-gray-500 font-[JetBrains_Mono] whitespace-nowrap">
+              {selectedCount} of {requiredCount} selected
+            </span>
 
-        <div className="flex items-center gap-4 shrink-0">
-          <span
-            className="font-sans"
-            style={{ fontSize: 13, color: '#6B7280' }}
-          >
-            {selectedCount} of {totalSelectable}
-          </span>
-          <button
-            type="button"
-            onClick={selectedCount > 0 ? onDone : undefined}
-            className="font-sans font-bold rounded-lg px-5 transition-colors"
-            style={{
-              height: 40,
-              fontSize: 14,
-              backgroundColor: selectedCount > 0 ? '#0FA3B1' : '#E5E7EB',
-              color: selectedCount > 0 ? 'white' : '#9CA3AF',
-              cursor: selectedCount > 0 ? 'pointer' : 'default',
-            }}
-          >
-            Confirm Selections
-          </button>
+            <button
+              type="button"
+              onClick={selectedCount >= requiredCount ? onConfirm : undefined}
+              disabled={selectedCount < requiredCount}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap
+                ${selectedCount >= requiredCount
+                  ? 'bg-[#0FA3B1] text-white hover:bg-[#0c8a96]'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+            >
+              Confirm Selections
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
