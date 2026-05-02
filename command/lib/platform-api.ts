@@ -43,6 +43,11 @@ api.interceptors.response.use(
 
 export default api;
 
+// ─── Token aliases (spec-required exports) ────────────────────────────────────
+export const getPlatformToken = getToken;
+export const setPlatformToken = setToken;
+export const clearPlatformToken = clearToken;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AdminRole = 'super_admin' | 'admin' | 'support' | 'billing' | 'readonly';
@@ -61,7 +66,7 @@ export interface AdminUser {
 export interface AuditEvent {
   id: number;
   action: string;
-  admin_user_email: string | null;
+  admin_name: string | null;
   organization_name: string | null;
   created_at: string;
 }
