@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import toast from 'react-hot-toast';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAdminUser } from '@/contexts/AdminUserContext';
 import { platformAuth, setToken, getToken } from '@/lib/platform-api';
 
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { setAdminUser } = useAdminUser();
 
-  // Redirect already-authenticated admins
   useEffect(() => {
     if (getToken()) router.replace('/overview');
   }, [router]);
@@ -44,85 +43,115 @@ export default function LoginPage() {
       } else if (status === 403) {
         setError('root', { message: 'Your account is inactive. Contact a super admin.' });
       } else {
-        toast.error('Unable to connect to the platform API.');
+        setError('root', { message: 'Connection error. Please check your network.' });
       }
     }
   }
 
   return (
-    <div className="min-h-full flex items-center justify-center bg-gray-900 px-4 py-16">
-      <div className="w-full max-w-sm">
-        {/* Logo / wordmark */}
-        <div className="mb-8 text-center">
-          <p className="font-heading text-2xl font-semibold text-white tracking-tight">
-            Wayfield
-          </p>
-          <p className="mt-1 text-sm text-gray-400">Command Center</p>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#111827] px-4">
+      {/* Wordmark above card */}
+      <div className="mb-8 text-center">
+        <p
+          className="text-lg font-bold text-white mb-1"
+          style={{ fontFamily: 'var(--font-sora, sans-serif)' }}
+        >
+          WAYFIELD
+        </p>
+        <p
+          className="text-[11px] uppercase tracking-widest text-gray-400"
+          style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+        >
+          Command Center
+        </p>
+      </div>
 
-        <div className="rounded-xl bg-gray-800 border border-gray-700 p-8 shadow-xl">
-          <h1 className="font-heading text-lg font-semibold text-white mb-6">
-            Sign in to your account
-          </h1>
+      {/* White card */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-8 py-10">
+        <h1
+          className="text-2xl font-semibold text-gray-900 mb-1"
+          style={{ fontFamily: 'var(--font-sora, sans-serif)' }}
+        >
+          Sign in
+        </h1>
+        <p
+          className="text-sm text-gray-500 mb-6"
+          style={{ fontFamily: 'var(--font-plus-jakarta, sans-serif)' }}
+        >
+          Platform administrator access only
+        </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                {...register('email')}
-                className="w-full h-11 rounded-lg bg-gray-900 border border-gray-600 px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition"
-                placeholder="admin@wayfield.io"
-              />
-              {errors.email && (
-                <p className="mt-1.5 text-xs text-red-400">{errors.email.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          {/* Email */}
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-[13px] font-medium text-gray-700 mb-1"
+              style={{ fontFamily: 'var(--font-plus-jakarta, sans-serif)' }}
+            >
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              {...register('email')}
+              className="w-full h-[44px] border border-gray-200 rounded-lg px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] focus:border-transparent"
+              placeholder="admin@wayfield.io"
+            />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+            )}
+          </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...register('password')}
-                className="w-full h-11 rounded-lg bg-gray-900 border border-gray-600 px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition"
-                placeholder="••••••••"
-              />
-              {errors.password && (
-                <p className="mt-1.5 text-xs text-red-400">{errors.password.message}</p>
-              )}
-            </div>
+          {/* Password */}
+          <div className="mt-4">
+            <label
+              htmlFor="password"
+              className="block text-[13px] font-medium text-gray-700 mb-1"
+              style={{ fontFamily: 'var(--font-plus-jakarta, sans-serif)' }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register('password')}
+              className="w-full h-[44px] border border-gray-200 rounded-lg px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] focus:border-transparent"
+              placeholder="••••••••"
+            />
+            {errors.password && (
+              <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+            )}
+          </div>
 
-            {/* Root error */}
+          {/* Error area */}
+          <div className="mt-3 min-h-[20px]">
             {errors.root && (
-              <div className="rounded-lg bg-red-900/40 border border-red-700/50 px-4 py-3">
-                <p className="text-sm text-red-300">{errors.root.message}</p>
+              <div className="flex items-center gap-2">
+                <AlertCircle size={14} className="text-red-500 shrink-0" />
+                <span className="text-sm text-red-600">{errors.root.message}</span>
               </div>
             )}
+          </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-11 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-gray-800"
-            >
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-6 text-center text-xs text-gray-600">
-          Wayfield platform access is restricted to authorised staff.
-        </p>
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="mt-6 w-full h-[44px] rounded-lg bg-[#0FA3B1] text-white text-sm font-medium hover:bg-[#0d8f9c] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0FA3B1] transition-colors flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
