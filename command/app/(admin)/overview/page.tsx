@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { Building2, Users, BookOpen, Activity, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { platformOverview, type OverviewResponse } from '@/lib/platform-api';
 
 // ─── Stat card ───────────────────────────────────────────────────────────────
@@ -19,25 +19,26 @@ interface StatCardProps {
   label: string;
   value: number | string;
   sub?: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  accent?: string;
+  alertLevel?: 'warning';
 }
 
-function StatCard({ label, value, sub, icon: Icon, accent = 'text-brand' }: StatCardProps) {
+function StatCard({ label, value, sub, alertLevel }: StatCardProps) {
+  const containerClass = alertLevel === 'warning'
+    ? 'bg-amber-50 border-amber-300'
+    : 'bg-white border-gray-200';
+
   return (
-    <div className="rounded-xl bg-white border border-gray-200 px-5 py-4 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-          <p className={`mt-1 font-heading text-3xl font-semibold ${accent}`}>
-            {typeof value === 'number' ? value.toLocaleString() : value}
-          </p>
-          {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
-        </div>
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-100">
-          <Icon size={18} className="text-gray-400" />
-        </span>
-      </div>
+    <div className={`rounded-xl border shadow-sm p-6 ${containerClass}`}>
+      <p
+        className="text-xs uppercase tracking-widest text-gray-400 mb-1"
+        style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+      >
+        {label}
+      </p>
+      <p className="font-heading text-3xl font-bold text-gray-900">
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </p>
+      {sub && <p className="text-sm text-gray-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -139,7 +140,7 @@ function AuditRow({ event }: { event: OverviewResponse['recent_audit_events'][nu
       <div className="min-w-0">
         <p className="text-sm font-medium text-gray-800 font-mono truncate">{event.action}</p>
         <p className="text-xs text-gray-400 mt-0.5 truncate">
-          {event.admin_user_email ?? 'system'}
+          {event.admin_name ?? 'system'}
           {event.organization_name ? ` · ${event.organization_name}` : ''}
         </p>
       </div>
@@ -172,21 +173,24 @@ export default function OverviewPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-48">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-brand" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="animate-pulse bg-gray-200 rounded-xl h-28" />
+        ))}
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center h-48 gap-3">
-        <p className="text-sm text-gray-500">{error ?? 'No data available.'}</p>
+      <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <AlertTriangle size={16} className="text-red-500 shrink-0" />
+        <span className="text-sm text-red-700">Failed to load overview data.</span>
         <button
           onClick={load}
-          className="flex items-center gap-2 text-sm text-brand hover:underline"
+          className="ml-auto text-sm font-medium text-red-700 hover:underline"
         >
-          <RefreshCw size={14} /> Retry
+          Retry
         </button>
       </div>
     );
@@ -213,27 +217,25 @@ export default function OverviewPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Organizations"
+          label="ORGANISATIONS"
           value={data.organizations.total}
-          icon={Building2}
+          sub={`${data.organizations.by_status?.active ?? 0} active`}
         />
         <StatCard
-          label="Total Users"
-          value={data.users.total}
-          icon={Users}
-        />
-        <StatCard
-          label="Active (30d)"
+          label="ACTIVE USERS"
           value={data.users.active_30_days}
-          sub={`${data.users.new_7_days.toLocaleString()} new this week`}
-          icon={Activity}
-          accent="text-teal-600"
+          sub={`+${data.users.new_7_days} this week`}
         />
         <StatCard
-          label="Workshops"
-          value={data.workshops.total}
-          sub={`${data.workshops.by_status.published ?? 0} published`}
-          icon={BookOpen}
+          label="WORKSHOPS"
+          value={data.workshops.by_status?.published ?? 0}
+          sub={`${data.workshops.by_status?.draft ?? 0} in draft`}
+        />
+        <StatCard
+          label="BILLING"
+          value="—"
+          sub={data.stripe_note}
+          alertLevel="warning"
         />
       </div>
 
