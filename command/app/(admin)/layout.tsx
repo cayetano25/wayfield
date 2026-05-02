@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAdminUser } from '@/contexts/AdminUserContext';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -22,14 +23,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!adminUser) return null;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <TopBar />
-      <div className="flex flex-1 pt-14">
-        <Sidebar />
-        <main className="flex-1 ml-56 bg-gray-50 min-h-[calc(100vh-56px)] overflow-y-auto">
-          <div className="px-8 py-8">{children}</div>
-        </main>
+    <ToastProvider>
+      <div className="min-h-screen flex flex-col">
+        <TopBar />
+        <div className="flex flex-1 pt-14">
+          <Sidebar />
+          <main className="flex-1 ml-56 bg-gray-50 min-h-[calc(100vh-56px)] overflow-y-auto">
+            <div className="px-8 py-8">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

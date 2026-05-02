@@ -84,6 +84,84 @@ export interface OverviewResponse {
   generated_at: string;
 }
 
+export type OrgStatus = 'active' | 'suspended' | 'inactive';
+export type PlanCode = 'free' | 'starter' | 'pro' | 'enterprise';
+
+export interface OrgSubscription {
+  plan_code: PlanCode;
+  status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+}
+
+// Shape returned by the list endpoint (full Eloquent model)
+export interface OrgListItem {
+  id: number;
+  name: string;
+  slug: string;
+  status: OrgStatus;
+  primary_contact_email: string | null;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+  workshops_count: number;
+  active_workshops_count: number;
+  subscription: (OrgSubscription & { id: number; organization_id: number }) | null;
+  organization_users: Array<{ id: number; user_id: number; role: string; is_active: boolean }>;
+}
+
+// Shape returned by the detail endpoint (custom response)
+export interface OrgDetail {
+  id: number;
+  name: string;
+  slug: string;
+  status: OrgStatus;
+  contact_email: string | null;
+  contact_phone: string | null;
+  created_at: string;
+  updated_at: string;
+  subscription: OrgSubscription | null;
+  usage: {
+    workshop_count: number;
+    workshop_limit: number | null;
+    participant_count: number;
+    participant_limit: number | null;
+    manager_count: number;
+    manager_limit: number | null;
+  };
+}
+
+export interface FeatureFlag {
+  feature_key: string;
+  description: string | null;
+  is_enabled: boolean;
+  source: 'plan_default' | 'manual_override';
+}
+
+export interface PlatformAuditLog {
+  id: number;
+  action: string;
+  entity_type: string | null;
+  entity_id: number | null;
+  admin_user_id: number | null;
+  admin_name: string | null;
+  organization_id: number | null;
+  organization_name: string | null;
+  metadata_json: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+  from: number | null;
+  to: number | null;
+}
+
 // ─── API methods ──────────────────────────────────────────────────────────────
 
 export const platformAuth = {
@@ -95,4 +173,29 @@ export const platformAuth = {
 
 export const platformOverview = {
   get: () => api.get<OverviewResponse>('/overview'),
+};
+
+export const platformOrganizations = {
+  list: (params?: { search?: string; plan?: string; status?: string; page?: number }) =>
+    api.get<Paginated<OrgListItem>>('/organizations', { params }),
+  get: (id: number) => api.get<OrgDetail>(`/organizations/${id}`),
+  updateStatus: (id: number, status: OrgStatus, reason: string) =>
+    api.patch(`/organizations/${id}/status`, { status, reason }),
+  changePlan: (id: number, plan_code: PlanCode, reason: string) =>
+    api.post(`/organizations/${id}/billing/plan`, { plan_code, reason }),
+  getFeatureFlags: (id: number) =>
+    api.get<FeatureFlag[]>(`/organizations/${id}/feature-flags`),
+  setFeatureFlag: (id: number, feature_key: string, is_enabled: boolean) =>
+    api.post(`/organizations/${id}/feature-flags`, { feature_key, is_enabled }),
+};
+
+export const platformAuditLogs = {
+  list: (params?: {
+    admin_user_id?: number;
+    organization_id?: number;
+    action?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+  }) => api.get<Paginated<PlatformAuditLog>>('/audit-logs', { params }),
 };
