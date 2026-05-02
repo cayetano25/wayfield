@@ -171,6 +171,7 @@ interface DashboardWorkshop {
   leaders_count?: number;
   header_image_url?: string | null;
   public_page_enabled?: boolean;
+  public_slug?: string | null;
   join_code?: string;
 }
 
@@ -237,8 +238,8 @@ function NextUpWorkshopCard({
       : null;
   const atCapacityWarning = utilization !== null && utilization >= 90;
 
-  const publicPageEnabled = workshop.public_page_enabled !== false;
-  const publicHref = workshop.join_code ? `/workshops/${workshop.join_code}` : '#';
+  const publicPageEnabled = workshop.public_page_enabled !== false && !!workshop.public_slug;
+  const publicHref = workshop.public_slug ? `/workshops/${workshop.public_slug}` : '#';
 
   return (
     <div

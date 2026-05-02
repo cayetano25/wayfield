@@ -19,8 +19,8 @@ function SingleAvatar({ leader }: { leader: SessionLeaderSummary }) {
       <Image
         src={leader.profile_image_url}
         alt={`${leader.first_name} ${leader.last_name}`}
-        width={20}
-        height={20}
+        width={28}
+        height={28}
         className="rounded-full object-cover"
         style={{ border: '1.5px solid white' }}
         onError={() => setFailed(true)}
@@ -32,11 +32,11 @@ function SingleAvatar({ leader }: { leader: SessionLeaderSummary }) {
     <div
       className="rounded-full flex items-center justify-center"
       style={{
-        width: 20,
-        height: 20,
+        width: 28,
+        height: 28,
         backgroundColor: '#0FA3B1',
         border: '1.5px solid white',
-        fontSize: 7,
+        fontSize: 10,
         fontFamily: 'var(--font-heading, Sora, sans-serif)',
         fontWeight: 600,
         color: 'white',
@@ -60,7 +60,7 @@ export function LeaderAvatarStack({ leaders, maxDisplay = 3 }: Props) {
       {visible.map((leader, i) => (
         <div
           key={i}
-          style={{ marginLeft: i === 0 ? 0 : -6, position: 'relative', zIndex: maxDisplay - i }}
+          style={{ marginLeft: i === 0 ? 0 : -8, position: 'relative', zIndex: maxDisplay - i }}
         >
           <SingleAvatar leader={leader} />
         </div>
@@ -69,12 +69,12 @@ export function LeaderAvatarStack({ leaders, maxDisplay = 3 }: Props) {
         <div
           className="rounded-full flex items-center justify-center"
           style={{
-            width: 20,
-            height: 20,
+            width: 28,
+            height: 28,
             backgroundColor: '#9CA3AF',
             border: '1.5px solid white',
-            marginLeft: -6,
-            fontSize: 7,
+            marginLeft: -8,
+            fontSize: 10,
             color: 'white',
             fontWeight: 600,
           }}

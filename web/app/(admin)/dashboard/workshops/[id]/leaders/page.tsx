@@ -5,13 +5,14 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import {
   Plus, X, Globe, Phone, UserCheck, ChevronDown, SendHorizonal,
-  User as UserIcon, UserPlus,
+  User as UserIcon, UserPlus, CheckCircle, Mail,
 } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { usePage } from '@/contexts/PageContext';
 import { useUser } from '@/contexts/UserContext';
 import { apiGet, apiPost, apiDelete, ApiError } from '@/lib/api/client';
+import { checkEmailExists } from '@/lib/api/invitations';
 import type { AdminUser } from '@/lib/auth/session';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -165,6 +166,8 @@ function InviteModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [emailHint, setEmailHint] = useState<'exists' | 'new' | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -172,9 +175,21 @@ function InviteModal({
       setForm(EMPTY_INVITE);
       setErrors({});
       setSuccess(false);
+      setEmailHint(null);
       setTimeout(() => emailRef.current?.focus(), 50);
     }
   }, [open]);
+
+  async function handleEmailBlur() {
+    const trimmed = form.invited_email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailHint(null); return; }
+    setEmailChecking(true);
+    try {
+      const exists = await checkEmailExists(trimmed);
+      setEmailHint(exists ? 'exists' : 'new');
+    } catch { setEmailHint(null); }
+    finally { setEmailChecking(false); }
+  }
 
   function setF<K extends keyof InviteForm>(k: K, v: string) {
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -250,22 +265,40 @@ function InviteModal({
         </div>
       ) : (
         <form id="invite-form" onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            ref={emailRef}
-            label="Email"
-            type="email"
-            value={form.invited_email}
-            onChange={(e) => setF('invited_email', e.target.value)}
-            placeholder="leader@example.com"
-            error={errors.invited_email}
-          />
+          <div className="flex flex-col gap-1">
+            <Input
+              ref={emailRef}
+              label="Email"
+              type="email"
+              value={form.invited_email}
+              onChange={(e) => { setF('invited_email', e.target.value); setEmailHint(null); }}
+              onBlur={handleEmailBlur}
+              placeholder="leader@example.com"
+              error={errors.invited_email}
+            />
+            {!errors.invited_email && emailChecking && (
+              <p className="text-xs text-medium-gray">Checking…</p>
+            )}
+            {!errors.invited_email && !emailChecking && emailHint === 'exists' && (
+              <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                Has a Wayfield account — they&apos;ll receive an email invitation
+              </p>
+            )}
+            {!errors.invited_email && !emailChecking && emailHint === 'new' && (
+              <p className="flex items-center gap-1.5 text-xs text-medium-gray">
+                <Mail className="w-3.5 h-3.5 shrink-0" />
+                No Wayfield account yet — they&apos;ll be prompted to create one
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="First Name"
               value={form.invited_first_name}
               onChange={(e) => setF('invited_first_name', e.target.value)}
-              placeholder="They'll fill this in"
+              placeholder="Optional"
             />
             <Input
               label="Last Name"
@@ -274,10 +307,9 @@ function InviteModal({
               placeholder="Optional"
             />
           </div>
-
-          <div className="rounded-lg bg-surface border border-border-gray px-4 py-3 text-xs text-medium-gray leading-relaxed">
-            The leader completes their own profile after accepting — you only need their email to get started.
-          </div>
+          <p className="text-xs text-medium-gray -mt-3">
+            Optional — helps personalize the invitation email
+          </p>
         </form>
       )}
     </Modal>
