@@ -28,7 +28,7 @@ function makeAdmin(string $role = 'super_admin', bool $active = true): AdminUser
 // ─── Unauthenticated / non-admin ──────────────────────────────────────────────
 
 test('unauthenticated request to platform endpoint returns 401', function () {
-    $this->getJson('/api/v1/platform/organizations')
+    $this->getJson('/api/platform/v1/organizations')
         ->assertStatus(401);
 });
 
@@ -38,7 +38,7 @@ test('regular user (no AdminUser record) is denied with 401', function () {
     $token = $user->createToken('tenant_token', ['*'])->plainTextToken;
 
     $this->withToken($token)
-        ->getJson('/api/v1/platform/organizations')
+        ->getJson('/api/platform/v1/organizations')
         ->assertStatus(401);
 });
 
@@ -46,7 +46,7 @@ test('inactive platform admin is denied with 403', function () {
     $admin = makeAdmin('super_admin', false);
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/organizations')
+        ->getJson('/api/platform/v1/organizations')
         ->assertStatus(403);
 });
 
@@ -57,7 +57,7 @@ test('active super_admin can access organization list', function () {
     Organization::factory()->count(3)->create();
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/organizations')
+        ->getJson('/api/platform/v1/organizations')
         ->assertStatus(200)
         ->assertJsonStructure(['data', 'total', 'current_page']);
 });
@@ -66,7 +66,7 @@ test('support role platform admin can access organizations', function () {
     $admin = makeAdmin('support');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/organizations')
+        ->getJson('/api/platform/v1/organizations')
         ->assertStatus(200);
 });
 
@@ -76,7 +76,7 @@ test('billing role cannot access audit-logs (restricted to super_admin and admin
     $admin = makeAdmin('billing');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/audit-logs')
+        ->getJson('/api/platform/v1/audit-logs')
         ->assertStatus(403);
 });
 
@@ -84,7 +84,7 @@ test('ops role can access audit-logs', function () {
     $admin = makeAdmin('admin');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/audit-logs')
+        ->getJson('/api/platform/v1/audit-logs')
         ->assertStatus(200);
 });
 
@@ -92,7 +92,7 @@ test('super_admin can access audit-logs', function () {
     $admin = makeAdmin('super_admin');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/audit-logs')
+        ->getJson('/api/platform/v1/audit-logs')
         ->assertStatus(200);
 });
 
@@ -100,7 +100,7 @@ test('support role cannot access financial invoices', function () {
     $admin = makeAdmin('support');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/financials/invoices')
+        ->getJson('/api/platform/v1/financials/invoices')
         ->assertStatus(403);
 });
 
@@ -108,7 +108,7 @@ test('finance role can access financial invoices', function () {
     $admin = makeAdmin('billing');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/financials/invoices')
+        ->getJson('/api/platform/v1/financials/invoices')
         ->assertStatus(200);
 });
 
@@ -116,7 +116,7 @@ test('super_admin can access system health endpoint', function () {
     $admin = makeAdmin('super_admin');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/health')
+        ->getJson('/api/platform/v1/health')
         ->assertStatus(200);
 });
 
@@ -124,7 +124,7 @@ test('support role cannot access system health endpoint', function () {
     $admin = makeAdmin('support');
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/health')
+        ->getJson('/api/platform/v1/health')
         ->assertStatus(403);
 });
 
@@ -135,7 +135,7 @@ test('platform admin can view a specific organization', function () {
     $org = Organization::factory()->create();
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson("/api/v1/platform/organizations/{$org->id}")
+        ->getJson("/api/platform/v1/organizations/{$org->id}")
         ->assertStatus(200)
         ->assertJsonFragment(['id' => $org->id]);
 });
@@ -147,7 +147,7 @@ test('platform admin can list all users', function () {
     User::factory()->count(5)->create();
 
     $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/users')
+        ->getJson('/api/platform/v1/users')
         ->assertStatus(200)
         ->assertJsonStructure(['data', 'total', 'current_page']);
 });
@@ -157,7 +157,7 @@ test('platform admin user detail never exposes password_hash', function () {
     $targetUser = User::factory()->create();
 
     $response = $this->actingAs($admin, 'platform_admin')
-        ->getJson("/api/v1/platform/users/{$targetUser->id}")
+        ->getJson("/api/platform/v1/users/{$targetUser->id}")
         ->assertStatus(200);
 
     $this->assertArrayNotHasKey('password_hash', $response->json());

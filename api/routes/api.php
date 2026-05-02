@@ -23,7 +23,6 @@ use App\Http\Controllers\Api\V1\WaitlistPaymentController;
 use App\Http\Controllers\Api\V1\WorkshopPriceTierController;
 use App\Http\Controllers\Api\V1\WorkshopPricingController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
-use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
 use App\Http\Controllers\Webhooks\StripeWebhookController as StripeConnectWebhookController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscoveryController;
@@ -49,15 +48,6 @@ use App\Http\Controllers\Api\V1\OrgMemberController;
 use App\Http\Controllers\Api\V1\ParticipantController;
 use App\Http\Controllers\Api\V1\ParticipantDashboardController;
 use App\Http\Controllers\Api\V1\PlansController;
-use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
-use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
-use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
-use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
-use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
-use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
-use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
-use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
-use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\PublicCategoryController;
 use App\Http\Controllers\Api\V1\PublicDiscoverController;
@@ -571,78 +561,6 @@ Route::prefix('v1')->group(function () {
 
     // ─── Local file upload handler (local env only, no auth required) ───────────
     Route::post('files/local-upload', [FileUploadController::class, 'localUpload']);
-
-    // ─── Platform Admin (Command Center — legacy v1 platform routes) ─────────
-    // Auth: platform_admin guard (AdminUser tokens only — tenant tokens rejected).
-    // Role values updated to match admin_users.role ENUM: admin, billing (not ops/finance).
-    Route::prefix('platform')
-        ->middleware(['auth:platform_admin', 'platform.admin'])
-        ->group(function () {
-
-            // Organizations
-            Route::get('organizations', [PlatformOrganizationController::class, 'index']);
-            Route::get('organizations/{organization}', [PlatformOrganizationController::class, 'show']);
-
-            // Users
-            Route::get('users', [PlatformUserController::class, 'index']);
-            Route::get('users/{user}', [PlatformUserController::class, 'show']);
-
-            // Audit logs (super_admin and admin only)
-            Route::middleware('platform.admin:super_admin,admin')
-                ->group(function () {
-                    Route::get('audit-logs', [PlatformAuditController::class, 'index']);
-                });
-
-            // Support tickets
-            Route::get('support/tickets', [PlatformSupportController::class, 'index']);
-            Route::get('support/tickets/{ticket}', [PlatformSupportController::class, 'show']);
-            Route::patch('support/tickets/{ticket}', [PlatformSupportController::class, 'update']);
-            Route::post('support/tickets/{ticket}/messages', [PlatformSupportController::class, 'addMessage']);
-
-            // Financials (super_admin and billing only)
-            Route::middleware('platform.admin:super_admin,billing')
-                ->group(function () {
-                    Route::get('financials/invoices', [PlatformFinancialController::class, 'invoices']);
-                    Route::get('financials/subscriptions', [PlatformFinancialController::class, 'subscriptions']);
-                });
-
-            // System health (super_admin and admin only)
-            Route::middleware('platform.admin:super_admin,admin')
-                ->group(function () {
-                    Route::get('health', [PlatformHealthController::class, 'index']);
-                    Route::get('health/security-events', [PlatformHealthController::class, 'securityEvents']);
-                    Route::get('health/login-events', [PlatformHealthController::class, 'loginEvents']);
-                });
-
-            // SSO configuration (Phase 9)
-            Route::get('organizations/{organization}/sso', [PlatformSsoController::class, 'show']);
-            Route::middleware('platform.admin:super_admin,admin')
-                ->group(function () {
-                    Route::put('organizations/{organization}/sso', [PlatformSsoController::class, 'update']);
-                });
-
-            // Webhook visibility (Phase 9)
-            Route::get('organizations/{organization}/webhooks', [PlatformWebhookController::class, 'index']);
-
-            // ─── Payment admin (super_admin and admin only) ───────────────────
-            Route::middleware('platform.admin:super_admin,admin')
-                ->group(function () {
-                    Route::post(
-                        'organizations/{organization}/enable-payments',
-                        [PlatformPaymentController::class, 'enablePayments']
-                    );
-                    Route::post(
-                        'organizations/{organization}/disable-payments',
-                        [PlatformPaymentController::class, 'disablePayments']
-                    );
-                });
-
-            // System Announcements (Command Center)
-            Route::get('system-announcements', [PlatformAnnouncementController::class, 'index']);
-            Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
-            Route::patch('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'update']);
-            Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
-        });
 });
 
 // ─── Stripe Connect webhooks (outside v1 prefix — no auth, signature-verified) ─
