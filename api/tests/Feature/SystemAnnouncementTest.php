@@ -124,7 +124,7 @@ test('test_platform_admin_can_create_announcement', function () {
     ];
 
     $this->actingAs($admin, 'platform_admin')
-        ->postJson('/api/v1/platform/system-announcements', $payload)
+        ->postJson('/api/platform/v1/system-announcements', $payload)
         ->assertStatus(201);
 
     $this->assertDatabaseHas('system_announcements', [
@@ -142,7 +142,7 @@ test('test_super_admin_can_create_announcement', function () {
     $admin = makeAnnouncementAdmin('super_admin');
 
     $this->actingAs($admin, 'platform_admin')
-        ->postJson('/api/v1/platform/system-announcements', [
+        ->postJson('/api/platform/v1/system-announcements', [
             'title' => 'Test',
             'message' => 'Test message',
             'announcement_type' => 'info',
@@ -155,7 +155,7 @@ test('test_support_role_cannot_create_announcement', function () {
     $admin = makeAnnouncementAdmin('support');
 
     $this->actingAs($admin, 'platform_admin')
-        ->postJson('/api/v1/platform/system-announcements', [
+        ->postJson('/api/platform/v1/system-announcements', [
             'title' => 'Test',
             'message' => 'Test message',
             'announcement_type' => 'info',
@@ -169,7 +169,7 @@ test('ops_role_cannot_create_announcement', function () {
     $admin = makeAnnouncementAdmin('readonly');
 
     $this->actingAs($admin, 'platform_admin')
-        ->postJson('/api/v1/platform/system-announcements', [
+        ->postJson('/api/platform/v1/system-announcements', [
             'title' => 'Test',
             'message' => 'Test message',
             'announcement_type' => 'info',
@@ -183,7 +183,7 @@ test('super_admin_can_update_announcement', function () {
     $announcement = makeAnnouncement();
 
     $this->actingAs($admin, 'platform_admin')
-        ->patchJson("/api/v1/platform/system-announcements/{$announcement->id}", [
+        ->patchJson("/api/platform/v1/system-announcements/{$announcement->id}", [
             'is_active' => false,
         ])
         ->assertStatus(200)
@@ -200,7 +200,7 @@ test('support_role_cannot_update_announcement', function () {
     $announcement = makeAnnouncement();
 
     $this->actingAs($admin, 'platform_admin')
-        ->patchJson("/api/v1/platform/system-announcements/{$announcement->id}", [
+        ->patchJson("/api/platform/v1/system-announcements/{$announcement->id}", [
             'is_active' => false,
         ])
         ->assertStatus(403);
@@ -211,7 +211,7 @@ test('super_admin_can_delete_announcement', function () {
     $announcement = makeAnnouncement();
 
     $this->actingAs($admin, 'platform_admin')
-        ->deleteJson("/api/v1/platform/system-announcements/{$announcement->id}")
+        ->deleteJson("/api/platform/v1/system-announcements/{$announcement->id}")
         ->assertStatus(204);
 
     $this->assertDatabaseMissing('system_announcements', ['id' => $announcement->id]);
@@ -227,7 +227,7 @@ test('non_super_admin_cannot_delete_announcement', function () {
     $announcement = makeAnnouncement();
 
     $this->actingAs($admin, 'platform_admin')
-        ->deleteJson("/api/v1/platform/system-announcements/{$announcement->id}")
+        ->deleteJson("/api/platform/v1/system-announcements/{$announcement->id}")
         ->assertStatus(403);
 
     $this->assertDatabaseHas('system_announcements', ['id' => $announcement->id]);
@@ -240,7 +240,7 @@ test('platform_admin_index_returns_all_announcements_paginated', function () {
     makeAnnouncement(['title' => 'Inactive one', 'is_active' => false]);
 
     $response = $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/system-announcements')
+        ->getJson('/api/platform/v1/system-announcements')
         ->assertStatus(200);
 
     expect($response->json('total'))->toBe(2);
@@ -253,7 +253,7 @@ test('platform_admin_index_filters_by_is_active', function () {
     makeAnnouncement(['is_active' => false]);
 
     $response = $this->actingAs($admin, 'platform_admin')
-        ->getJson('/api/v1/platform/system-announcements?is_active=true')
+        ->getJson('/api/platform/v1/system-announcements?is_active=true')
         ->assertStatus(200);
 
     expect($response->json('total'))->toBe(1);

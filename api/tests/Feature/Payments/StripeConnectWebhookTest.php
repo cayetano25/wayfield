@@ -311,7 +311,7 @@ test('platform admin can enable payments for an org', function () {
     $adminUser = \App\Models\AdminUser::factory()->create(['role' => 'admin']);
 
     $this->actingAs($adminUser, 'platform_admin')
-        ->postJson("/api/v1/platform/organizations/{$org->id}/enable-payments")
+        ->postJson("/api/platform/v1/organizations/{$org->id}/enable-payments")
         ->assertOk()
         ->assertJsonPath('data.org_payments_enabled', true);
 
@@ -339,7 +339,7 @@ test('platform admin can disable payments for an org', function () {
     $adminUser = \App\Models\AdminUser::factory()->create(['role' => 'admin']);
 
     $this->actingAs($adminUser, 'platform_admin')
-        ->postJson("/api/v1/platform/organizations/{$org->id}/disable-payments")
+        ->postJson("/api/platform/v1/organizations/{$org->id}/disable-payments")
         ->assertOk()
         ->assertJsonPath('data.org_payments_enabled', false);
 
@@ -360,6 +360,6 @@ test('tenant user cannot call platform payment endpoints', function () {
     // A regular (tenant) user hits a platform-admin-only route.
     // The platform.admin middleware rejects with 403 (not a platform admin token).
     $this->actingAs($user)
-        ->postJson("/api/v1/platform/organizations/{$org->id}/enable-payments")
+        ->postJson("/api/platform/v1/organizations/{$org->id}/enable-payments")
         ->assertStatus(403);
 });
