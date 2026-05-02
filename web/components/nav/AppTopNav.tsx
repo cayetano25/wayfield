@@ -71,6 +71,9 @@ export function AppTopNav() {
             {/* Explore Workshops — always visible */}
             <NavLink href="/discover" label="Explore Workshops" />
 
+            {/* Pricing — always visible */}
+            <NavLink href="/pricing" label="Pricing" />
+
             {/* My Workshops — all authenticated users */}
             {nav.isAuthenticated && (
               <NavLink href="/my-workshops" label="My Workshops" />
