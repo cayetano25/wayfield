@@ -38,7 +38,7 @@ class PlatformConfigController extends Controller
         ]);
 
         $old = $record->config_value;
-        $new = $request->input('value');
+        $new = $request->input('value') ?? '';
 
         $record->update([
             'config_value'         => $new,
@@ -59,6 +59,6 @@ class PlatformConfigController extends Controller
             ]
         );
 
-        return response()->json($record->fresh(['config_key', 'config_value', 'description', 'updated_at']));
+        return response()->json($record->fresh()->only(['config_key', 'config_value', 'description', 'updated_at']));
     }
 }

@@ -42,7 +42,9 @@ class PlatformAdminUserController extends Controller
             return $denied;
         }
 
-        $admins = AdminUser::orderByRaw("FIELD(role,'super_admin','admin','support','billing','readonly')")
+        $admins = AdminUser::orderByRaw(
+            "CASE role WHEN 'super_admin' THEN 1 WHEN 'admin' THEN 2 WHEN 'support' THEN 3 WHEN 'billing' THEN 4 ELSE 5 END"
+        )
             ->orderBy('created_at')
             ->get()
             ->map(fn (AdminUser $a) => $this->formatAdmin($a));
