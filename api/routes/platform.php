@@ -81,8 +81,8 @@ Route::prefix('platform/v1')->group(function () {
 
         // Financials — super_admin and billing only
         Route::middleware('platform.admin:super_admin,billing')->group(function () {
+            Route::get('financials/overview', [PlatformFinancialController::class, 'overview']);
             Route::get('financials/invoices', [PlatformFinancialController::class, 'invoices']);
-            Route::get('financials/subscriptions', [PlatformFinancialController::class, 'subscriptions']);
         });
 
         // System health — super_admin and admin only
