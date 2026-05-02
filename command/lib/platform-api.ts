@@ -199,3 +199,89 @@ export const platformAuditLogs = {
     page?: number;
   }) => api.get<Paginated<PlatformAuditLog>>('/audit-logs', { params }),
 };
+
+// ─── User management types ────────────────────────────────────────────────────
+
+export interface UserListItem {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  email_verified_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  organization_count: number;
+}
+
+export interface UserOrg {
+  id: number;
+  name: string;
+  role: string;
+  joined_at: string | null;
+}
+
+export interface LoginEvent {
+  ip_address: string;
+  user_agent: string;
+  outcome: string;
+  created_at: string;
+}
+
+export interface UserDetail {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  email_verified_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  organizations: UserOrg[];
+  login_history: LoginEvent[];
+}
+
+export const platformUsers = {
+  list: (params?: { search?: string; page?: number }) =>
+    api.get<Paginated<UserListItem>>('/users', { params }),
+  get: (id: number) => api.get<UserDetail>(`/users/${id}`),
+};
+
+// ─── Financials types ─────────────────────────────────────────────────────────
+
+export interface FinancialsOverview {
+  mrr_cents: number | null;
+  arr_cents: number | null;
+  subscriptions: {
+    active: number;
+    trialing: number;
+    past_due: number;
+    canceled: number;
+    by_plan: {
+      free: number;
+      starter: number;
+      pro: number;
+      enterprise: number;
+    };
+  };
+  stripe_webhook_connected: boolean;
+}
+
+export interface InvoiceListItem {
+  id: number;
+  stripe_invoice_id: string;
+  organization_id: number;
+  organization_name: string | null;
+  amount_due: number;
+  amount_paid: number;
+  currency: string;
+  status: string;
+  invoice_pdf_url: string | null;
+  invoice_date: string | null;
+}
+
+export const platformFinancials = {
+  overview: () => api.get<FinancialsOverview>('/financials/overview'),
+  invoices: (params?: { status?: string; organization_id?: number; page?: number }) =>
+    api.get<Paginated<InvoiceListItem>>('/financials/invoices', { params }),
+};
