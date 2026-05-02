@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Platform\V1\OverviewController;
 use App\Http\Controllers\Platform\V1\PlatformAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,8 @@ Route::prefix('platform/v1')->group(function () {
     Route::middleware(['auth:platform_admin', 'platform.admin'])->group(function () {
         Route::post('auth/logout', [PlatformAuthController::class, 'logout']);
         Route::get('auth/me', [PlatformAuthController::class, 'me']);
+
+        Route::get('overview', [OverviewController::class, 'index']);
 
         // ─── Impersonation stub (not yet active) ─────────────────────────────
         // Wired so any future activation automatically inherits audit logging.
