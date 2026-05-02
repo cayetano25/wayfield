@@ -1,134 +1,336 @@
 # Command Center — Navigation Specification
 ## docs/command_center/NAVIGATION_SPEC.md
 
-> **Status:** Specification only. The Command Center frontend has not been built.
-> This document defines the navigation structure to be implemented in CC-Web Phases 1–4.
+> **Status:** Specification only. CC-Web frontend not yet built.
+> **Authority:** This file is canonical. No CC phase may add, remove, or rename
+> navigation items without a corresponding update to this file and a
+> DECISIONS.md entry. Claude Code must read this file before writing any
+> navigation or layout code.
+
+---
+
+## Design Philosophy
+
+The Command Center navigation follows **Apple Human Interface Guidelines (HIG)**
+principles adapted for a web application context:
+
+- **Clarity:** Every navigation item is immediately understandable. Labels are nouns,
+  not verbs. Icons reinforce meaning, never replace it.
+- **Deference:** The interface defers to the content. Navigation chrome is present
+  but unobtrusive — dark and receding so the main content area commands attention.
+- **Depth and Hierarchy:** The persistent sidebar represents the top level. Within each
+  section, depth is added through tabs (organisation detail) and slide-overs (user detail),
+  not through nested sidebar items.
+- **Feedback:** Every navigation action and state change has immediate, clear feedback.
+- **Consistency:** Every screen in the CC shares the same shell, the same top bar,
+  and the same sidebar. There are no exceptions.
 
 ---
 
 ## Shell Structure
 
-The Command Center uses a **persistent dark sidebar shell** on all authenticated screens.
-This visually distinguishes it from the tenant web admin (`web/`) which uses a lighter theme.
-┌─────────────────────────────────────────────────────────────┐
-│  COMMAND CENTER          [Admin Name] [Role badge] [Logout] │  ← Top bar
-├──────────────┬──────────────────────────────────────────────┤
-│              │                                              │
-│  SIDEBAR     │  MAIN CONTENT AREA                          │
-│  (dark)      │                                              │
-│              │                                              │
-│  Nav items   │                                              │
-│              │                                              │
-└──────────────┴──────────────────────────────────────────────┘
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ▪ WAYFIELD  Command Center    [Admin Full Name] [Role] [Logout] │  ← Top bar
+├───────────────┬──────────────────────────────────────────────────┤
+│               │                                                  │
+│  SIDEBAR      │  MAIN CONTENT AREA                              │
+│  dark bg      │  light bg (#F8F9FA or white)                    │
+│  w-56 fixed   │  flex-1, overflow-y-auto                        │
+│               │  px-8 py-6                                      │
+│  nav items    │                                                  │
+│               │  [Page title area]                              │
+│  ─────────    │  [Content]                                      │
+│  [Role badge] │                                                  │
+│  [Logout]     │                                                  │
+│               │                                                  │
+└───────────────┴──────────────────────────────────────────────────┘
+```
 
-The top bar shows the admin's name, their role badge, and a logout button.
-The sidebar is always visible on authenticated screens.
+### Top Bar
+- Left: Wayfield logo mark (small, white) + "WAYFIELD" wordmark + separator + "Command Center" (small, gray-400, font-mono)
+- Right (flex row, gap-4): Admin full name (white, font-medium) → Role badge → Logout button
+- Background: same dark color as sidebar (`#111827` or `gray-900`)
+- Height: 56px fixed
+- Full width (spans sidebar + content)
+
+### Sidebar
+- Background: `#111827` (gray-900) — dark, not black
+- Width: 224px (w-56) fixed, full viewport height
+- Padding: `px-4 py-6`
+- Logo area at top: 48px height
+- Navigation sections below logo
+- Role badge + admin name at the very bottom of sidebar (above nothing)
+- No horizontal scrolling, no collapse/expand in this phase
+
+### Main Content Area
+- Background: `#F9FAFB` (gray-50)
+- Left margin: 224px (sidebar width)
+- Top margin: 56px (top bar height)
+- Padding: `px-8 py-8`
+- Max width: none — fills available space
+- Page title pattern: H1 in Sora, 24px, gray-900, with optional subtitle in Plus Jakarta Sans, 14px, gray-500
 
 ---
 
 ## Sidebar Navigation Items
 
-Listed in display order. Role visibility noted where an item is restricted.
+Listed in display order. Role visibility determines whether items render at all.
+**Hidden items are not rendered** — they are not greyed out, not disabled, not shown
+with a lock icon. They simply do not appear. This is Apple HIG's approach to progressive
+disclosure: don't present options that aren't available.
 
-| Item | Icon | Route | Visible to | Built in |
-|---|---|---|---|---|
-| Overview | Dashboard | `/` | All roles | CC-Web 1 |
-| Organisations | Building | `/organizations` | All except `readonly` (read only) | CC-Web 2 |
-| Users | Users | `/users` | `super_admin`, `admin`, `support` | CC-Web 3 |
-| Financials | CreditCard | `/financials` | `super_admin`, `billing` | CC-Web 3 |
-| Support | Ticket | `/support` | `super_admin`, `admin`, `support` | CC-Web 3 |
-| Automations | Zap | `/automations` | `super_admin`, `admin` | CC-Web 4 |
-| Security | Shield | `/security` | `super_admin`, `admin`, `support` | CC-Web 4 |
-| Audit Log | ClipboardList | `/audit` | `super_admin`, `admin` | CC-Web 4 |
-| Settings | Settings | `/settings` | `super_admin` | CC-Web 4 |
+### Section: Platform (no section label in sidebar — these are top-level items)
 
-**`readonly` role**: sees Overview and Organisations (read-only) only.
-All mutation controls are hidden or disabled for `readonly`.
+| Item | Icon (lucide-react) | Route | Visible to |
+|---|---|---|---|
+| Overview | `LayoutDashboard` | `/` | All roles |
+| Organisations | `Building2` | `/organizations` | All roles |
+| Users | `Users` | `/users` | `super_admin`, `admin`, `support` |
+| Financials | `CreditCard` | `/financials` | `super_admin`, `billing` |
+| Support | `MessageCircle` | `/support` | `super_admin`, `admin`, `support` |
+
+### Divider (thin horizontal rule, gray-800)
+
+### Section: Operations (no label)
+
+| Item | Icon (lucide-react) | Route | Visible to |
+|---|---|---|---|
+| Automations | `Zap` | `/automations` | `super_admin`, `admin` |
+| Security | `Shield` | `/security` | `super_admin`, `admin`, `support` |
+| Audit Log | `ClipboardList` | `/audit` | `super_admin`, `admin` |
+| Settings | `Settings` | `/settings` | `super_admin` only |
 
 ---
 
-## Screen Inventory by Phase
+## Navigation Item States
 
-### CC-Web Phase 1 — Auth, Shell, Overview
+### Active State
+- Left border: 2px solid `#0FA3B1` (Primary Teal)
+- Background: `rgba(15, 163, 177, 0.10)` (teal at 10% opacity)
+- Icon: `#0FA3B1`
+- Label: white, font-medium
 
-| Screen | Route | Description |
-|---|---|---|
-| Login | `/login` | Dark-themed login form. Calls `POST /api/platform/v1/auth/login`. No registration flow — admin accounts are created by `super_admin`. |
-| Overview Dashboard | `/` | Platform health metrics: total organisations by plan, MRR, active users (30-day), recent signups. Stat cards with trends. Plan distribution donut chart. Recent audit events list. |
+### Inactive State
+- No left border
+- No background
+- Icon: `#6B7280` (gray-500)
+- Label: `#9CA3AF` (gray-400), font-normal
 
-### CC-Web Phase 2 — Organisation Management
+### Hover State (inactive items only)
+- Background: `rgba(255,255,255,0.05)`
+- Icon: `#D1D5DB` (gray-300)
+- Label: `#D1D5DB`
+- Transition: 150ms ease
 
-| Screen | Route | Description |
-|---|---|---|
-| Organisations List | `/organizations` | Filterable table: name, plan badge, status, participant count, workshop count, last active. Search by name or email. Filter by plan and status. |
-| Organisation Detail | `/organizations/{id}` | Tabs: Overview · Billing · Feature Flags · Usage · Audit. Overview shows contact info, plan, workshop count. |
-| Organisation > Billing tab | `/organizations/{id}?tab=billing` | Plan display, invoice list. Plan change modal (billing/super_admin only). Link to Stripe. |
-| Organisation > Feature Flags tab | `/organizations/{id}?tab=flags` | List of feature flags with toggle switches. Each toggle shows source (plan_default vs manual_override). Toggle writes audit log. Admin/super_admin only. |
-| Organisation > Usage tab | `/organizations/{id}?tab=usage` | Workshop count vs limit, participant count vs limit, manager count vs limit. Usage bars with thresholds. |
+### Item Dimensions
+- Height: 40px (10rem) — minimum 44px touch target area (Apple HIG)
+- Padding: `px-3 py-2`
+- Icon size: 18px
+- Icon-to-label gap: `gap-3`
+- Border radius: `rounded-lg`
 
-### CC-Web Phase 3 — Users, Financials, Support
+---
 
-| Screen | Route | Description |
-|---|---|---|
-| Users List | `/users` | All tenant users. Search by email. Filterable by org. Table: name, email, orgs (count), last login, verified status. |
-| User Detail (slide-over) | (triggered from list) | User detail slide-over: profile, org memberships with roles, login history (last 10 events from `login_events`). |
-| Financials Overview | `/financials` | MRR and ARR summary cards. Subscription count by plan and status. Invoice list (from `stripe_invoices`). Note: data accuracy depends on Stripe webhook wiring (Q4). |
-| Support | `/support` | Links to external support tool (Freshdesk). Ticket schema exists in DB but CC frontend will link externally rather than building a ticket UI. |
+## Role Badges
 
-### CC-Web Phase 4 — Automations, Security, Audit, Settings
+Role badges appear in the top bar (next to admin name) and in Settings > Admin Users.
+Shape: small pill, font-mono, uppercase, 11px, letter-spacing-wide.
 
-| Screen | Route | Description |
-|---|---|---|
-| Automations List | `/automations` | List of automation rules across all organisations. Filter by org, trigger type, status. Note: rules exist but the execution engine is not implemented (Q8). |
-| Automation Detail / Create | `/automations/new`, `/automations/{id}` | Rule CRUD: trigger selector, action selector, condition editor, active toggle. |
-| Security Events | `/security` | `security_events` table display. Filter by severity, event type, date. Colour-coded severity badges. |
-| Audit Log | `/audit` | `platform_audit_logs` table. Filter by admin user, organisation, action, date range. Expandable metadata column. |
-| Settings | `/settings` | Platform config key-value editor. Admin user management (list, invite, role change, deactivate). Super_admin only. Last-super-admin guard active. |
+| Role | Background | Text | Example |
+|---|---|---|---|
+| `super_admin` | `#E94F37` at 15% opacity | `#E94F37` | `SUPER ADMIN` |
+| `admin` | `#3B82F6` at 15% opacity | `#3B82F6` | `ADMIN` |
+| `support` | `#8B5CF6` at 15% opacity | `#8B5CF6` | `SUPPORT` |
+| `billing` | `#E67E22` at 15% opacity | `#E67E22` | `BILLING` |
+| `readonly` | `#6B7280` at 15% opacity | `#6B7280` | `READ ONLY` |
+
+---
+
+## Routes and Directory Structure
+
+All routes use Next.js App Router. The `(admin)` route group applies the authenticated
+layout to all protected pages.
+
+```
+command/
+  app/
+    layout.tsx                    ← root layout (fonts, providers)
+    login/
+      page.tsx                    ← /login (public, no sidebar)
+    (admin)/
+      layout.tsx                  ← authenticated shell (sidebar + top bar + route guard)
+      page.tsx                    ← / (Overview Dashboard)
+      organizations/
+        page.tsx                  ← /organizations (list)
+        [id]/
+          page.tsx                ← /organizations/{id} (detail, tabs)
+      users/
+        page.tsx                  ← /users (list + slide-over)
+      financials/
+        page.tsx                  ← /financials
+      support/
+        page.tsx                  ← /support
+      automations/
+        page.tsx                  ← /automations (list)
+        new/
+          page.tsx                ← /automations/new
+        [id]/
+          page.tsx                ← /automations/{id} (edit)
+      security/
+        page.tsx                  ← /security
+      audit/
+        page.tsx                  ← /audit
+      settings/
+        page.tsx                  ← /settings
+```
 
 ---
 
 ## Route Guards
 
-All routes except `/login` require authentication via the platform admin token.
+### Authentication Guard
+Applied in `(admin)/layout.tsx`. Logic:
+1. Read `cc_platform_token` from localStorage
+2. If absent → redirect to `/login`
+3. Call `GET /api/platform/v1/me` with the token
+4. If 401 → clear token, redirect to `/login`
+5. If success → set AdminUserContext, render children
 
-On any request to an authenticated route:
-1. Check for platform admin token in storage
-2. If absent: redirect to `/login`
-3. If present: verify against `GET /api/platform/v1/me` (or decoded from JWT if applicable)
-4. If 401: clear token, redirect to `/login`
-5. If valid: render the screen
+### Role Guard (per-route)
+Applied at the top of each page component that has role restrictions.
 
-Role guards for specific screens:
-- `/settings`: `super_admin` only — redirect `admin` and below to `/`
-- `/financials`: `super_admin`, `billing` — redirect others to `/`
-- `/users`: `super_admin`, `admin`, `support` — redirect `billing` and `readonly` to `/`
+```typescript
+// Example role guard pattern
+const { adminUser } = useAdminUser();
+if (!['super_admin', 'billing'].includes(adminUser.role)) {
+  redirect('/');
+}
+```
+
+Role-restricted routes:
+- `/financials` — `super_admin`, `billing` only → others redirect to `/`
+- `/users` — `super_admin`, `admin`, `support` only → others redirect to `/`
+- `/automations` — `super_admin`, `admin` only → others redirect to `/`
+- `/audit` — `super_admin`, `admin` only → others redirect to `/`
+- `/settings` — `super_admin` only → others redirect to `/`
+- `/support` — `super_admin`, `admin`, `support` only → others redirect to `/`
+- `/security` — `super_admin`, `admin`, `support` only → others redirect to `/`
 
 ---
 
-## Empty and Loading States
+## Organisation Detail Tabs
 
-Every list screen must handle:
-- **Loading:** skeleton rows while data fetches
-- **Empty:** clear empty state message with context
-- **Error:** error banner with retry action
+The organisation detail page (`/organizations/{id}`) uses an in-page tab system.
+Tabs are not separate routes — they use query params (`?tab=billing`).
 
-Every mutation (toggle, plan change, role change) must show:
-- **Optimistic UI** is acceptable but must roll back on API error
-- **Confirmation toast** on success
-- **Error toast** on failure with the error message from the API
+| Tab | Query | Visible to |
+|---|---|---|
+| Overview | `?tab=overview` (default) | All roles |
+| Billing | `?tab=billing` | `super_admin`, `billing`, `admin` (read-only for `admin`) |
+| Feature Flags | `?tab=flags` | `super_admin`, `admin` (mutations); `support`, `billing` cannot see this tab |
+| Usage | `?tab=usage` | All roles |
+| Audit | `?tab=audit` | `super_admin`, `admin` |
+
+Tab bar styling:
+- Underline style (not pill/card tabs)
+- Active tab: `#0FA3B1` underline, 2px, label white
+- Inactive tab: gray-400 label, no underline
+- Tab height: 44px (Apple HIG minimum touch target)
 
 ---
 
-## Design Conventions
+## Slide-Overs vs Modals
 
-- **Colour scheme:** dark sidebar (`#1a1a2e` or similar), light main area
-- **Typography:** same brand fonts as tenant admin (Sora headings, Plus Jakarta Sans body)
-- **Role badges:**
-  - `super_admin`: red/coral
-  - `admin`: blue
-  - `support`: purple
-  - `billing`: amber/orange
-  - `readonly`: grey
-- **Plan badges:** matches tenant admin plan colour conventions
-- **Mutation actions:** always require explicit confirmation for destructive operations
-  (plan downgrades, feature flag removal, admin deactivation)
+The CC uses two overlay patterns. Use them consistently:
+
+### Slide-Over (right panel, partial screen)
+Use for: detail views with significant content (user detail, rule editor).
+- Width: 480px on desktop, full-screen on mobile (not applicable — CC is desktop-only)
+- Overlay: `rgba(0,0,0,0.4)` backdrop
+- Animation: slides in from the right, 200ms ease-out
+- Always has a close button (X) top-right
+- Can be closed by clicking the backdrop
+
+### Modal (centred dialog)
+Use for: confirmations, simple forms, single-action dialogs.
+- Max width: 480px
+- Overlay: `rgba(0,0,0,0.5)` backdrop
+- Animation: fade in + scale from 95% to 100%, 150ms ease-out
+- Always has Cancel and Confirm/Submit buttons
+- Destructive actions (deactivate, plan downgrade) use Coral Red confirm button
+- Cannot be closed by clicking the backdrop (prevents accidental dismissal of destructive actions)
+
+---
+
+## Empty, Loading, and Error States
+
+Apple HIG requires that every possible state is designed. No screen may show raw
+JavaScript errors, blank pages, or undefined values.
+
+### Loading State
+Use skeleton shimmer placeholders at the correct dimensions.
+Never show a full-page spinner — show content skeletons in place.
+
+```
+Stat card skeleton: w-full h-24 rounded-xl bg-gray-200 animate-pulse
+Table row skeleton: w-full h-12 rounded bg-gray-100 animate-pulse (×5 rows)
+Chart skeleton: w-full h-48 rounded-xl bg-gray-100 animate-pulse
+```
+
+### Empty State
+Every list or table must have an empty state. Pattern:
+
+```
+[Icon — 32px, gray-300, centered]
+[Heading — "No organisations found" — Sora, 16px, gray-500]
+[Subtitle — contextual explanation — Plus Jakarta Sans, 14px, gray-400]
+[Optional: Primary action button if creation is possible from this screen]
+```
+
+### Error State
+When an API call fails, show an inline error banner (not a full-page error):
+
+```
+[AlertTriangle icon — 16px, red-500]
+"Failed to load data."
+[Retry button]
+```
+
+---
+
+## Feedback and Toasts
+
+Apple HIG: every user action must acknowledge. Use toast notifications for
+operation outcomes. Toasts appear top-right, stack if multiple, auto-dismiss at 4 seconds.
+
+| Situation | Toast style | Message pattern |
+|---|---|---|
+| Mutation success | Green background, CheckCircle icon | "Plan updated successfully" |
+| Mutation failure | Red background, AlertCircle icon | "Failed to update plan. Try again." |
+| Info / notice | Blue background, Info icon | "Changes may take a moment to reflect." |
+
+Toast dimensions: `min-w-64 max-w-sm`, `rounded-xl`, `shadow-lg`, `px-4 py-3`.
+
+---
+
+## Accessibility Requirements (Apple HIG + WCAG AA)
+
+1. **Contrast:** All text on dark sidebar must meet 4.5:1 contrast ratio minimum.
+   Inactive nav labels (gray-400 on gray-900): verified to pass.
+   Active nav labels (white on teal-tinted bg): verified to pass.
+
+2. **Focus states:** All interactive elements must have visible focus rings.
+   Use `focus-visible:ring-2 focus-visible:ring-[#0FA3B1] focus-visible:outline-none`.
+
+3. **Keyboard navigation:** Sidebar items must be keyboard-navigable (Tab + Enter).
+   Modals must trap focus. Escape closes modals and slide-overs.
+
+4. **Touch targets:** All buttons and interactive elements: minimum 44×44px
+   (Apple HIG requirement). Applied via `min-h-[44px] min-w-[44px]`.
+
+5. **Screen reader labels:** Icons without visible labels use `aria-label`.
+   Sidebar nav items use `aria-current="page"` for the active item.
+
+6. **No color-only information:** Status badges use both color and text.
+   Severity badges use both color and text label.
