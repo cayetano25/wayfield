@@ -19,23 +19,12 @@ interface Props {
 
 function TimeGroupHeader({ slotTime }: { slotTime: string }) {
   return (
-    <div
-      className="flex items-center gap-3"
-      style={{ marginBottom: 8, marginTop: 4 }}
-    >
-      <span
-        className="font-sans font-semibold"
-        style={{
-          fontSize: 11,
-          color: '#9CA3AF',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          flexShrink: 0,
-        }}
-      >
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-xs font-bold text-gray-400 font-[JetBrains_Mono]
+        uppercase tracking-wider whitespace-nowrap">
         {slotTime}
       </span>
-      <div style={{ flex: 1, height: 1, backgroundColor: '#F3F4F6' }} />
+      <div className="flex-1 h-px bg-gray-100" />
     </div>
   );
 }
@@ -119,19 +108,21 @@ export function SessionList({
                     onClearError={onClearError}
                   />
                 ) : slot.sessions[0] ? (
-                  <SessionCard
-                    session={slot.sessions[0]}
-                    effectiveState={getEffectiveState(slot.sessions[0])}
-                    isLoading={pendingSessionIds.has(slot.sessions[0].session_id)}
-                    errorMessage={
-                      sessionErrors.get(slot.sessions[0].session_id)?.message ?? null
-                    }
-                    onToggle={() => {
-                      const s = slot.sessions[0]!;
-                      onToggle(s.session_id, getEffectiveState(s));
-                    }}
-                    onClearError={() => onClearError(slot.sessions[0]!.session_id)}
-                  />
+                  <div className="mb-4">
+                    <SessionCard
+                      session={slot.sessions[0]}
+                      effectiveState={getEffectiveState(slot.sessions[0])}
+                      isLoading={pendingSessionIds.has(slot.sessions[0].session_id)}
+                      errorMessage={
+                        sessionErrors.get(slot.sessions[0].session_id)?.message ?? null
+                      }
+                      onToggle={() => {
+                        const s = slot.sessions[0]!;
+                        onToggle(s.session_id, getEffectiveState(s));
+                      }}
+                      onClearError={() => onClearError(slot.sessions[0]!.session_id)}
+                    />
+                  </div>
                 ) : null}
               </div>
             );

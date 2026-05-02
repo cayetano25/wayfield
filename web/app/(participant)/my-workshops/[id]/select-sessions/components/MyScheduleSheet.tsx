@@ -1,8 +1,7 @@
 'use client';
 
-import { CalendarPlus, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { MyScheduleSession } from '@/lib/types/session-selection';
-import { MyScheduleSessionRow } from './MyScheduleSessionRow';
 
 interface Props {
   selectedSessions: MyScheduleSession[];
@@ -12,69 +11,6 @@ interface Props {
   isConfirming: boolean;
 }
 
-/* -- Helpers -------------------------------------------------------------- */
-
-function summaryLine(sessions: MyScheduleSession[]): string {
-  if (sessions.length === 0) return '';
-  const days = [...new Set(sessions.map((s) => s.day_short))];
-  return `${sessions.length} session${sessions.length !== 1 ? 's' : ''} · ${days.join(' – ')}`;
-}
-
-/* -- Empty state ---------------------------------------------------------- */
-
-function EmptySchedule() {
-  return (
-    <div
-      className="flex flex-col items-center justify-center text-center"
-      style={{ padding: '32px 20px', gap: 12 }}
-    >
-      <CalendarPlus size={32} style={{ color: '#D1D5DB' }} />
-      <p className="font-sans" style={{ fontSize: 13, color: '#9CA3AF' }}>
-        Click sessions to build your schedule
-      </p>
-    </div>
-  );
-}
-
-/* -- Confirm button ------------------------------------------------------- */
-
-function ConfirmButton({
-  count,
-  isConfirming,
-  onConfirm,
-}: {
-  count: number;
-  isConfirming: boolean;
-  onConfirm: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={count > 0 ? onConfirm : undefined}
-      disabled={isConfirming || count === 0}
-      className="w-full font-sans font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"
-      style={{
-        height: 48,
-        fontSize: 15,
-        backgroundColor: count > 0 ? '#0FA3B1' : '#E5E7EB',
-        color: count > 0 ? 'white' : '#9CA3AF',
-        cursor: count > 0 && !isConfirming ? 'pointer' : 'default',
-      }}
-    >
-      {isConfirming ? (
-        <>
-          <Loader2 size={16} className="animate-spin" />
-          Saving…
-        </>
-      ) : (
-        'Confirm Selections'
-      )}
-    </button>
-  );
-}
-
-/* -- Desktop: sticky right sidebar ---------------------------------------- */
-
 export function MyScheduleSheet({
   selectedSessions,
   workshopTitle,
@@ -82,62 +18,88 @@ export function MyScheduleSheet({
   onConfirm,
   isConfirming,
 }: Props) {
-  const count = selectedSessions.length;
-
   return (
-    <div
-      className="hidden md:flex flex-col shrink-0"
-      style={{
-        width: 320,
-        borderLeft: '1px solid #E5E7EB',
-        backgroundColor: 'white',
-        position: 'sticky',
-        top: 56,
-        height: 'calc(100vh - 56px)',
-        overflowY: 'auto',
-        alignSelf: 'flex-start',
-      }}
-    >
-      {/* Sidebar header */}
-      <div style={{ padding: '20px 20px 12px', flexShrink: 0 }}>
-        <p
-          className="font-heading font-bold"
-          style={{ fontSize: 16, color: '#2E2E2E', marginBottom: 4 }}
-        >
-          My Schedule
-        </p>
-        <p className="font-sans" style={{ fontSize: 12, color: '#9CA3AF' }}>
-          {workshopTitle}
-        </p>
-      </div>
+    <aside className="hidden lg:block w-72 flex-shrink-0">
+      <div className="sticky top-20">
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
 
-      {/* Session list */}
-      <div className="flex-1 min-h-0" style={{ padding: '0 20px', overflowY: 'auto' }}>
-        {count === 0 ? (
-          <EmptySchedule />
-        ) : (
-          selectedSessions.map((s) => (
-            <MyScheduleSessionRow
-              key={s.session_id}
-              session={s}
-              onDeselect={() => onDeselect(s.session_id)}
-            />
-          ))
-        )}
-      </div>
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em]
+              text-gray-400 font-[JetBrains_Mono] mb-0.5">
+              My Schedule
+            </p>
+            <p className="text-sm font-semibold text-gray-900 font-[Sora]">
+              {workshopTitle}
+            </p>
+          </div>
 
-      {/* Confirm button — always at bottom of sidebar */}
-      <div style={{ padding: 20, flexShrink: 0, borderTop: '1px solid #F3F4F6' }}>
-        {summaryLine(selectedSessions) && (
-          <p
-            className="font-sans"
-            style={{ fontSize: 12, color: '#6B7280', marginBottom: 12 }}
-          >
-            {summaryLine(selectedSessions)}
-          </p>
-        )}
-        <ConfirmButton count={count} isConfirming={isConfirming} onConfirm={onConfirm} />
+          {/* Selected session list */}
+          <div className="divide-y divide-gray-100">
+            {selectedSessions.length === 0 ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-xs text-gray-400">
+                  No sessions selected yet.
+                </p>
+              </div>
+            ) : (
+              selectedSessions.map((session) => (
+                <div
+                  key={session.session_id}
+                  className="flex items-start gap-3 px-5 py-3
+                    hover:bg-gray-50 transition-colors group"
+                >
+                  {/* Teal left bar */}
+                  <div className="w-0.5 bg-[#0FA3B1] rounded-full
+                    flex-shrink-0 self-stretch min-h-[36px]" />
+
+                  <div className="flex-1 min-w-0">
+                    {/* Day + time */}
+                    <p className="text-[10px] font-bold text-[#0FA3B1]
+                      font-[JetBrains_Mono] uppercase tracking-wide mb-0.5">
+                      {session.day_short} · {session.start_display}
+                    </p>
+                    {/* Session title */}
+                    <p className="text-sm font-medium text-gray-900
+                      leading-snug truncate">
+                      {session.title}
+                    </p>
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => onDeselect(session.session_id)}
+                    className="opacity-0 group-hover:opacity-100
+                      transition-opacity text-gray-300 hover:text-gray-500
+                      flex-shrink-0 mt-0.5"
+                    aria-label={`Remove ${session.title}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Confirm button — lg:hidden since desktop header already has one */}
+          {selectedSessions.length > 0 && (
+            <div className="p-4 border-t border-gray-100 lg:hidden">
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={isConfirming}
+                className="w-full py-3 rounded-xl bg-[#0FA3B1] text-white
+                  font-semibold text-sm hover:bg-[#0c8a96] transition-colors
+                  disabled:opacity-50"
+              >
+                {isConfirming ? 'Saving…' : 'Confirm Selections'}
+              </button>
+            </div>
+          )}
+
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }
