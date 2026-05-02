@@ -51,6 +51,18 @@ Route::prefix('platform/v1')->group(function () {
         // Organizations
         Route::get('organizations', [PlatformOrganizationController::class, 'index']);
         Route::get('organizations/{organization}', [PlatformOrganizationController::class, 'show']);
+        Route::patch('organizations/{organization}/status', [PlatformOrganizationController::class, 'updateStatus']);
+        Route::get('organizations/{organization}/feature-flags', [PlatformOrganizationController::class, 'featureFlags']);
+
+        // Organization mutations — super_admin, admin, billing only
+        Route::middleware('platform.admin:super_admin,admin,billing')->group(function () {
+            Route::post('organizations/{organization}/billing/plan', [PlatformOrganizationController::class, 'changePlan']);
+        });
+
+        // Feature flag overrides — super_admin and admin only
+        Route::middleware('platform.admin:super_admin,admin')->group(function () {
+            Route::post('organizations/{organization}/feature-flags', [PlatformOrganizationController::class, 'setFeatureFlag']);
+        });
 
         // Users
         Route::get('users', [PlatformUserController::class, 'index']);

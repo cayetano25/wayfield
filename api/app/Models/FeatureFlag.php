@@ -10,11 +10,14 @@ class FeatureFlag extends Model
 {
     use HasFactory;
 
+    protected $table = 'organization_feature_flags';
+
     protected $fillable = [
         'organization_id',
         'feature_key',
         'is_enabled',
         'source',
+        'set_by_admin_user_id',
     ];
 
     protected function casts(): array
