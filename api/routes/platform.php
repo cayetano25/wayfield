@@ -2,12 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\Platform\PlatformAdminUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAnnouncementController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuditController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAutomationController;
+use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
 use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
+use App\Http\Controllers\Api\V1\Platform\PlatformSecurityController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
@@ -112,6 +116,30 @@ Route::prefix('platform/v1')->group(function () {
         Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
         Route::patch('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'update']);
         Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
+
+        // Automations — read: any admin; write: super_admin and admin only
+        Route::get('automations', [PlatformAutomationController::class, 'index']);
+        Route::get('automations/{id}', [PlatformAutomationController::class, 'show']);
+        Route::middleware('platform.admin:super_admin,admin')->group(function () {
+            Route::post('automations', [PlatformAutomationController::class, 'store']);
+            Route::patch('automations/{id}', [PlatformAutomationController::class, 'update']);
+            Route::delete('automations/{id}', [PlatformAutomationController::class, 'destroy']);
+        });
+
+        // Security events — super_admin and admin only
+        Route::middleware('platform.admin:super_admin,admin')->group(function () {
+            Route::get('security/events', [PlatformSecurityController::class, 'index']);
+        });
+
+        // Platform config — read: any admin; write: super_admin only
+        Route::get('config', [PlatformConfigController::class, 'index']);
+        Route::put('config/{key}', [PlatformConfigController::class, 'update']);
+
+        // Admin user management — super_admin only
+        Route::get('admins', [PlatformAdminUserController::class, 'index']);
+        Route::post('admins', [PlatformAdminUserController::class, 'store']);
+        Route::patch('admins/{id}/role', [PlatformAdminUserController::class, 'updateRole']);
+        Route::patch('admins/{id}/status', [PlatformAdminUserController::class, 'updateStatus']);
 
         // Impersonation stub — super_admin only; not yet active
         Route::post('impersonate/{organization}', function () {
