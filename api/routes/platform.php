@@ -60,6 +60,15 @@ Route::prefix('platform/v1')->group(function () {
         Route::post('auth/logout', [PlatformAuthController::class, 'logout']);
         Route::get('auth/me', [PlatformAuthController::class, 'me']);
 
+        // 2FA management (self-service — any authenticated platform admin)
+        Route::get('auth/two-factor/setup',                          [TwoFactorManagementController::class, 'setup']);
+        Route::post('auth/two-factor/confirm',                       [TwoFactorManagementController::class, 'confirm']);
+        Route::post('auth/two-factor/disable',                       [TwoFactorManagementController::class, 'disable']);
+        Route::post('auth/two-factor/recovery-codes/regenerate',     [TwoFactorManagementController::class, 'regenerateRecoveryCodes']);
+
+        // 2FA admin override — super_admin only (enforced in controller)
+        Route::post('admins/{id}/two-factor/disable', [TwoFactorManagementController::class, 'disableForAdmin']);
+
         // Overview dashboard
         Route::get('overview', [OverviewController::class, 'index']);
 
