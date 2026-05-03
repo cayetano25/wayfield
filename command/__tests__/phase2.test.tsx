@@ -24,9 +24,14 @@ vi.mock('date-fns', () => ({
 }));
 
 const mockRouterReplace = vi.fn();
+// navTab drives the active financials tab for tests that need a specific tab open
+let navTab: string | null = null;
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockRouterReplace, push: vi.fn() }),
-  useSearchParams: () => ({ get: () => null, toString: () => '' }),
+  useSearchParams: () => ({
+    get: (key: string) => (key === 'tab' ? navTab : null),
+    toString: () => (navTab ? `tab=${navTab}` : ''),
+  }),
 }));
 
 vi.mock('@/components/ui/Toast', () => ({
@@ -308,6 +313,7 @@ describe('Financials page', () => {
   beforeEach(() => {
     vi.useRealTimers();
     currentRole = 'super_admin';
+    navTab = null;
     mockRouterReplace.mockReset();
     vi.spyOn(platformApi.platformFinancials, 'overview').mockResolvedValue({ data: mockOverview } as never);
     vi.spyOn(platformApi.platformFinancials, 'invoices').mockResolvedValue({ data: mockInvoices } as never);
@@ -370,6 +376,7 @@ describe('Financials page', () => {
   });
 
   it('renders invoice table with org name', async () => {
+    navTab = 'invoices';
     const FinancialsPage = (await import('@/app/(admin)/financials/page')).default;
     render(<FinancialsPage />);
 
@@ -380,6 +387,7 @@ describe('Financials page', () => {
   });
 
   it('filters invoices by status', async () => {
+    navTab = 'invoices';
     const invoicesSpy = vi.spyOn(platformApi.platformFinancials, 'invoices').mockResolvedValue({ data: mockInvoices } as never);
 
     const FinancialsPage = (await import('@/app/(admin)/financials/page')).default;

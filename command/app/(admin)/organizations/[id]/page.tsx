@@ -3,15 +3,17 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   platformOrganizations,
   platformAuditLogs,
+  platformPayments,
   type OrgDetail,
   type FeatureFlag,
   type PlatformAuditLog,
   type PlanCode,
+  type OrgPaymentStatus,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { useToast } from '@/components/ui/Toast';
@@ -22,7 +24,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Table, TableHead, Th, TableBody, Td } from '@/components/ui/Table';
 
-const TABS = ['overview', 'billing', 'flags', 'usage', 'audit'] as const;
+const TABS = ['overview', 'billing', 'flags', 'usage', 'payments', 'audit'] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAN_OPTIONS: Array<{ value: PlanCode; label: string }> = [
@@ -545,6 +547,291 @@ function AuditTab({ orgId }: { orgId: number }) {
   );
 }
 
+// ─── Payments tab ─────────────────────────────────────────────────────────────
+
+const CONNECT_ONBOARDING_STYLES: Record<string, string> = {
+  complete:     'bg-teal-50 text-teal-700 border border-teal-200',
+  pending:      'bg-amber-50 text-amber-700 border border-amber-200',
+  initiated:    'bg-blue-50 text-blue-700 border border-blue-200',
+  restricted:   'bg-orange-50 text-orange-700 border border-orange-200',
+  deauthorized: 'bg-red-50 text-red-700 border border-red-200',
+};
+
+function ConnectOnboardingBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-sm text-gray-400">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+        CONNECT_ONBOARDING_STYLES[status] ?? 'bg-gray-100 text-gray-600 border border-gray-200'
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function ConnectBoolRow({ label, value }: { label: string; value: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+      <span className="text-sm text-gray-600">{label}</span>
+      {value ? (
+        <CheckCircle size={16} className="text-teal-500" aria-label="Yes" />
+      ) : (
+        <XCircle size={16} className="text-gray-300" aria-label="No" />
+      )}
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  enabled,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  enabled: boolean;
+  onChange: (value: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+      <span className="text-sm text-gray-700">{label}</span>
+      <button
+        onClick={() => onChange(!enabled)}
+        disabled={disabled}
+        role="switch"
+        aria-checked={enabled}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+          enabled ? 'bg-[#0FA3B1]' : 'bg-gray-200'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            enabled ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function PaymentsTab({ orgId }: { orgId: number }) {
+  const { adminUser } = useAdminUser();
+  const { toast } = useToast();
+  const [payStatus, setPayStatus] = useState<OrgPaymentStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState(false);
+  const [flagUpdating, setFlagUpdating] = useState<string | null>(null);
+
+  const canManage = adminUser ? can.managePayments(adminUser.role) : false;
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformPayments.orgStatus(orgId);
+      setPayStatus(data);
+    } catch {
+      setError('Failed to load payment status.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleToggleOrg() {
+    if (!payStatus) return;
+    setToggling(true);
+    try {
+      const { data } = payStatus.org_payments_enabled
+        ? await platformPayments.disableOrg(orgId)
+        : await platformPayments.enableOrg(orgId);
+      setPayStatus(data);
+      toast(
+        data.org_payments_enabled
+          ? 'Payments enabled for this organisation.'
+          : 'Payments disabled for this organisation.',
+        'success',
+      );
+    } catch {
+      toast('Failed to update payment setting.', 'error');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleFlagToggle(flagKey: 'deposits_enabled' | 'waitlist_payments') {
+    if (!payStatus) return;
+    const currentValue = payStatus.flags[flagKey];
+    // Optimistic update
+    setPayStatus((prev) =>
+      prev ? { ...prev, flags: { ...prev.flags, [flagKey]: !currentValue } } : prev,
+    );
+    setFlagUpdating(flagKey);
+    try {
+      await platformPayments.setOrgFlag(orgId, flagKey, !currentValue);
+      toast(`${flagKey === 'deposits_enabled' ? 'Deposit pricing' : 'Waitlist payments'} ${!currentValue ? 'enabled' : 'disabled'}.`, 'success');
+    } catch {
+      // Rollback
+      setPayStatus((prev) =>
+        prev ? { ...prev, flags: { ...prev.flags, [flagKey]: currentValue } } : prev,
+      );
+      toast('Failed to update flag.', 'error');
+    } finally {
+      setFlagUpdating(null);
+    }
+  }
+
+  if (loading) return <div className="animate-pulse bg-gray-100 rounded-xl h-64 max-w-2xl" />;
+  if (error || !payStatus) return <ErrorBanner message={error ?? 'Failed to load.'} onRetry={load} />;
+
+  const { stripe_connect, effective_payments_active, org_payments_enabled } = payStatus;
+
+  // Determine which status banner to show
+  let statusBanner: React.ReactNode;
+  if (effective_payments_active) {
+    statusBanner = (
+      <div className="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3 flex items-center gap-2 text-sm text-teal-700">
+        <CheckCircle size={16} className="text-teal-500 shrink-0" aria-hidden="true" />
+        Payments are ACTIVE for this organisation
+      </div>
+    );
+  } else if (!org_payments_enabled) {
+    statusBanner = (
+      <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-600">
+        Payments are disabled for this organisation.
+      </div>
+    );
+  } else if (!stripe_connect.charges_enabled) {
+    statusBanner = (
+      <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2 text-sm text-red-700">
+        <AlertTriangle size={16} className="text-red-500 shrink-0" aria-hidden="true" />
+        Stripe Connect incomplete — payments cannot process.
+      </div>
+    );
+  } else {
+    statusBanner = (
+      <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-2 text-sm text-amber-700">
+        <AlertTriangle size={16} className="text-amber-500 shrink-0" aria-hidden="true" />
+        Platform payments are globally disabled.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      {/* Effective status banner */}
+      {statusBanner}
+
+      {/* Payment toggle card */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-heading text-sm font-semibold text-gray-800">Organisation Payments</h3>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              org_payments_enabled
+                ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                : 'bg-gray-100 text-gray-500 border border-gray-200'
+            }`}
+          >
+            {org_payments_enabled ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
+        {canManage && (
+          <button
+            onClick={handleToggleOrg}
+            disabled={toggling}
+            data-testid="org-payment-toggle"
+            className={`min-h-[44px] px-4 text-sm font-medium text-white rounded-lg disabled:opacity-50 transition-colors ${
+              org_payments_enabled
+                ? 'bg-gray-600 hover:bg-gray-700'
+                : 'bg-[#0FA3B1] hover:bg-[#0d8f9c]'
+            }`}
+          >
+            {toggling
+              ? 'Updating…'
+              : org_payments_enabled
+              ? 'Disable Payments'
+              : 'Enable Payments'}
+          </button>
+        )}
+      </div>
+
+      {/* Stripe Connect status card */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 className="font-heading text-sm font-semibold text-gray-800 mb-4">Stripe Connect</h3>
+        <div className="mb-4">
+          <ConnectOnboardingBadge status={stripe_connect.onboarding_status} />
+        </div>
+        <div className="space-y-0 mb-4">
+          <ConnectBoolRow label="Charges enabled" value={stripe_connect.charges_enabled} />
+          <ConnectBoolRow label="Payouts enabled" value={stripe_connect.payouts_enabled} />
+          <ConnectBoolRow label="Details submitted" value={stripe_connect.details_submitted} />
+        </div>
+        {stripe_connect.stripe_account_id && (
+          <p
+            className="text-xs text-gray-400 mb-2"
+            style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+          >
+            {stripe_connect.stripe_account_id}
+          </p>
+        )}
+        {stripe_connect.last_webhook_received_at && (
+          <p className="text-xs text-gray-400 mb-2">
+            Last webhook:{' '}
+            {formatDistanceToNow(new Date(stripe_connect.last_webhook_received_at), {
+              addSuffix: true,
+            })}
+          </p>
+        )}
+        {(stripe_connect.requirements ?? []).length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+            <p className="text-xs font-medium text-amber-700 mb-1">Pending requirements:</p>
+            <ul className="text-xs text-amber-600 space-y-0.5">
+              {(stripe_connect.requirements ?? []).map((req) => (
+                <li key={req}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mb-2">
+          Stripe Connect accounts are managed in the Stripe Dashboard.
+        </p>
+        {stripe_connect.stripe_account_id && (
+          <a
+            href={`https://dashboard.stripe.com/connect/accounts/${stripe_connect.stripe_account_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-[#0FA3B1] hover:text-[#0d8f9c] transition-colors"
+          >
+            Open Stripe Dashboard <ExternalLink size={12} />
+          </a>
+        )}
+      </div>
+
+      {/* Additional flags card */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 className="font-heading text-sm font-semibold text-gray-800 mb-2">Payment Flags</h3>
+        <ToggleRow
+          label="Deposit pricing enabled"
+          enabled={payStatus.flags.deposits_enabled}
+          onChange={() => handleFlagToggle('deposits_enabled')}
+          disabled={!canManage || flagUpdating === 'deposits_enabled'}
+        />
+        <ToggleRow
+          label="Waitlist payment charging"
+          enabled={payStatus.flags.waitlist_payments}
+          onChange={() => handleFlagToggle('waitlist_payments')}
+          disabled={!canManage || flagUpdating === 'waitlist_payments'}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -606,6 +893,7 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
     { key: 'billing', label: 'Billing' },
     ...(showFlagsTab ? [{ key: 'flags' as Tab, label: 'Feature Flags' }] : []),
     { key: 'usage', label: 'Usage' },
+    { key: 'payments', label: 'Payments' },
     ...(showAuditTab ? [{ key: 'audit' as Tab, label: 'Audit' }] : []),
   ];
 
@@ -655,6 +943,7 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
       )}
       {activeTab === 'flags' && showFlagsTab && <FeatureFlagsTab orgId={orgId} />}
       {activeTab === 'usage' && <UsageTab org={org} />}
+      {activeTab === 'payments' && <PaymentsTab orgId={orgId} />}
       {activeTab === 'audit' && showAuditTab && <AuditTab orgId={orgId} />}
     </div>
   );
