@@ -54,17 +54,24 @@ Route::prefix('platform/v1')->group(function () {
         ->middleware('throttle:10,1');
 
     // ─── Protected platform routes ────────────────────────────────────────────
+
+    // 2FA setup/confirm: auth required but exempt from platform.2fa enforcement
+    // so that admins with two_factor_required=true can still reach the setup screen.
     Route::middleware(['auth:platform_admin', 'platform.admin'])->group(function () {
+        Route::get('auth/two-factor/setup',    [TwoFactorManagementController::class, 'setup']);
+        Route::post('auth/two-factor/confirm', [TwoFactorManagementController::class, 'confirm']);
+    });
+
+    // All other protected routes enforce 2FA setup when two_factor_required=true.
+    Route::middleware(['auth:platform_admin', 'platform.admin', 'platform.2fa'])->group(function () {
 
         // Auth
         Route::post('auth/logout', [PlatformAuthController::class, 'logout']);
         Route::get('auth/me', [PlatformAuthController::class, 'me']);
 
-        // 2FA management (self-service — any authenticated platform admin)
-        Route::get('auth/two-factor/setup',                          [TwoFactorManagementController::class, 'setup']);
-        Route::post('auth/two-factor/confirm',                       [TwoFactorManagementController::class, 'confirm']);
-        Route::post('auth/two-factor/disable',                       [TwoFactorManagementController::class, 'disable']);
-        Route::post('auth/two-factor/recovery-codes/regenerate',     [TwoFactorManagementController::class, 'regenerateRecoveryCodes']);
+        // 2FA management — self-service (disable, regenerate codes)
+        Route::post('auth/two-factor/disable',                   [TwoFactorManagementController::class, 'disable']);
+        Route::post('auth/two-factor/recovery-codes/regenerate', [TwoFactorManagementController::class, 'regenerateRecoveryCodes']);
 
         // 2FA admin override — super_admin only (enforced in controller)
         Route::post('admins/{id}/two-factor/disable', [TwoFactorManagementController::class, 'disableForAdmin']);
