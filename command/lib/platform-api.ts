@@ -3,8 +3,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 export const TOKEN_KEY = 'cc_platform_token';
 
 const BASE_URL =
-  (process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? 'http://localhost:8000/api') +
-  '/platform/v1';
+  process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? 'http://localhost:8000/api/platform/v1';
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -399,4 +398,13 @@ export const platformAdmins = {
     api.patch<PlatformAdminEntry>(`/admins/${id}/role`, { role }),
   updateStatus: (id: number, is_active: boolean) =>
     api.patch<PlatformAdminEntry>(`/admins/${id}/status`, { is_active }),
+};
+
+// ─── Generic API client (returns data directly, not AxiosResponse) ────────────
+export const platformApi = {
+  get:    <T>(path: string)                     => api.get<T>(path).then(r => r.data),
+  post:   <T>(path: string, body?: unknown)     => api.post<T>(path, body).then(r => r.data),
+  put:    <T>(path: string, body?: unknown)     => api.put<T>(path, body).then(r => r.data),
+  patch:  <T>(path: string, body?: unknown)     => api.patch<T>(path, body).then(r => r.data),
+  delete: <T>(path: string)                     => api.delete<T>(path).then(r => r.data),
 };
