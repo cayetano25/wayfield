@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
 use App\Http\Controllers\Api\V1\Platform\PlatformFinancialController;
 use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
+use App\Http\Controllers\Api\V1\Platform\PaymentControlController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSecurityController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
@@ -110,6 +111,19 @@ Route::prefix('platform/v1')->group(function () {
             Route::post('organizations/{organization}/enable-payments', [PlatformPaymentController::class, 'enablePayments']);
             Route::post('organizations/{organization}/disable-payments', [PlatformPaymentController::class, 'disablePayments']);
         });
+
+        // Payment controls — readable by all authenticated admins; mutations check roles in controller
+        Route::get('payments/status', [PaymentControlController::class, 'status']);
+        Route::get('payments/take-rates', [PaymentControlController::class, 'takeRates']);
+        Route::get('payments/connect-accounts', [PaymentControlController::class, 'connectAccounts']);
+        Route::get('payments/connect-accounts/{organization_id}', [PaymentControlController::class, 'connectAccountDetail']);
+        Route::post('payments/enable', [PaymentControlController::class, 'enablePlatform']);
+        Route::post('payments/disable', [PaymentControlController::class, 'disablePlatform']);
+        Route::patch('payments/take-rates/{plan_code}', [PaymentControlController::class, 'updateTakeRate']);
+        Route::get('organizations/{id}/payments', [PaymentControlController::class, 'orgStatus']);
+        Route::post('organizations/{id}/payments/enable', [PaymentControlController::class, 'enableOrg']);
+        Route::post('organizations/{id}/payments/disable', [PaymentControlController::class, 'disableOrg']);
+        Route::patch('organizations/{id}/payments/flags/{flag_key}', [PaymentControlController::class, 'setOrgFlag']);
 
         // System Announcements
         Route::get('system-announcements', [PlatformAnnouncementController::class, 'index']);
