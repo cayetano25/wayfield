@@ -6,6 +6,7 @@ use Database\Factories\AdminUserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 
 class AdminUser extends Authenticatable
@@ -38,6 +39,10 @@ class AdminUser extends Authenticatable
         'is_active',
         'can_impersonate',
         'last_login_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'two_factor_required',
     ];
 
     protected $hidden = [
@@ -45,9 +50,13 @@ class AdminUser extends Authenticatable
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'can_impersonate' => 'boolean',
-        'last_login_at' => 'datetime',
+        'is_active'                 => 'boolean',
+        'can_impersonate'           => 'boolean',
+        'last_login_at'             => 'datetime',
+        'two_factor_secret'         => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at'   => 'datetime',
+        'two_factor_required'       => 'boolean',
     ];
 
     // ─── Role constants ────────────────────────────────────────────────────────
@@ -98,6 +107,36 @@ class AdminUser extends Authenticatable
     public function fullName(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    // ─── 2FA helpers ──────────────────────────────────────────────────────────
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at);
+    }
+
+    public function hasTwoFactorPending(): bool
+    {
+        return ! is_null($this->two_factor_secret) && is_null($this->two_factor_confirmed_at);
+    }
+
+    public function validRecoveryCodes(): array
+    {
+        return $this->two_factor_recovery_codes ?? [];
+    }
+
+    public function consumeRecoveryCode(string $code): bool
+    {
+        $codes = $this->two_factor_recovery_codes ?? [];
+        foreach ($codes as $index => $hashedCode) {
+            if (Hash::check($code, $hashedCode)) {
+                unset($codes[$index]);
+                $this->forceFill(['two_factor_recovery_codes' => array_values($codes)])->save();
+                return true;
+            }
+        }
+        return false;
     }
 
     // ─── Relationships ─────────────────────────────────────────────────────────
