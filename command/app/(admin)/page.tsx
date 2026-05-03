@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react';
 import {
   platformOverview,
   platformWorkshops,
@@ -221,6 +221,53 @@ function WorkshopReadinessSection({ items }: { items: WorkshopReadinessItem[] })
   );
 }
 
+// ─── 2FA health widget ────────────────────────────────────────────────────────
+
+interface Admin2faStats {
+  total_admins: number;
+  two_factor_on: number;
+  two_factor_off: number;
+}
+
+function Admin2faWidget({ stats }: { stats: Admin2faStats }) {
+  const allProtected = stats.two_factor_off === 0;
+
+  return (
+    <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-6">
+      <h2
+        className="text-sm font-semibold text-gray-900 mb-3"
+        style={{ fontFamily: 'var(--font-sora, sans-serif)' }}
+      >
+        Admin 2FA Coverage
+      </h2>
+
+      <p className="text-sm text-gray-600 mb-2">
+        {stats.two_factor_on} of {stats.total_admins} admin{stats.total_admins !== 1 ? 's' : ''} have 2FA enabled
+      </p>
+
+      {allProtected ? (
+        <div className="flex items-center gap-1.5 text-sm text-[#0FA3B1]">
+          <ShieldCheck size={14} />
+          All admin accounts are protected ✓
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-sm text-amber-600">
+            <ShieldAlert size={14} />
+            {stats.two_factor_off} admin account{stats.two_factor_off !== 1 ? 's' : ''} without 2FA
+          </div>
+          <a
+            href="/settings"
+            className="text-xs text-[#0FA3B1] hover:underline"
+          >
+            View in Settings →
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Audit event row ──────────────────────────────────────────────────────────
 
 function AuditRow({ event }: { event: OverviewResponse['recent_audit_events'][number] }) {
@@ -414,10 +461,17 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Workshop Readiness */}
+      {/* 2FA Coverage + Workshop Readiness row */}
       {readinessLoaded && (
-        <div className="mt-4">
-          <WorkshopReadinessSection items={readiness} />
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <WorkshopReadinessSection items={readiness} />
+          </div>
+          {data.admin_2fa && (
+            <div>
+              <Admin2faWidget stats={data.admin_2fa} />
+            </div>
+          )}
         </div>
       )}
     </div>
