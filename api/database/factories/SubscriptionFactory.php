@@ -15,26 +15,26 @@ class SubscriptionFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'plan_code' => 'free',
+            'plan_code' => 'foundation',
             'status' => 'active',
             'starts_at' => now()->subMonth(),
             'ends_at' => null,
         ];
     }
 
-    public function free(): static
+    public function foundation(): static
     {
-        return $this->state(['plan_code' => 'free']);
+        return $this->state(['plan_code' => 'foundation']);
     }
 
-    public function starter(): static
+    public function creator(): static
     {
-        return $this->state(['plan_code' => 'starter']);
+        return $this->state(['plan_code' => 'creator']);
     }
 
-    public function pro(): static
+    public function studio(): static
     {
-        return $this->state(['plan_code' => 'pro']);
+        return $this->state(['plan_code' => 'studio']);
     }
 
     public function enterprise(): static
