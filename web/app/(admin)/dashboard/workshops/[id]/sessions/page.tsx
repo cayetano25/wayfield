@@ -350,14 +350,17 @@ function SessionSlideOver({
   // Fetch add-on pricing when editing an addon session
   useEffect(() => {
     if (!open || !editingSession || editingSession.session_type !== 'addon') return;
-    apiGet<{ price_cents: number; is_nonrefundable: boolean }>(
+    apiGet<{ data: { price_cents: number; is_nonrefundable: boolean } | null }>(
       `/sessions/${editingSession.id}/pricing`,
-    ).then((p) => {
-      setAddonPriceCents(p.price_cents ?? 0);
-      setAddonIsNonrefundable(p.is_nonrefundable ?? false);
-      setAddonPricingExists(true);
+    ).then(({ data }) => {
+      if (data !== null) {
+        setAddonPriceCents(data.price_cents ?? 0);
+        setAddonIsNonrefundable(data.is_nonrefundable ?? false);
+        setAddonPricingExists(true);
+      }
+      // data === null means no pricing record yet — leave defaults (addonPricingExists stays false)
     }).catch(() => {
-      // 404 = no pricing yet — leave defaults
+      // network error — leave defaults
     });
   }, [open, editingSession]);
 
@@ -486,10 +489,10 @@ function SessionSlideOver({
           price_cents: addonPriceCents,
           is_nonrefundable: addonIsNonrefundable,
         };
-        if (addonPricingExists || !editingSession) {
-          await apiPut(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {
-            apiPost(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {});
-          });
+        // addonPricingExists is true only when we fetched a real record — use PUT.
+        // For new sessions or sessions without a pricing record yet — use POST.
+        if (addonPricingExists) {
+          await apiPut(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {});
         } else {
           await apiPost(`/sessions/${sessionId}/pricing`, pricingPayload).catch(() => {});
         }
