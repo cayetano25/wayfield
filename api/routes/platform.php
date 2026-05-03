@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Platform\PlatformHealthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformOrganizationController;
 use App\Http\Controllers\Api\V1\Platform\PaymentControlController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPaymentController;
+use App\Http\Controllers\Api\V1\Platform\PlatformWorkshopAuditController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSecurityController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSsoController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
@@ -56,6 +57,7 @@ Route::prefix('platform/v1')->group(function () {
         // Organizations
         Route::get('organizations', [PlatformOrganizationController::class, 'index']);
         Route::get('organizations/{organization}', [PlatformOrganizationController::class, 'show']);
+        Route::get('organizations/{id}/leader-completion', [PlatformOrganizationController::class, 'leaderCompletion']);
         Route::patch('organizations/{organization}/status', [PlatformOrganizationController::class, 'updateStatus']);
         Route::get('organizations/{organization}/feature-flags', [PlatformOrganizationController::class, 'featureFlags']);
 
@@ -84,10 +86,15 @@ Route::prefix('platform/v1')->group(function () {
         Route::patch('support/tickets/{ticket}', [PlatformSupportController::class, 'update']);
         Route::post('support/tickets/{ticket}/messages', [PlatformSupportController::class, 'addMessage']);
 
+        // Workshop audit — read-only, all authenticated admins
+        Route::get('workshops/pricing-audit', [PlatformWorkshopAuditController::class, 'pricingAudit']);
+        Route::get('workshops/readiness', [PlatformWorkshopAuditController::class, 'readiness']);
+
         // Financials — super_admin and billing only
         Route::middleware('platform.admin:super_admin,billing')->group(function () {
             Route::get('financials/overview', [PlatformFinancialController::class, 'overview']);
             Route::get('financials/invoices', [PlatformFinancialController::class, 'invoices']);
+            Route::get('financials/refund-policies', [PlatformFinancialController::class, 'refundPolicies']);
         });
 
         // System health — super_admin and admin only

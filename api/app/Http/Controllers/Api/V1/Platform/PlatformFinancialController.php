@@ -8,6 +8,7 @@ use App\Models\StripeSubscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PlatformFinancialController extends Controller
 {
@@ -92,5 +93,98 @@ class PlatformFinancialController extends Controller
         ]);
 
         return response()->json($invoices);
+    }
+
+    /**
+     * GET /api/platform/v1/financials/refund-policies
+     * Paginated list of all refund policies with summary counts.
+     * Returns a graceful unavailable response if the table doesn't exist yet.
+     */
+    public function refundPolicies(Request $request): JsonResponse
+    {
+        if (!Schema::hasTable('refund_policies')) {
+            return response()->json([
+                'summary' => [
+                    'unavailable' => true,
+                    'reason'      => 'refund_policies table not yet created',
+                ],
+                'data' => [],
+            ]);
+        }
+
+        // Map the query param (policy_level) to the DB column (scope)
+        $scopeFilter = match ($request->input('policy_level')) {
+            'org'      => 'organization',
+            'platform' => 'platform',
+            'workshop' => 'workshop',
+            default    => $request->input('policy_level'), // pass-through or null
+        };
+
+        // Summary counts across all policies
+        $countsByScope = DB::table('refund_policies')
+            ->selectRaw('scope, count(*) as count')
+            ->groupBy('scope')
+            ->pluck('count', 'scope');
+
+        // Paid workshops with no workshop- or org-level refund policy
+        $workshopsWithoutPolicy = 0;
+        if (Schema::hasTable('workshop_pricing')) {
+            $workshopsWithoutPolicy = (int) DB::table('workshops')
+                ->join('workshop_pricing', 'workshops.id', '=', 'workshop_pricing.workshop_id')
+                ->where('workshop_pricing.is_paid', true)
+                ->whereNotExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('refund_policies')
+                        ->whereColumn('refund_policies.workshop_id', 'workshops.id')
+                        ->where('refund_policies.scope', 'workshop');
+                })
+                ->whereNotExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('refund_policies')
+                        ->whereColumn('refund_policies.organization_id', 'workshops.organization_id')
+                        ->where('refund_policies.scope', 'organization');
+                })
+                ->count();
+        }
+
+        $query = DB::table('refund_policies')
+            ->leftJoin('organizations', 'refund_policies.organization_id', '=', 'organizations.id')
+            ->leftJoin('workshops', 'refund_policies.workshop_id', '=', 'workshops.id')
+            ->select(
+                'refund_policies.*',
+                'organizations.name as organization_name',
+                'workshops.title as workshop_title'
+            )
+            ->when($request->input('organization_id'), fn ($q, $id) => $q->where('refund_policies.organization_id', $id))
+            ->when($scopeFilter, fn ($q, $scope) => $q->where('refund_policies.scope', $scope))
+            ->orderBy('refund_policies.created_at', 'desc');
+
+        $policies = $query->paginate(25);
+
+        $policies->getCollection()->transform(fn ($policy) => [
+            'id'                 => $policy->id,
+            'policy_level'       => $policy->scope,
+            'organization_id'    => $policy->organization_id,
+            'organization_name'  => $policy->organization_name,
+            'workshop_id'        => $policy->workshop_id,
+            'workshop_title'     => $policy->workshop_title,
+            'policy_type'        => $policy->custom_policy_text ? 'custom' : 'standard',
+            'custom_policy_text' => $policy->custom_policy_text,
+            'is_active'          => true,
+            'created_at'         => $policy->created_at,
+        ]);
+
+        $total = (int) ($countsByScope->sum());
+
+        return response()->json([
+            'summary' => [
+                'total'                    => $total,
+                'platform_level'           => (int) ($countsByScope['platform']     ?? 0),
+                'org_level'                => (int) ($countsByScope['organization'] ?? 0),
+                'workshop_level'           => (int) ($countsByScope['workshop']     ?? 0),
+                'workshops_without_policy' => $workshopsWithoutPolicy,
+            ],
+            'data' => $policies,
+        ]);
     }
 }

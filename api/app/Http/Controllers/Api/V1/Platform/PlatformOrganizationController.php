@@ -59,6 +59,8 @@ class PlatformOrganizationController extends Controller
         $planCode = $organization->subscription?->plan_code ?? 'foundation';
         $limits = $this->planLimits($planCode);
 
+        $leaderCompletion = $this->leaderCompletionSummary($organization->id);
+
         return response()->json([
             'id' => $organization->id,
             'name' => $organization->name,
@@ -86,6 +88,83 @@ class PlatformOrganizationController extends Controller
                 'manager_count' => $organization->organization_users_count,
                 'manager_limit' => $limits['organizers'],
             ],
+            'leader_completion' => $leaderCompletion,
+        ]);
+    }
+
+    /**
+     * GET /api/platform/v1/organizations/{id}/leader-completion
+     * Detailed leader profile completion report for an organisation.
+     */
+    public function leaderCompletion(Request $request, int $id): JsonResponse
+    {
+        $organization = Organization::findOrFail($id);
+
+        $leaders = DB::table('leaders')
+            ->join('organization_leaders', 'leaders.id', '=', 'organization_leaders.leader_id')
+            ->leftJoin('leader_invitations', function ($join) use ($id) {
+                $join->on('leader_invitations.leader_id', '=', 'leaders.id')
+                     ->where('leader_invitations.organization_id', '=', $id);
+            })
+            ->where('organization_leaders.organization_id', $id)
+            ->select(
+                'leaders.id',
+                'leaders.first_name',
+                'leaders.last_name',
+                'leaders.email',
+                'leaders.bio',
+                'leaders.profile_image_url',
+                'leaders.website_url',
+                'leaders.phone_number',
+                DB::raw('MAX(leader_invitations.status) as invitation_status')
+            )
+            ->groupBy(
+                'leaders.id',
+                'leaders.first_name',
+                'leaders.last_name',
+                'leaders.email',
+                'leaders.bio',
+                'leaders.profile_image_url',
+                'leaders.website_url',
+                'leaders.phone_number'
+            )
+            ->get();
+
+        $leaderData = $leaders->map(function ($leader) {
+            $accepted   = $leader->invitation_status === 'accepted';
+            $hasBio     = !empty($leader->bio) && strlen($leader->bio) > 20;
+            $hasImage   = !empty($leader->profile_image_url);
+            $hasContact = !empty($leader->website_url) || !empty($leader->phone_number) || !empty($leader->email);
+
+            $missing = [];
+            if (!$accepted)   $missing[] = 'invitation not accepted';
+            if (!$hasBio)     $missing[] = 'bio missing or too short';
+            if (!$hasImage)   $missing[] = 'profile image missing';
+            if (!$hasContact) $missing[] = 'no contact information';
+
+            return [
+                'leader_id'         => $leader->id,
+                'first_name'        => $leader->first_name,
+                'last_name'         => $leader->last_name,
+                'email'             => $leader->email,
+                'invitation_status' => $leader->invitation_status ?? 'pending',
+                'profile_complete'  => $accepted && $hasBio && $hasImage && $hasContact,
+                'missing_fields'    => $missing,
+            ];
+        });
+
+        $total     = $leaderData->count();
+        $completed = $leaderData->where('profile_complete', true)->count();
+        $rate      = $total > 0 ? round(($completed / $total) * 100, 1) : 0.0;
+
+        return response()->json([
+            'organization_id'    => $organization->id,
+            'organization_name'  => $organization->name,
+            'total_leaders'      => $total,
+            'completed_profiles' => $completed,
+            'incomplete_profiles' => $total - $completed,
+            'completion_rate_pct' => $rate,
+            'leaders'            => $leaderData->values(),
         ]);
     }
 
@@ -256,6 +335,49 @@ class PlatformOrganizationController extends Controller
             'is_enabled' => $flag->is_enabled,
             'source' => $flag->source,
         ]);
+    }
+
+    private function leaderCompletionSummary(int $organizationId): array
+    {
+        $leaders = DB::table('leaders')
+            ->join('organization_leaders', 'leaders.id', '=', 'organization_leaders.leader_id')
+            ->leftJoin('leader_invitations', function ($join) use ($organizationId) {
+                $join->on('leader_invitations.leader_id', '=', 'leaders.id')
+                     ->where('leader_invitations.organization_id', '=', $organizationId);
+            })
+            ->where('organization_leaders.organization_id', $organizationId)
+            ->select(
+                'leaders.bio',
+                'leaders.profile_image_url',
+                'leaders.website_url',
+                'leaders.phone_number',
+                'leaders.email',
+                DB::raw('MAX(leader_invitations.status) as invitation_status')
+            )
+            ->groupBy(
+                'leaders.id',
+                'leaders.bio',
+                'leaders.profile_image_url',
+                'leaders.website_url',
+                'leaders.phone_number',
+                'leaders.email'
+            )
+            ->get();
+
+        $total     = $leaders->count();
+        $completed = $leaders->filter(function ($leader) {
+            $accepted   = $leader->invitation_status === 'accepted';
+            $hasBio     = !empty($leader->bio) && strlen($leader->bio) > 20;
+            $hasImage   = !empty($leader->profile_image_url);
+            $hasContact = !empty($leader->website_url) || !empty($leader->phone_number) || !empty($leader->email);
+            return $accepted && $hasBio && $hasImage && $hasContact;
+        })->count();
+
+        return [
+            'total'               => $total,
+            'complete'            => $completed,
+            'completion_rate_pct' => $total > 0 ? round(($completed / $total) * 100, 1) : 0.0,
+        ];
     }
 
     private function planLimits(string $planCode): array
