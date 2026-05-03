@@ -109,7 +109,7 @@ function resolvesLimit(planCode: string, limitHitKey: string): string | null {
 }
 
 // Determine upgrade vs downgrade vs same based on plan order
-const PLAN_ORDER = ['free', 'starter', 'pro', 'enterprise']
+const PLAN_ORDER = ['foundation', 'creator', 'studio', 'enterprise']
 
 function planRelation(currentCode: string | undefined, cardCode: string): 'current' | 'upgrade' | 'downgrade' | 'none' {
   if (!currentCode) return 'upgrade'
@@ -238,7 +238,7 @@ export function PlanCard({
           Contact Us
         </button>
       )
-    } else if (plan.code === 'free') {
+    } else if (plan.code === 'foundation') {
       ctaButton = (
         <button type="button" onClick={() => onSelectPlan(plan.code, billingCycle)} style={tealOutlineBtn}>
           Start free
@@ -304,7 +304,7 @@ export function PlanCard({
   return (
     <div style={cardStyle}>
       {/* Top badge — only for starter (highlighted) */}
-      {plan.code === 'starter' ? (
+      {plan.code === 'creator' ? (
         <div style={{ marginBottom: '10px' }}>
           <span
             style={{
@@ -328,8 +328,8 @@ export function PlanCard({
 
       {/* Plan name */}
       <div>
-        {/* Small plan-tier label for pro */}
-        {plan.code === 'pro' && (
+        {/* Small plan-tier label for studio */}
+        {plan.code === 'studio' && (
           <div
             style={{
               fontSize: '9px',

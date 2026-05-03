@@ -67,7 +67,7 @@ export function OnboardingFlow() {
   }
 
   function handlePlanSelected(planCode: string, _: BillingCycle) {
-    if (planCode === 'free') {
+    if (planCode === 'foundation') {
       router.push('/dashboard')
     }
     // paid plans: PricingPage handles Stripe checkout redirect internally

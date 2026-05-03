@@ -46,7 +46,7 @@ export function RegistrationTrendTab({ orgId, isProPlus }: RegistrationTrendProp
   if (!isProPlus) {
     return (
       <ReportLockedState
-        requiredPlan="pro"
+        requiredPlan="studio"
         feature="Registration Trend"
         description="Registration Trend shows week-over-week growth across your workshops. Available on the Pro plan."
       />

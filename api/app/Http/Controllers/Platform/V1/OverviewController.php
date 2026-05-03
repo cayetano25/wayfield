@@ -32,8 +32,10 @@ class OverviewController extends Controller
             ->groupBy('status')
             ->pluck('count', 'status');
 
-        // Plan distribution — from Stripe mirror (may be stale until webhook is wired)
-        $planCounts = DB::table('stripe_subscriptions')
+        // Plan distribution — from the live subscriptions table.
+        // Stripe mirror (stripe_subscriptions) is not yet wired via webhook, so we use
+        // the tenant subscriptions table which is kept up-to-date by the billing actions.
+        $planCounts = DB::table('subscriptions')
             ->where('status', 'active')
             ->selectRaw('plan_code, COUNT(*) as count')
             ->groupBy('plan_code')

@@ -28,13 +28,17 @@ class WorkshopPricingController extends Controller
     {
         $this->authorizeOwnerOrAdmin($request, $workshop);
 
+        $workshop->loadMissing('organization');
+        $takeRatePct = $this->feeService->getTakeRateForOrganization($workshop->organization);
+        $takeRateDisplay = round($takeRatePct * 100, 2);
+
         $pricing = WorkshopPricing::where('workshop_id', $workshop->id)->first();
 
         if ($pricing === null) {
-            return response()->json(['data' => null]);
+            return response()->json(['data' => null, 'take_rate_pct' => $takeRateDisplay]);
         }
 
-        return response()->json(['data' => new WorkshopPricingResource($pricing)]);
+        return response()->json(['data' => new WorkshopPricingResource($pricing), 'take_rate_pct' => $takeRateDisplay]);
     }
 
     /**

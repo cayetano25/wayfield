@@ -81,7 +81,7 @@ const SECTIONS: Section[] = [
   },
 ]
 
-const PLAN_ORDER = ['free', 'starter', 'pro', 'enterprise']
+const PLAN_ORDER = ['foundation', 'creator', 'studio', 'enterprise']
 
 function Cell({ value, isCurrentPlan }: { value: CellValue; isCurrentPlan?: boolean }) {
   const colBg = isCurrentPlan ? 'rgba(15,163,177,0.03)' : 'transparent'

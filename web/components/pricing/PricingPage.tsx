@@ -12,7 +12,7 @@ import type { SelectedPlan } from './CheckoutModal'
 import { FeatureComparisonTable } from './FeatureComparisonTable'
 import { PricingFAQ } from './PricingFAQ'
 
-const PLAN_ORDER = ['free', 'starter', 'pro', 'enterprise']
+const PLAN_ORDER = ['foundation', 'creator', 'studio', 'enterprise']
 
 const DISPLAY_NAME_FALLBACK: Record<string, string> = {
   free: 'Foundation',
@@ -172,7 +172,7 @@ export function PricingPage({
     'Foundation'
 
   function handleSelectPlan(planCode: string, cycle: BillingCycle) {
-    if (planCode === 'free') {
+    if (planCode === 'foundation') {
       onPlanSelected?.(planCode, cycle)
       return
     }
@@ -278,7 +278,7 @@ export function PricingPage({
                   billingCycle={billingCycle}
                   currentPlanCode={currentPlanCode}
                   context={context}
-                  isHighlighted={plan.code === 'starter'}
+                  isHighlighted={plan.code === 'creator'}
                   limitHitKey={limitHitKey}
                   onSelectPlan={handleSelectPlan}
                 />
@@ -304,7 +304,7 @@ export function PricingPage({
           onSuccess={() => {
             // Snapshot before clearing so toast closure retains values
             const completedPlan = selectedPlan
-            const oldIdx = PLAN_ORDER.indexOf(currentPlanCode ?? 'free')
+            const oldIdx = PLAN_ORDER.indexOf(currentPlanCode ?? 'foundation')
             const newIdx = PLAN_ORDER.indexOf(completedPlan.code)
             const isDowngrade = oldIdx > -1 && newIdx > -1 && newIdx < oldIdx
 

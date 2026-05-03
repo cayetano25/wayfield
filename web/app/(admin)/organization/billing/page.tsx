@@ -38,7 +38,7 @@ interface Invoice {
 }
 
 interface SubscriptionData {
-  plan_code: 'free' | 'starter' | 'pro' | 'enterprise'
+  plan_code: 'foundation' | 'creator' | 'studio' | 'enterprise'
   plan_name: string
   billing_cycle: 'monthly' | 'annual' | null
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete'
@@ -54,9 +54,9 @@ interface SubscriptionData {
 const BILLING_ROLES = ['owner', 'billing_admin']
 
 const PLAN_DISPLAY: Record<string, string> = {
-  free: 'Foundation',
-  starter: 'Creator',
-  pro: 'Studio',
+  foundation: 'Foundation',
+  creator: 'Creator',
+  studio: 'Studio',
   enterprise: 'Enterprise',
 }
 
@@ -340,7 +340,7 @@ export default function OrganizationBillingPage() {
     )
   }
 
-  const hasSubscription = data.plan_code !== 'free'
+  const hasSubscription = data.plan_code !== 'foundation'
   const displayName = PLAN_DISPLAY[data.plan_code] ?? data.plan_name
   const statusBadgeVariant =
     data.status === 'active' || data.status === 'trialing'

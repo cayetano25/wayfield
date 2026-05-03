@@ -11,15 +11,15 @@ interface ExportButtonProps {
   planCode: string;
 }
 
-const PLAN_TIERS: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+const PLAN_TIERS: Record<string, number> = { foundation: 0, creator: 1, studio: 2, enterprise: 3 };
 
-function isPlanAtLeast(planCode: string, min: 'starter' | 'pro'): boolean {
+function isPlanAtLeast(planCode: string, min: 'creator' | 'studio'): boolean {
   return (PLAN_TIERS[planCode] ?? 0) >= PLAN_TIERS[min];
 }
 
 export function ExportButton({ activeTab, workshopId, orgId, planCode }: ExportButtonProps) {
   const [exporting, setExporting] = useState(false);
-  const canExport = isPlanAtLeast(planCode, 'starter');
+  const canExport = isPlanAtLeast(planCode, 'creator');
 
   async function handleExport() {
     if (!canExport || exporting) return;

@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { Lock } from 'lucide-react';
 
 interface ReportLockedStateProps {
-  requiredPlan: 'starter' | 'pro';
+  requiredPlan: 'creator' | 'studio';
   feature: string;
   description?: string;
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  starter: 'Creator',
-  pro: 'Studio',
+  creator: 'Creator',
+  studio: 'Studio',
 };
 
 export function ReportLockedState({ requiredPlan, feature, description }: ReportLockedStateProps) {

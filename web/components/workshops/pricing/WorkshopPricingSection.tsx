@@ -51,8 +51,9 @@ export function WorkshopPricingSection({
   workshopStartDate,
   planCode,
 }: WorkshopPricingSectionProps) {
-  const takeRate = TAKE_RATE_BY_PLAN[planCode] ?? 2.0;
   const depositAvailable = DEPOSIT_PLANS.has(planCode);
+  // Initialise from local lookup; overwritten with the DB value once the API responds.
+  const [takeRate, setTakeRate] = useState<number>(TAKE_RATE_BY_PLAN[planCode] ?? 2.0);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,12 +85,16 @@ export function WorkshopPricingSection({
     setLoading(true);
     try {
       const [pricingRes, policyRes] = await Promise.allSettled([
-        apiGet<WorkshopPricingData>(`/workshops/${workshopId}/pricing`),
-        apiGet<RefundPolicyData>(`/workshops/${workshopId}/refund-policy`),
+        apiGet<{ data: WorkshopPricingData | null; take_rate_pct: number }>(`/workshops/${workshopId}/pricing`),
+        apiGet<{ data: RefundPolicyData | null }>(`/workshops/${workshopId}/refund-policy`),
       ]);
 
       if (pricingRes.status === 'fulfilled') {
-        const p = pricingRes.value;
+        setTakeRate(pricingRes.value.take_rate_pct);
+      }
+
+      if (pricingRes.status === 'fulfilled' && pricingRes.value.data !== null) {
+        const p = pricingRes.value.data;
         setHasExisting(true);
         setIsPaid(p.is_paid ?? false);
         setBasePriceCents(p.base_price_cents ?? 0);
@@ -103,13 +108,13 @@ export function WorkshopPricingSection({
         setPostCommitmentRefundPct(p.post_commitment_refund_pct ?? 0);
       }
 
-      if (policyRes.status === 'fulfilled') {
-        const pol = policyRes.value;
+      if (policyRes.status === 'fulfilled' && policyRes.value.data !== null) {
+        const pol = policyRes.value.data;
         setRefundPolicy(pol);
         setIsWorkshopRefundOverride(pol.scope === 'workshop');
       }
     } catch {
-      // 404 is normal for a new workshop without pricing
+      // network errors
     } finally {
       setLoading(false);
     }

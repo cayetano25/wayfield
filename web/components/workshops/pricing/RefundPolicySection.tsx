@@ -79,13 +79,13 @@ export function RefundPolicySection({
         no_refund_cutoff_hours:     form.no_refund_cutoff_hours,
         custom_policy_text:         form.custom_policy_text || null,
       };
-      let saved: RefundPolicy;
+      let res: { data: RefundPolicy };
       if (isWorkshopOverride && policy?.id) {
-        saved = await apiPut(`/workshops/${workshopId}/refund-policy`, payload);
+        res = await apiPut(`/workshops/${workshopId}/refund-policy`, payload);
       } else {
-        saved = await apiPost(`/workshops/${workshopId}/refund-policy`, payload);
+        res = await apiPost(`/workshops/${workshopId}/refund-policy`, payload);
       }
-      onPolicyUpdated(saved);
+      onPolicyUpdated(res.data);
       setEditing(false);
       toast.success('Refund policy saved');
     } catch (err) {

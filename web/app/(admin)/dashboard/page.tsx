@@ -674,8 +674,8 @@ export default function DashboardPage() {
 
   const { core, analytics, stubs } = data;
   const planCode = core.plan.plan_code;
-  const isPro = planCode === 'pro' || planCode === 'enterprise';
-  const isStarter = planCode === 'starter' || isPro;
+  const isPro = planCode === 'studio' || planCode === 'enterprise';
+  const isStarter = planCode === 'creator' || isPro;
   const isFree = !isStarter;
   const showEmptyState = core.workshops.total === 0;
 

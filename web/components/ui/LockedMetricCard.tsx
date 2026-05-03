@@ -43,7 +43,7 @@ export function LockedMetricCard({
       <p className="text-[12px] text-light-gray italic mb-3">
         Available on {availableOn} plan
       </p>
-      {currentPlan === 'free' && (
+      {currentPlan === 'foundation' && (
         <button
           type="button"
           onClick={() => router.push('/admin/organization/billing')}

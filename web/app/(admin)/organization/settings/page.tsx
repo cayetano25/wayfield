@@ -45,9 +45,9 @@ export default function OrganizationSettingsPage() {
 
   const { currentOrg } = useUser();
   const canEdit = EDIT_ROLES.includes(currentOrg?.role ?? '');
-  const planCode = currentOrg?.plan_code ?? 'free';
-  const isCreatorOrAbove = ['starter', 'pro', 'enterprise'].includes(planCode);
-  const isStudioOrAbove = ['pro', 'enterprise'].includes(planCode);
+  const planCode = currentOrg?.plan_code ?? 'foundation';
+  const isCreatorOrAbove = ['creator', 'studio', 'enterprise'].includes(planCode);
+  const isStudioOrAbove = ['studio', 'enterprise'].includes(planCode);
 
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [loading, setLoading] = useState(true);

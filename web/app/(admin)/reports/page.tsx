@@ -14,9 +14,9 @@ import { ReportLockedState } from './components/ReportLockedState';
 
 /* --- Plan helpers ------------------------------------------------------ */
 
-const PLAN_TIERS: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+const PLAN_TIERS: Record<string, number> = { foundation: 0, creator: 1, studio: 2, enterprise: 3 };
 
-function isPlanAtLeast(planCode: string, min: 'starter' | 'pro'): boolean {
+function isPlanAtLeast(planCode: string, min: 'creator' | 'studio'): boolean {
   return (PLAN_TIERS[planCode] ?? 0) >= PLAN_TIERS[min];
 }
 
@@ -46,9 +46,9 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('attendance');
   const [workshopId, setWorkshopId] = useState<number | undefined>();
 
-  const planCode = currentOrg?.plan_code ?? 'free';
-  const isStarterPlus = isPlanAtLeast(planCode, 'starter');
-  const isProPlus = isPlanAtLeast(planCode, 'pro');
+  const planCode = currentOrg?.plan_code ?? 'foundation';
+  const isStarterPlus = isPlanAtLeast(planCode, 'creator');
+  const isProPlus = isPlanAtLeast(planCode, 'studio');
   const orgId = currentOrg?.id;
 
   const showWorkshopFilter = activeTab === 'attendance' || activeTab === 'participants';
@@ -66,7 +66,7 @@ export default function ReportsPage() {
           </div>
         </div>
         <ReportLockedState
-          requiredPlan="starter"
+          requiredPlan="creator"
           feature="Reports"
           description="Detailed attendance, participant, and workshop reports help you understand your events at a glance."
         />

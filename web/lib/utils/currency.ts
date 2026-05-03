@@ -20,21 +20,21 @@ export function calcFees(amountCents: number, takeRatePct: number): FeeBreakdown
 }
 
 export const TAKE_RATE_BY_PLAN: Record<string, number> = {
-  free: 2.0,
-  starter: 2.0,
-  pro: 1.5,
+  foundation: 6.5,
+  creator: 4.0,
+  studio: 2.0,
   enterprise: 1.0,
 };
 
 export const PLAN_LABEL: Record<string, string> = {
-  free: 'Foundation',
-  starter: 'Creator',
-  pro: 'Studio',
+  foundation: 'Foundation',
+  creator: 'Creator',
+  studio: 'Studio',
   enterprise: 'Enterprise',
 };
 
 /** Plans that include deposit payment functionality (Creator / Studio / Enterprise) */
-export const DEPOSIT_PLANS = new Set(['starter', 'pro', 'enterprise']);
+export const DEPOSIT_PLANS = new Set(['creator', 'studio', 'enterprise']);
 
 /** Plans that include price tier functionality (Creator / Studio / Enterprise) */
-export const TIER_PLANS = new Set(['starter', 'pro', 'enterprise']);
+export const TIER_PLANS = new Set(['creator', 'studio', 'enterprise']);

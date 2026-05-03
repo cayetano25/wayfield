@@ -3,7 +3,7 @@ import { FEATURE_FLAGS } from '@/lib/featureFlags';
 export const PRICING_PLANS = [
   {
     id: 'foundation',
-    dbCode: 'free',
+    dbCode: 'foundation',
     name: 'Foundation',
     tagline: 'Run your first workshops without friction.',
     bestFor: 'Solo organizers testing the workflow',
@@ -33,7 +33,7 @@ export const PRICING_PLANS = [
   },
   {
     id: 'creator',
-    dbCode: 'starter',
+    dbCode: 'creator',
     name: 'Creator',
     tagline: 'Run workshops consistently — without losing control.',
     bestFor: 'Small recurring workshop businesses',
@@ -63,7 +63,7 @@ export const PRICING_PLANS = [
   },
   {
     id: 'studio',
-    dbCode: 'pro',
+    dbCode: 'studio',
     name: 'Studio',
     tagline: 'Operate your workshop program like a system.',
     bestFor: 'Serious educators and workshop teams',
