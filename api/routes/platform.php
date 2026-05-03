@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Platform\V1\OverviewController;
 use App\Http\Controllers\Platform\V1\PlatformAuthController;
+use App\Http\Controllers\Platform\V1\TwoFactorChallengeController;
+use App\Http\Controllers\Platform\V1\TwoFactorManagementController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +44,13 @@ Route::prefix('platform/v1')->group(function () {
 
     // ─── Auth (unauthenticated) ───────────────────────────────────────────────
     Route::post('auth/login', [PlatformAuthController::class, 'login'])
+        ->middleware('throttle:10,1');
+
+    // 2FA challenge — intermediate step between login and full token issuance.
+    // No Sanctum auth; validated by the short-lived two_factor_session_token (cache).
+    Route::post('auth/two-factor',          [TwoFactorChallengeController::class, 'verify'])
+        ->middleware('throttle:10,1');
+    Route::post('auth/two-factor/recovery', [TwoFactorChallengeController::class, 'recovery'])
         ->middleware('throttle:10,1');
 
     // ─── Protected platform routes ────────────────────────────────────────────
