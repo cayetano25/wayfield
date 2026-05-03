@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Zap,
   Shield,
+  Activity,
   ClipboardList,
   Settings,
   Megaphone,
@@ -43,6 +44,7 @@ export default function Sidebar() {
   const group2: NavItem[] = [
     ...(can.manageAutomations(role)                          ? [{ href: '/automations',  label: 'Automations', icon: Zap }]          : []),
     ...(can.viewSecurity(role)                               ? [{ href: '/security',     label: 'Security',    icon: Shield }]        : []),
+    ...(can.viewHealth(role)                                 ? [{ href: '/health',       label: 'Health',      icon: Activity }]      : []),
     ...(can.viewAuditLog(role)                               ? [{ href: '/audit',        label: 'Audit Log',   icon: ClipboardList }] : []),
     ...(role === 'super_admin' || role === 'admin'           ? [{ href: '/announcements',label: 'Announcements',icon: Megaphone }]    : []),
     ...(can.manageSettings(role)                             ? [{ href: '/settings',     label: 'Settings',    icon: Settings }]      : []),
