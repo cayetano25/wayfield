@@ -73,7 +73,7 @@ const mockOrgList: platformApi.Paginated<platformApi.OrgListItem> = {
       primary_contact_email: 'c@cascade.test', logo_url: null,
       created_at: '2026-01-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z',
       workshops_count: 4, active_workshops_count: 3,
-      subscription: { id: 1, organization_id: 1, stripe_customer_id: null, stripe_subscription_id: null, billing_cycle: null, current_period_end: null, plan_code: 'creator', status: 'active', starts_at: '2026-01-01T00:00:00Z', ends_at: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
+      subscription: { id: 1, organization_id: 1, plan_code: 'creator', status: 'active', current_period_start: null, current_period_end: null },
       organization_users: [],
     },
     {
@@ -93,6 +93,7 @@ const mockOrgDetail: platformApi.OrgDetail = {
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z',
   subscription: { plan_code: 'creator', status: 'active', current_period_start: null, current_period_end: null },
   usage: { workshop_count: 4, workshop_limit: 10, participant_count: 120, participant_limit: 250, manager_count: 3, manager_limit: 10 },
+  leader_completion: { total: 5, complete: 4, completion_rate_pct: 80 },
 };
 
 const mockFlags: platformApi.FeatureFlag[] = [

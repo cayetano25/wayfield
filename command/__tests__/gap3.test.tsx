@@ -78,13 +78,18 @@ function makeFailedPayment(overrides: Partial<platformApi.FailedPayment> = {}): 
 
 function makeAddonSession(overrides: Partial<platformApi.AddonSessionPricing> = {}): platformApi.AddonSessionPricing {
   return {
+    id: 10,
     session_id: 10,
     session_title: 'Advanced Session',
     workshop_id: 1,
     workshop_title: 'Photography Workshop',
+    organization_id: 1,
+    organization_name: 'Test Org',
     session_type: 'addon',
     price_cents: 4900,
-    deposit_amount_cents: 1000,
+    currency: 'usd',
+    is_nonrefundable: false,
+    max_purchases: null,
     ...overrides,
   };
 }

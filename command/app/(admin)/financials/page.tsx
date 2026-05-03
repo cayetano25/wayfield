@@ -30,6 +30,9 @@ import {
   type StripeConnectAccount,
   type PaymentStatus,
   type FailedPayment,
+  type RefundPolicy,
+  type RefundPolicySummary,
+  type Paginated,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { useToast } from '@/components/ui/Toast';
@@ -46,6 +49,7 @@ type FinancialsTab =
   | 'payment-controls'
   | 'take-rates'
   | 'stripe-connect'
+  | 'refund-policies'
   | 'failed-payments';
 
 const TABS: Array<{ key: FinancialsTab; label: string }> = [
@@ -54,6 +58,7 @@ const TABS: Array<{ key: FinancialsTab; label: string }> = [
   { key: 'payment-controls', label: 'Payment Controls' },
   { key: 'take-rates', label: 'Take Rates' },
   { key: 'stripe-connect', label: 'Stripe Connect' },
+  { key: 'refund-policies', label: 'Refund Policies' },
   { key: 'failed-payments', label: 'Failed Payments' },
 ];
 
@@ -1362,6 +1367,227 @@ function FailedPaymentsTab() {
   );
 }
 
+// ─── Refund Policies tab ──────────────────────────────────────────────────────
+
+function PolicyLevelBadge({ level }: { level: string }) {
+  const styles: Record<string, string> = {
+    platform:     'bg-purple-50 text-purple-700 border border-purple-200',
+    organization: 'bg-teal-50 text-teal-700 border border-teal-200',
+    workshop:     'bg-blue-50 text-blue-700 border border-blue-200',
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+        styles[level] ?? 'bg-gray-100 text-gray-600 border border-gray-200'
+      }`}
+    >
+      {level}
+    </span>
+  );
+}
+
+function RefundPoliciesTab() {
+  const [summary, setSummary] = useState<RefundPolicySummary | null>(null);
+  const [policies, setPolicies] = useState<RefundPolicy[]>([]);
+  const [total, setTotal] = useState(0);
+  const [lastPage, setLastPage] = useState(1);
+  const [page, setPage] = useState(1);
+  const [levelFilter, setLevelFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  async function load(pg: number) {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformFinancials.refundPolicies({
+        policy_level: levelFilter || undefined,
+        page: pg,
+      });
+      if (data.summary.unavailable) {
+        setUnavailable(true);
+        setSummary(data.summary);
+        setPolicies([]);
+      } else {
+        setUnavailable(false);
+        setSummary(data.summary);
+        const paged = data.data as Paginated<RefundPolicy>;
+        setPolicies(paged.data ?? []);
+        setTotal(paged.total ?? 0);
+        setLastPage(paged.last_page ?? 1);
+      }
+    } catch {
+      setError('Failed to load refund policies.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(page); }, [page, levelFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading && !summary) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-gray-200 rounded-xl h-24" />
+          ))}
+        </div>
+        <div className="animate-pulse bg-gray-100 rounded-xl h-48" />
+      </div>
+    );
+  }
+
+  if (error) return <ErrorBanner message={error} onRetry={() => load(page)} />;
+
+  if (unavailable) {
+    return (
+      <div
+        className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-5 flex items-start gap-3 max-w-2xl"
+        data-testid="refund-policies-unavailable"
+      >
+        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-amber-800 mb-1">Refund policy data not available</p>
+          <p className="text-sm text-amber-700">
+            {summary?.reason ?? 'The refund policy schema is not yet active.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const from = total === 0 ? 0 : (page - 1) * 15 + 1;
+  const to = Math.min(page * 15, total);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards */}
+      {summary && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'TOTAL POLICIES', value: summary.total ?? 0 },
+            { label: 'PLATFORM LEVEL', value: summary.platform_level ?? 0 },
+            { label: 'ORG LEVEL', value: summary.org_level ?? 0 },
+            { label: 'WITHOUT POLICY', value: summary.workshops_without_policy ?? 0 },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <Mono className="text-xs uppercase tracking-widest text-gray-400 mb-1 block">
+                {label}
+              </Mono>
+              <p className="font-heading text-3xl font-bold text-gray-900">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filter bar */}
+      <div className="flex gap-3">
+        <select
+          value={levelFilter}
+          onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
+          className="min-h-[36px] px-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0FA3B1]"
+        >
+          <option value="">All Levels</option>
+          <option value="platform">Platform</option>
+          <option value="organization">Organisation</option>
+          <option value="workshop">Workshop</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+        <Table>
+          <TableHead>
+            <Th>Level</Th>
+            <Th>Organisation</Th>
+            <Th>Workshop</Th>
+            <Th>Type</Th>
+            <Th>Active</Th>
+            <Th>Created</Th>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              [...Array(5)].map((_, i) => (
+                <tr key={i}>
+                  <td colSpan={6} className="px-4 py-1">
+                    <div className="animate-pulse bg-gray-100 h-10 rounded my-1" />
+                  </td>
+                </tr>
+              ))
+            ) : policies.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">
+                  No refund policies found.
+                </td>
+              </tr>
+            ) : (
+              policies.map((policy) => (
+                <tr key={policy.id} className="hover:bg-gray-50 transition-colors">
+                  <Td><PolicyLevelBadge level={policy.policy_level} /></Td>
+                  <Td>
+                    <span className="text-sm text-gray-700">{policy.organization_name ?? '—'}</span>
+                  </Td>
+                  <Td>
+                    <span className="text-sm text-gray-700">{policy.workshop_title ?? '—'}</span>
+                  </Td>
+                  <Td>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                        policy.policy_type === 'custom'
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : 'bg-gray-100 text-gray-600 border border-gray-200'
+                      }`}
+                    >
+                      {policy.policy_type}
+                    </span>
+                  </Td>
+                  <Td>
+                    {policy.is_active
+                      ? <CheckCircle size={16} className="text-teal-500" aria-label="Active" />
+                      : <XCircle size={16} className="text-gray-300" aria-label="Inactive" />
+                    }
+                  </Td>
+                  <Td>
+                    <Mono className="text-xs text-gray-400">
+                      {format(new Date(policy.created_at), 'MMM d, yyyy')}
+                    </Mono>
+                  </Td>
+                </tr>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {!loading && total > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Showing {from}–{to} of {total.toLocaleString()}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page <= 1}
+              className="min-h-[36px] px-3 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= lastPage}
+              className="min-h-[36px] px-3 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FinancialsPage() {
@@ -1451,6 +1677,7 @@ export default function FinancialsPage() {
       {activeTab === 'payment-controls' && <PaymentControlsTab />}
       {activeTab === 'take-rates' && <TakeRatesTab />}
       {activeTab === 'stripe-connect' && <StripeConnectTab />}
+      {activeTab === 'refund-policies' && <RefundPoliciesTab />}
       {activeTab === 'failed-payments' && <FailedPaymentsTab />}
     </div>
   );

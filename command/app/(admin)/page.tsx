@@ -9,8 +9,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { platformOverview, type OverviewResponse } from '@/lib/platform-api';
+import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import {
+  platformOverview,
+  platformWorkshops,
+  type OverviewResponse,
+  type WorkshopReadinessItem,
+} from '@/lib/platform-api';
 
 // ─── Plan display names ───────────────────────────────────────────────────────
 
@@ -123,6 +128,99 @@ function PlanChart({ byPlan }: { byPlan: OverviewResponse['organizations']['by_p
   );
 }
 
+// ─── Score badge ─────────────────────────────────────────────────────────────
+
+function ScoreBadge({ score }: { score: number }) {
+  const cls = score >= 80
+    ? 'bg-teal-50 text-teal-700'
+    : score >= 50
+    ? 'bg-amber-50 text-amber-700'
+    : 'bg-red-50 text-red-700';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
+      style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+    >
+      {score}
+    </span>
+  );
+}
+
+// ─── Workshop readiness section ───────────────────────────────────────────────
+
+function WorkshopReadinessSection({ items }: { items: WorkshopReadinessItem[] }) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-6 flex items-center gap-3">
+        <CheckCircle size={24} className="text-[#0FA3B1] shrink-0" />
+        <span className="text-sm text-gray-600">All draft workshops score 80+ — good shape!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 pt-5 pb-3 flex items-start justify-between">
+        <div>
+          <h2
+            className="text-base font-semibold text-gray-900"
+            style={{ fontFamily: 'var(--font-sora, sans-serif)' }}
+          >
+            Workshop Readiness
+          </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Draft workshops sorted by readiness score (lowest first)
+          </p>
+        </div>
+        <span className="text-sm text-[#0FA3B1]">View all →</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-t border-gray-100 bg-gray-50">
+              <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Organisation
+              </th>
+              <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Workshop
+              </th>
+              <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Score
+              </th>
+              <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Missing Items
+              </th>
+              <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ready?
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {items.slice(0, 10).map((item) => {
+              const missingText = item.missing_items.join(', ');
+              const truncated = missingText.length > 60 ? missingText.slice(0, 60) + '…' : missingText;
+              return (
+                <tr key={item.workshop_id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-3 text-sm text-gray-500">{item.organization_name ?? '—'}</td>
+                  <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.title}</td>
+                  <td className="px-6 py-3"><ScoreBadge score={item.readiness_score} /></td>
+                  <td className="px-6 py-3 text-sm text-gray-500">{truncated || '—'}</td>
+                  <td className="px-6 py-3 text-sm font-medium">
+                    {item.ready_to_publish
+                      ? <span className="text-teal-600">Yes</span>
+                      : <span className="text-red-500">No</span>
+                    }
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Audit event row ──────────────────────────────────────────────────────────
 
 function AuditRow({ event }: { event: OverviewResponse['recent_audit_events'][number] }) {
@@ -160,20 +258,28 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [readiness, setReadiness] = useState<WorkshopReadinessItem[]>([]);
+  const [readinessLoaded, setReadinessLoaded] = useState(false);
 
   async function load(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
-    try {
-      const { data: overview } = await platformOverview.get();
-      setData(overview);
-    } catch {
+    const [overviewRes, readinessRes] = await Promise.allSettled([
+      platformOverview.get(),
+      platformWorkshops.readiness({ status: 'draft', max_score: 79 }),
+    ]);
+    if (overviewRes.status === 'fulfilled') {
+      setData(overviewRes.value.data);
+    } else {
       setError('Failed to load overview data.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
+    if (readinessRes.status === 'fulfilled') {
+      setReadiness(readinessRes.value.data.data);
+    }
+    setReadinessLoaded(true);
+    setLoading(false);
+    setRefreshing(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -211,6 +317,9 @@ export default function OverviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
           <SkeletonCard height="h-64" />
           <SkeletonCard height="h-64" />
+        </div>
+        <div className="mt-4">
+          <SkeletonCard height="h-40" />
         </div>
       </div>
     );
@@ -304,6 +413,13 @@ export default function OverviewPage() {
           )}
         </div>
       </div>
+
+      {/* Workshop Readiness */}
+      {readinessLoaded && (
+        <div className="mt-4">
+          <WorkshopReadinessSection items={readiness} />
+        </div>
+      )}
     </div>
   );
 }
