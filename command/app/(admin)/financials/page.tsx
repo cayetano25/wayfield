@@ -56,16 +56,16 @@ function StatCard({ label, value, sub }: StatCardProps) {
 // ─── Plan distribution chart ──────────────────────────────────────────────────
 
 const PLAN_COLORS: Record<string, string> = {
-  free: '#9CA3AF',
-  starter: '#0FA3B1',
-  pro: '#7EA8BE',
+  foundation: '#9CA3AF',
+  creator:    '#0FA3B1',
+  studio:     '#7EA8BE',
   enterprise: '#E67E22',
 };
 
 const PLAN_LABELS: Record<string, string> = {
-  free: 'Free',
-  starter: 'Starter',
-  pro: 'Pro',
+  foundation: 'Foundation',
+  creator:    'Creator',
+  studio:     'Studio',
   enterprise: 'Enterprise',
 };
 

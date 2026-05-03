@@ -74,7 +74,7 @@ export interface OverviewResponse {
   organizations: {
     total: number;
     by_status: Record<string, number>;
-    by_plan: { free: number; starter: number; pro: number; enterprise: number };
+    by_plan: { foundation: number; creator: number; studio: number; enterprise: number };
   };
   users: { total: number; active_30_days: number; new_7_days: number };
   workshops: { total: number; by_status: Record<string, number> };
@@ -84,7 +84,7 @@ export interface OverviewResponse {
 }
 
 export type OrgStatus = 'active' | 'suspended' | 'inactive';
-export type PlanCode = 'free' | 'starter' | 'pro' | 'enterprise';
+export type PlanCode = 'foundation' | 'creator' | 'studio' | 'enterprise';
 
 export interface OrgSubscription {
   plan_code: PlanCode;
@@ -257,9 +257,9 @@ export interface FinancialsOverview {
     past_due: number;
     canceled: number;
     by_plan: {
-      free: number;
-      starter: number;
-      pro: number;
+      foundation: number;
+      creator: number;
+      studio: number;
       enterprise: number;
     };
   };

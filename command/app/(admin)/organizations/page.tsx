@@ -14,9 +14,9 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Table, TableHead, Th, TableBody, Td } from '@/components/ui/Table';
 
 const PLAN_OPTIONS: Array<{ value: PlanCode; label: string }> = [
-  { value: 'free', label: 'Free' },
-  { value: 'starter', label: 'Starter' },
-  { value: 'pro', label: 'Pro' },
+  { value: 'foundation', label: 'Foundation' },
+  { value: 'creator', label: 'Creator' },
+  { value: 'studio', label: 'Studio' },
   { value: 'enterprise', label: 'Enterprise' },
 ];
 
@@ -243,7 +243,7 @@ export default function OrganizationsPage() {
                     </Link>
                   </Td>
                   <Td>
-                    <PlanBadge plan={org.subscription?.plan_code ?? 'free'} />
+                    <PlanBadge plan={org.subscription?.plan_code ?? 'foundation'} />
                   </Td>
                   <Td>
                     <StatusBadge status={org.status} />

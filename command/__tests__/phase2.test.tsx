@@ -114,7 +114,7 @@ const mockOverview: platformApi.FinancialsOverview = {
     trialing: 1,
     past_due: 0,
     canceled: 1,
-    by_plan: { free: 0, starter: 2, pro: 1, enterprise: 0 },
+    by_plan: { foundation: 0, creator: 2, studio: 1, enterprise: 0 },
   },
   stripe_webhook_connected: true,
 };
