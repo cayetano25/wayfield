@@ -25,6 +25,7 @@ async function renderSidebarWithRole(role: AdminRole) {
       viewSupport:        (r: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(r),
       manageAutomations:  (r: AdminRole) => (['super_admin', 'admin'] as AdminRole[]).includes(r),
       viewSecurity:       (r: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(r),
+      viewHealth:         (r: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(r),
       viewAuditLog:       (r: AdminRole) => (['super_admin', 'admin'] as AdminRole[]).includes(r),
       manageSettings:     (r: AdminRole) => r === 'super_admin',
       managePayments:     (r: AdminRole) => (['super_admin', 'billing'] as AdminRole[]).includes(r),

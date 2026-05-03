@@ -283,6 +283,11 @@ export const platformFinancials = {
   overview: () => api.get<FinancialsOverview>('/financials/overview'),
   invoices: (params?: { status?: string; organization_id?: number; page?: number }) =>
     api.get<Paginated<InvoiceListItem>>('/financials/invoices', { params }),
+  failedPayments: (params?: { organization_id?: number; date_from?: string; date_to?: string; page?: number }) =>
+    api.get<Paginated<FailedPayment> & { stripe_webhook_required?: boolean }>(
+      '/financials/failed-payments',
+      { params },
+    ),
 };
 
 // ─── Automation types ─────────────────────────────────────────────────────────
@@ -463,6 +468,75 @@ export interface StripeConnectAccount {
   country: string | null;
   last_webhook_received_at: string | null;
   has_pending_requirements: boolean;
+}
+
+// ─── Health monitoring types ──────────────────────────────────────────────────
+
+export interface SesDeliveryStats {
+  sent_30d: number;
+  delivered_30d: number;
+  bounced_30d: number;
+  complained_30d: number;
+  bounce_rate_pct: number;
+  complaint_rate_pct: number;
+  last_updated: string | null;
+}
+
+export interface OrgEmailDelivery {
+  organization_id: number;
+  organization_name: string;
+  sent_30d: number;
+  bounce_rate_pct: number;
+  complaint_rate_pct: number;
+  status: 'high_bounce' | 'ok' | 'no_data';
+}
+
+export const platformHealth = {
+  sesStats: () => api.get<SesDeliveryStats>('/health/ses-stats'),
+  emailByOrg: (params?: { min_bounce_rate?: number }) =>
+    api.get<OrgEmailDelivery[]>('/health/email-by-org', { params }),
+};
+
+// ─── Workshop pricing types ───────────────────────────────────────────────────
+
+export interface WorkshopPricingItem {
+  workshop_id: number;
+  workshop_title: string;
+  session_count: number;
+  pricing_model: string | null;
+  base_price_cents: number | null;
+  deposit_required: boolean;
+  deposit_amount_cents: number | null;
+}
+
+export interface AddonSessionPricing {
+  session_id: number;
+  session_title: string;
+  workshop_id: number;
+  workshop_title: string;
+  session_type: 'addon' | 'invite_only';
+  price_cents: number | null;
+  deposit_amount_cents: number | null;
+}
+
+export const platformWorkshops = {
+  pricingAudit: (params?: { organization_id?: number; page?: number }) =>
+    api.get<Paginated<WorkshopPricingItem>>('/workshops/pricing-audit', { params }),
+  addonPricing: (params?: { organization_id?: number }) =>
+    api.get<AddonSessionPricing[]>('/workshops/addon-pricing', { params }),
+};
+
+// ─── Failed payments type ─────────────────────────────────────────────────────
+
+export interface FailedPayment {
+  id: number;
+  organization_id: number;
+  organization_name: string;
+  amount_cents: number;
+  currency: string;
+  failure_reason: string | null;
+  customer_email: string | null;
+  created_at: string;
 }
 
 export const platformPayments = {

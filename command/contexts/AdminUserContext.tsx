@@ -76,6 +76,7 @@ export const can = {
   viewSupport:        (role: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(role),
   manageAutomations:  (role: AdminRole) => (['super_admin', 'admin'] as AdminRole[]).includes(role),
   viewSecurity:       (role: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(role),
+  viewHealth:         (role: AdminRole) => (['super_admin', 'admin', 'support'] as AdminRole[]).includes(role),
   viewAuditLog:       (role: AdminRole) => (['super_admin', 'admin'] as AdminRole[]).includes(role),
   manageSettings:     (role: AdminRole) => role === 'super_admin',
   managePayments:     (role: AdminRole) => (['super_admin', 'billing'] as AdminRole[]).includes(role),
