@@ -9,6 +9,7 @@ import {
   platformOrganizations,
   platformAuditLogs,
   platformPayments,
+  platformWorkshops,
   type OrgDetail,
   type FeatureFlag,
   type PlatformAuditLog,
