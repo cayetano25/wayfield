@@ -172,16 +172,12 @@ export default function AutomationsPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <Table>
           <TableHead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Trigger</Th>
-              <Th>Action</Th>
-              <Th>Status</Th>
-              <Th>Last Run</Th>
-              <Th>
-                <span className="sr-only">Actions</span>
-              </Th>
-            </tr>
+            <Th>Name</Th>
+            <Th>Trigger</Th>
+            <Th>Action</Th>
+            <Th>Status</Th>
+            <Th>Last Run</Th>
+            <Th><span className="sr-only">Actions</span></Th>
           </TableHead>
           <TableBody>
             {loading ? (

@@ -214,14 +214,12 @@ export default function SecurityPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <Table>
           <TableHead>
-            <tr>
-              <Th>Event Type</Th>
-              <Th>Severity</Th>
-              <Th>Description</Th>
-              <Th>Organization</Th>
-              <Th>User</Th>
-              <Th>When</Th>
-            </tr>
+            <Th>Event Type</Th>
+            <Th>Severity</Th>
+            <Th>Description</Th>
+            <Th>Organization</Th>
+            <Th>User</Th>
+            <Th>When</Th>
           </TableHead>
           <TableBody>
             {loading ? (

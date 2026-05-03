@@ -197,12 +197,10 @@ export default function AuditPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <Table>
           <TableHead>
-            <tr>
-              <Th>Action</Th>
-              <Th>Admin</Th>
-              <Th>Organization</Th>
-              <Th>When</Th>
-            </tr>
+            <Th>Action</Th>
+            <Th>Admin</Th>
+            <Th>Organization</Th>
+            <Th>When</Th>
           </TableHead>
           <TableBody>
             {loading ? (
