@@ -1,12 +1,12 @@
 export interface IconProps {
-  /** Icon size in px. Applied to width and height. Default: 24 */
+  /** Width and height in px. Default: 24 */
   size?: number;
-  /** Stroke color. Default: Wayfield charcoal #2E2E2E */
+  /** Primary stroke color. Default: #334155 (Slate) */
   color?: string;
-  /** Accent fill color for inner highlights. Default: Wayfield teal #0FA3B1 */
+  /** Accent fill/stroke color. Default: #0FA3B1 (Wayfield teal) */
   accent?: string;
-  /** Additional className for the SVG element */
+  /** Extra className on the SVG element */
   className?: string;
-  /** aria-label for accessibility. Provide when icon has no visible text label */
+  /** aria-label for screen readers */
   'aria-label'?: string;
 }

@@ -4,7 +4,7 @@ import type { IconProps } from './types';
 
 export default function OrganizerIcon({
   size = 24,
-  color = '#2E2E2E',
+  color = '#334155',
   accent = '#0FA3B1',
   className,
   'aria-label': ariaLabel,
@@ -15,8 +15,6 @@ export default function OrganizerIcon({
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
-      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -24,25 +22,43 @@ export default function OrganizerIcon({
       aria-hidden={ariaLabel ? undefined : true}
       role={ariaLabel ? 'img' : undefined}
     >
-      {/* Outer rounded rectangle */}
-      <rect x={2} y={2} width={20} height={20} rx={3} />
-      {/* Top-left cell */}
-      <rect x={5} y={5} width={6} height={6} rx={1.5} />
-      {/* Top-right cell — accent highlighted */}
+      {/* Building body */}
+      <rect x="3" y="5" width="18" height="17" rx="1.5" stroke={color} strokeWidth={2} fill="none" />
+
+      {/* Ground line */}
+      <line x1="1" y1="22" x2="23" y2="22" stroke={color} strokeWidth={2} />
+
+      {/* Window — top-left, teal accent fill */}
       <rect
-        x={13}
-        y={5}
-        width={6}
-        height={6}
-        rx={1.5}
-        fill={accent}
-        fillOpacity={0.2}
-        stroke={accent}
+        x="6" y="9" width="4" height="3.5" rx="0.5"
+        fill={accent} fillOpacity="0.25"
+        stroke={accent} strokeWidth={1.5}
       />
-      {/* Bottom-left cell */}
-      <rect x={5} y={13} width={6} height={6} rx={1.5} />
-      {/* Bottom-right cell */}
-      <rect x={13} y={13} width={6} height={6} rx={1.5} />
+
+      {/* Window — top-right, stroke only */}
+      <rect
+        x="14" y="9" width="4" height="3.5" rx="0.5"
+        stroke={color} strokeWidth={1.5} fill="none"
+      />
+
+      {/* Window — bottom-left, stroke only */}
+      <rect
+        x="6" y="14.5" width="4" height="3.5" rx="0.5"
+        stroke={color} strokeWidth={1.5} fill="none"
+      />
+
+      {/* Window — bottom-right, teal accent fill */}
+      <rect
+        x="14" y="14.5" width="4" height="3.5" rx="0.5"
+        fill={accent} fillOpacity="0.25"
+        stroke={accent} strokeWidth={1.5}
+      />
+
+      {/* Door — centered at bottom of building */}
+      <rect
+        x="9.5" y="18" width="5" height="4" rx="0.5"
+        stroke={color} strokeWidth={1.5} fill="none"
+      />
     </svg>
   );
 }
