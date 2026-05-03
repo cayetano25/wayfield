@@ -52,9 +52,10 @@ export interface NotificationsResponse {
 export type InvitationActionResult = 'accepted' | 'declined' | 'error'
 
 export interface UnreadMeta {
-  unread_count:      number
-  has_urgent_unread: boolean
-  has_leader_unread: boolean
+  unread_count:        number
+  has_urgent_unread:   boolean
+  has_leader_unread:   boolean
+  has_support_replies: boolean
 }
 
 /* --- Participant notification types (notifications page) --------------- */

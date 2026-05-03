@@ -1,15 +1,21 @@
 import { apiGet, apiPatch, apiPost } from './client'
 import type { NotificationsResponse, UnreadMeta } from '@/lib/types/notifications'
 
-const EMPTY_META: UnreadMeta = { unread_count: 0, has_urgent_unread: false, has_leader_unread: false }
+const EMPTY_META: UnreadMeta = {
+  unread_count:        0,
+  has_urgent_unread:   false,
+  has_leader_unread:   false,
+  has_support_replies: false,
+}
 
 export async function fetchUnreadCount(): Promise<UnreadMeta> {
   try {
     const data = await apiGet<Partial<UnreadMeta>>('/me/notifications/unread-count')
     return {
-      unread_count:      data.unread_count      ?? 0,
-      has_urgent_unread: data.has_urgent_unread ?? false,
-      has_leader_unread: data.has_leader_unread ?? false,
+      unread_count:        data.unread_count        ?? 0,
+      has_urgent_unread:   data.has_urgent_unread   ?? false,
+      has_leader_unread:   data.has_leader_unread   ?? false,
+      has_support_replies: data.has_support_replies ?? false,
     }
   } catch {
     return EMPTY_META
