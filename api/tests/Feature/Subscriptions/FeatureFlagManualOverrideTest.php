@@ -15,7 +15,7 @@ uses(RefreshDatabase::class);
 function makeOrgWithRole(string $role): array
 {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create();
 
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
@@ -160,7 +160,7 @@ test('manual override enabling reporting makes it available on free plan', funct
 
 test('manual override disabling reporting blocks starter plan access', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([

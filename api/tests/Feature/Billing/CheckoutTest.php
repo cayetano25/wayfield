@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function billingOrg(string $plan = 'free', string $role = 'owner'): array
+function billingOrg(string $plan = 'foundation', string $role = 'owner'): array
 {
     $org = Organization::factory()->create();
     Subscription::factory()->forOrganization($org->id)->active()->$plan()->create();
@@ -32,14 +32,14 @@ function billingOrg(string $plan = 'free', string $role = 'owner'): array
 // ─── POST /api/v1/organizations/{organization}/billing/checkout ───────────────
 
 test('owner can create a checkout session for starter plan', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     // In test env no Stripe price IDs are set, so the controller returns 422
     // with stripe_not_configured — which proves the owner cleared the auth check.
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing' => 'monthly',
     ]);
 
@@ -50,10 +50,10 @@ test('owner can create a checkout session for starter plan', function () {
 });
 
 test('staff cannot create a checkout session', function () {
-    [$org, $user] = billingOrg('free', 'staff');
+    [$org, $user] = billingOrg('foundation', 'staff');
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing' => 'monthly',
     ]);
 
@@ -61,10 +61,10 @@ test('staff cannot create a checkout session', function () {
 });
 
 test('admin cannot create a checkout session', function () {
-    [$org, $user] = billingOrg('free', 'admin');
+    [$org, $user] = billingOrg('foundation', 'admin');
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing' => 'monthly',
     ]);
 
@@ -72,13 +72,13 @@ test('admin cannot create a checkout session', function () {
 });
 
 test('billing_admin can initiate a checkout session', function () {
-    [$org, $user] = billingOrg('free', 'billing_admin');
+    [$org, $user] = billingOrg('foundation', 'billing_admin');
 
     // Ensure no price ID so controller reaches the Stripe-not-configured check
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing' => 'monthly',
     ]);
 
@@ -89,10 +89,10 @@ test('billing_admin can initiate a checkout session', function () {
 });
 
 test('free plan cannot be submitted to checkout endpoint', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'free',
+        'plan_code' => 'foundation',
         'billing' => 'monthly',
     ]);
 
@@ -100,7 +100,7 @@ test('free plan cannot be submitted to checkout endpoint', function () {
 });
 
 test('enterprise plan cannot be submitted to checkout endpoint', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'enterprise',
@@ -111,13 +111,13 @@ test('enterprise plan cannot be submitted to checkout endpoint', function () {
 });
 
 test('checkout returns 422 when no Stripe price is configured for the plan', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     // Ensure no price ID is set
     config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing' => 'monthly',
     ]);
 
@@ -147,7 +147,7 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
     $org = Organization::factory()->create();
     $subscription = Subscription::factory()
         ->forOrganization($org->id)
-        ->free()
+        ->foundation()
         ->active()
         ->create();
 
@@ -165,7 +165,7 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
                 'subscription' => 'sub_test_123',
                 'metadata' => [
                     'organization_id' => (string) $org->id,
-                    'plan_code' => 'starter',
+                    'plan_code' => 'creator',
                     'billing' => 'monthly',
                 ],
             ],
@@ -192,7 +192,7 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
 
     $this->assertDatabaseHas('subscriptions', [
         'id' => $subscription->id,
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'status' => 'active',
         'billing_cycle' => 'monthly',
     ]);
@@ -206,7 +206,7 @@ test('webhook checkout.session.completed updates subscription plan_code', functi
 // ─── plan_limit_reached error shape ──────────────────────────────────────────
 
 test('limit-hit on workshop creation returns plan_limit_reached error shape', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     // Create 2 workshops to hit the Free plan limit
     Workshop::factory()->forOrganization($org->id)->draft()->create();
@@ -238,9 +238,9 @@ test('limit-hit on workshop creation returns plan_limit_reached error shape', fu
     ]);
 
     $data = $response->json();
-    expect($data['current_plan'])->toBe('free');
+    expect($data['current_plan'])->toBe('foundation');
     expect($data['current_plan_display'])->toBe('Foundation');
-    expect($data['upgrade_to'])->toBe('starter');
+    expect($data['upgrade_to'])->toBe('creator');
     expect($data['upgrade_to_display'])->toBe('Creator');
     expect($data['upgrade_url'])->toBe('/admin/organization/billing');
     expect($data['limit'])->toBe(2);
@@ -248,7 +248,7 @@ test('limit-hit on workshop creation returns plan_limit_reached error shape', fu
 });
 
 test('limit-hit on participant join returns plan_limit_reached error shape', function () {
-    [$org, $user] = billingOrg('free', 'owner');
+    [$org, $user] = billingOrg('foundation', 'owner');
 
     $workshop = Workshop::factory()->forOrganization($org->id)->create([
         'status' => 'published',

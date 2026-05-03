@@ -55,7 +55,7 @@ function orgWithStripeCustomer(string $customerId): Organization
 
 function activeSubscription(int $orgId, string $stripeSubId): Subscription
 {
-    return Subscription::factory()->forOrganization($orgId)->starter()->active()->create([
+    return Subscription::factory()->forOrganization($orgId)->creator()->active()->create([
         'stripe_subscription_id' => $stripeSubId,
         'stripe_status'          => 'active',
         'current_period_end'     => now()->addMonth(),
@@ -222,7 +222,7 @@ test('payment_succeeded sets subscription to active and writes audit log', funct
     $customerId = 'cus_pay_ok';
     $org        = orgWithStripeCustomer($customerId);
 
-    $sub = Subscription::factory()->forOrganization($org->id)->starter()->create([
+    $sub = Subscription::factory()->forOrganization($org->id)->creator()->create([
         'stripe_status' => 'past_due',
         'status'        => 'past_due',
     ]);
@@ -289,7 +289,7 @@ test('subscription.deleted cancels local subscription and resets plan to free', 
     expect($sub->status)->toBe('canceled');
     expect($sub->stripe_status)->toBe('canceled');
     expect($sub->ends_at)->not->toBeNull();
-    expect($sub->plan_code)->toBe('free');
+    expect($sub->plan_code)->toBe('foundation');
 
     $this->assertDatabaseHas('audit_logs', [
         'organization_id' => $org->id,

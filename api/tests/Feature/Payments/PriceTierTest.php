@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function tierOrg(string $planCode = 'starter', string $role = 'owner'): array
+function tierOrg(string $planCode = 'creator', string $role = 'owner'): array
 {
     $org  = Organization::factory()->create();
     $user = User::factory()->create();
@@ -220,7 +220,7 @@ test('nextTier is populated when winning tier will expire', function () {
 // ─── Organizer Tier Endpoints ─────────────────────────────────────────────────
 
 test('foundation plan org gets 402 on tier index', function () {
-    [$org, $user] = tierOrg('free');
+    [$org, $user] = tierOrg('foundation');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->getJson("/api/v1/workshops/{$workshop->id}/price-tiers")
@@ -228,7 +228,7 @@ test('foundation plan org gets 402 on tier index', function () {
 });
 
 test('starter plan org can list tiers', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     makeTier($workshop);
 
@@ -238,7 +238,7 @@ test('starter plan org can list tiers', function () {
 });
 
 test('POST creates a tier and returns 201', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -254,7 +254,7 @@ test('POST creates a tier and returns 201', function () {
 });
 
 test('POST fails validation when no valid_until and no capacity_limit', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -265,7 +265,7 @@ test('POST fails validation when no valid_until and no capacity_limit', function
 });
 
 test('POST fails when price_cents exceeds base_price_cents', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -277,7 +277,7 @@ test('POST fails when price_cents exceeds base_price_cents', function () {
 });
 
 test('POST fails when valid_until is after workshop start_date', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -289,7 +289,7 @@ test('POST fails when valid_until is after workshop start_date', function () {
 });
 
 test('PATCH updates tier successfully', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     $tier     = makeTier($workshop);
 
@@ -300,7 +300,7 @@ test('PATCH updates tier successfully', function () {
 });
 
 test('PATCH cannot change price_cents once tier has been used', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     $tier     = makeTier($workshop);
 
@@ -316,7 +316,7 @@ test('PATCH cannot change price_cents once tier has been used', function () {
 });
 
 test('DELETE soft-deactivates tier', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     $tier     = makeTier($workshop);
 
@@ -328,7 +328,7 @@ test('DELETE soft-deactivates tier', function () {
 });
 
 test('PUT order reorders tiers', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     $tier1 = makeTier($workshop, ['sort_order' => 0, 'label' => 'First']);
@@ -346,7 +346,7 @@ test('PUT order reorders tiers', function () {
 });
 
 test('staff cannot create tiers', function () {
-    [$org, $user] = tierOrg('starter', 'staff');
+    [$org, $user] = tierOrg('creator', 'staff');
     $workshop = tierWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -359,7 +359,7 @@ test('staff cannot create tiers', function () {
 // ─── CartService tier integration ─────────────────────────────────────────────
 
 test('cart item stores applied_tier_id and is_tier_price when adding workshop with active tier', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     $tier     = makeTier($workshop, ['price_cents' => 30000]);
 
@@ -385,7 +385,7 @@ test('cart item stores applied_tier_id and is_tier_price when adding workshop wi
 });
 
 test('cart item uses base price when no active tier', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
 
     Cache::forget("price_resolution_{$workshop->id}");
@@ -411,7 +411,7 @@ test('cart item uses base price when no active tier', function () {
 // ─── Public current endpoint ─────────────────────────────────────────────────
 
 test('GET price-tiers/current returns public display without auth', function () {
-    [$org] = tierOrg('starter');
+    [$org] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     makeTier($workshop, ['price_cents' => 30000]);
 
@@ -421,7 +421,7 @@ test('GET price-tiers/current returns public display without auth', function () 
 });
 
 test('GET price-tiers/current returns organizer view when authenticated as admin', function () {
-    [$org, $user] = tierOrg('starter');
+    [$org, $user] = tierOrg('creator');
     $workshop = tierWorkshop($org);
     makeTier($workshop, ['price_cents' => 30000]);
 

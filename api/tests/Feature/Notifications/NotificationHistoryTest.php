@@ -19,7 +19,7 @@ uses(RefreshDatabase::class);
 function makeHistoryFixture(): array
 {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([

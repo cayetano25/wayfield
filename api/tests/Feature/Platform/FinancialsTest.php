@@ -80,7 +80,7 @@ test('GET /financials/overview returns correct shape', function () {
             'mrr_cents', 'arr_cents',
             'subscriptions' => [
                 'active', 'trialing', 'past_due', 'canceled',
-                'by_plan' => ['free', 'starter', 'pro', 'enterprise'],
+                'by_plan' => ['foundation', 'creator', 'studio', 'enterprise'],
             ],
             'stripe_webhook_connected',
         ]);
@@ -102,9 +102,9 @@ test('GET /financials/overview mrr_cents sums active plan prices', function () {
     $org2  = Organization::factory()->create();
     $org3  = Organization::factory()->create();
 
-    makeStripeSubscription($org1, 'starter', 'active');   // 4900
-    makeStripeSubscription($org2, 'pro', 'active');       // 12900
-    makeStripeSubscription($org3, 'starter', 'canceled'); // excluded
+    makeStripeSubscription($org1, 'creator', 'active');   // 4900
+    makeStripeSubscription($org2, 'studio', 'active');    // 12900
+    makeStripeSubscription($org3, 'creator', 'canceled'); // excluded
 
     $this->withToken(finToken($admin))
         ->getJson('/api/platform/v1/financials/overview')
@@ -143,11 +143,11 @@ test('GET /financials/overview subscription counts are correct', function () {
     $admin = finAdmin();
     $orgs  = Organization::factory()->count(5)->create();
 
-    makeStripeSubscription($orgs[0], 'starter', 'active');
-    makeStripeSubscription($orgs[1], 'pro',     'active');
-    makeStripeSubscription($orgs[2], 'starter', 'trialing');
-    makeStripeSubscription($orgs[3], 'starter', 'past_due');
-    makeStripeSubscription($orgs[4], 'free',    'canceled');
+    makeStripeSubscription($orgs[0], 'creator',    'active');
+    makeStripeSubscription($orgs[1], 'studio',     'active');
+    makeStripeSubscription($orgs[2], 'creator',    'trialing');
+    makeStripeSubscription($orgs[3], 'creator',    'past_due');
+    makeStripeSubscription($orgs[4], 'foundation', 'canceled');
 
     $this->withToken(finToken($admin))
         ->getJson('/api/platform/v1/financials/overview')
@@ -156,8 +156,8 @@ test('GET /financials/overview subscription counts are correct', function () {
         ->assertJsonPath('subscriptions.trialing', 1)
         ->assertJsonPath('subscriptions.past_due', 1)
         ->assertJsonPath('subscriptions.canceled', 1)
-        ->assertJsonPath('subscriptions.by_plan.starter', 2)  // active + trialing
-        ->assertJsonPath('subscriptions.by_plan.pro',     1);
+        ->assertJsonPath('subscriptions.by_plan.creator', 2)  // active + trialing
+        ->assertJsonPath('subscriptions.by_plan.studio',  1);
 });
 
 // ─── GET /financials/invoices ─────────────────────────────────────────────────

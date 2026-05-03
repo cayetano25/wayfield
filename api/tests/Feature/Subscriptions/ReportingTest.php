@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 function makeStarterOrg(): array
 {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $owner = User::factory()->create();
     OrganizationUser::factory()->create([
@@ -200,7 +200,7 @@ test('usage report returns current plan, limits, and usage counts', function () 
     $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/usage")
         ->assertOk()
-        ->assertJsonPath('data.plan', 'starter')
+        ->assertJsonPath('data.plan', 'creator')
         ->assertJsonPath('data.limits.max_active_workshops', 10)
         ->assertJsonStructure([
             'data' => [
@@ -239,7 +239,7 @@ test('subscription endpoint returns plan info', function () {
     $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/subscription")
         ->assertOk()
-        ->assertJsonFragment(['plan_code' => 'starter'])
+        ->assertJsonFragment(['plan_code' => 'creator'])
         ->assertJsonFragment(['status' => 'active']);
 });
 
@@ -256,7 +256,7 @@ test('subscription endpoint returns free plan info when no subscription exists',
     $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/subscription")
         ->assertOk()
-        ->assertJsonFragment(['plan_code' => 'free'])
+        ->assertJsonFragment(['plan_code' => 'foundation'])
         ->assertJsonFragment(['status' => 'none']);
 });
 

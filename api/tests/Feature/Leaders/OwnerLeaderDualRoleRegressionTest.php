@@ -86,7 +86,7 @@ test('owner enrolled as leader retains their organization_users row and can stil
 test('owner enrolled as leader and assigned to a session is subject to time-window constraints', function () {
     [$org, $owner] = oldrOwnerOrg();
 
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $workshop = oldrWorkshop($org);
 

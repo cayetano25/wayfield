@@ -19,7 +19,7 @@ uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function ptrOrg(string $planCode = 'starter'): array
+function ptrOrg(string $planCode = 'creator'): array
 {
     $org  = Organization::factory()->create();
     $user = User::factory()->create();
@@ -128,7 +128,7 @@ test('regression: price resolution returns consistent result over 10 calls', fun
 });
 
 test('regression: tier scheduling jobs created when tier is created via API', function () {
-    [$org, $user] = ptrOrg('starter');
+    [$org, $user] = ptrOrg('creator');
     $workshop = ptrWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -144,7 +144,7 @@ test('regression: tier scheduling jobs created when tier is created via API', fu
 });
 
 test('regression: pending scheduling jobs cancelled when tier is deleted via API', function () {
-    [$org, $user] = ptrOrg('starter');
+    [$org, $user] = ptrOrg('creator');
     $workshop = ptrWorkshop($org);
 
     $tier = WorkshopPriceTier::create([

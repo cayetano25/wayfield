@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function ptoOrg(string $planCode = 'starter', string $role = 'owner'): array
+function ptoOrg(string $planCode = 'creator', string $role = 'owner'): array
 {
     $org  = Organization::factory()->create();
     $user = User::factory()->create();
@@ -66,7 +66,7 @@ function ptoTier(Workshop $workshop, array $overrides = []): WorkshopPriceTier
 // ─── Plan gating ─────────────────────────────────────────────────────────────
 
 test('pto: Foundation plan returns 402 on tier index', function () {
-    [$org, $user] = ptoOrg('free');
+    [$org, $user] = ptoOrg('foundation');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->getJson("/api/v1/workshops/{$workshop->id}/price-tiers")
@@ -74,7 +74,7 @@ test('pto: Foundation plan returns 402 on tier index', function () {
 });
 
 test('pto: Creator (starter) plan can list tiers', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->getJson("/api/v1/workshops/{$workshop->id}/price-tiers")
@@ -82,7 +82,7 @@ test('pto: Creator (starter) plan can list tiers', function () {
 });
 
 test('pto: Studio (pro) plan can list tiers', function () {
-    [$org, $user] = ptoOrg('pro');
+    [$org, $user] = ptoOrg('studio');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->getJson("/api/v1/workshops/{$workshop->id}/price-tiers")
@@ -92,7 +92,7 @@ test('pto: Studio (pro) plan can list tiers', function () {
 // ─── Role gating ─────────────────────────────────────────────────────────────
 
 test('pto: staff member cannot create tiers (403)', function () {
-    [$org, $user] = ptoOrg('starter', 'staff');
+    [$org, $user] = ptoOrg('creator', 'staff');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -103,7 +103,7 @@ test('pto: staff member cannot create tiers (403)', function () {
 });
 
 test('pto: owner can create a tier and receives 201', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -120,7 +120,7 @@ test('pto: owner can create a tier and receives 201', function () {
 // ─── POST validation ──────────────────────────────────────────────────────────
 
 test('pto: POST fails when price_cents exceeds base_price_cents', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -132,7 +132,7 @@ test('pto: POST fails when price_cents exceeds base_price_cents', function () {
 });
 
 test('pto: POST fails when price_cents is 0', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -144,7 +144,7 @@ test('pto: POST fails when price_cents is 0', function () {
 });
 
 test('pto: POST fails when neither valid_until nor capacity_limit provided', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -155,7 +155,7 @@ test('pto: POST fails when neither valid_until nor capacity_limit provided', fun
 });
 
 test('pto: POST fails when valid_until is after workshop start_date', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org); // start_date = +3 months
 
     $this->actingAs($user)->postJson("/api/v1/workshops/{$workshop->id}/price-tiers", [
@@ -169,7 +169,7 @@ test('pto: POST fails when valid_until is after workshop start_date', function (
 // ─── PATCH ───────────────────────────────────────────────────────────────────
 
 test('pto: PATCH updates label successfully', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     $tier     = ptoTier($workshop);
 
@@ -180,7 +180,7 @@ test('pto: PATCH updates label successfully', function () {
 });
 
 test('pto: PATCH updates valid_until successfully', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     $tier     = ptoTier($workshop);
 
@@ -192,7 +192,7 @@ test('pto: PATCH updates valid_until successfully', function () {
 });
 
 test('pto: PATCH cannot change price_cents once tier has been used', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     $tier     = ptoTier($workshop);
 
@@ -209,7 +209,7 @@ test('pto: PATCH cannot change price_cents once tier has been used', function ()
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 
 test('pto: DELETE soft-deactivates the tier', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     $tier     = ptoTier($workshop);
 
@@ -221,7 +221,7 @@ test('pto: DELETE soft-deactivates the tier', function () {
 });
 
 test('pto: DELETE active tier produces an audit log entry', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     $tier     = ptoTier($workshop); // currently active
 
@@ -239,7 +239,7 @@ test('pto: DELETE active tier produces an audit log entry', function () {
 // ─── PUT order ────────────────────────────────────────────────────────────────
 
 test('pto: PUT order reorders tiers', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
 
     $tier1 = ptoTier($workshop, ['sort_order' => 0, 'label' => 'First']);
@@ -257,7 +257,7 @@ test('pto: PUT order reorders tiers', function () {
 });
 
 test('pto: PUT order rejects tier IDs belonging to a different workshop', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop1    = ptoWorkshop($org);
     $workshop2    = ptoWorkshop($org);
 
@@ -275,7 +275,7 @@ test('pto: PUT order rejects tier IDs belonging to a different workshop', functi
 // ─── GET index ────────────────────────────────────────────────────────────────
 
 test('pto: GET index response includes is_currently_active for each tier', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     ptoTier($workshop);
 
@@ -287,7 +287,7 @@ test('pto: GET index response includes is_currently_active for each tier', funct
 // ─── GET current ─────────────────────────────────────────────────────────────
 
 test('pto: GET current returns public pricing for unauthenticated request', function () {
-    [$org] = ptoOrg('starter');
+    [$org] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     ptoTier($workshop, ['price_cents' => 30000]);
 
@@ -297,7 +297,7 @@ test('pto: GET current returns public pricing for unauthenticated request', func
 });
 
 test('pto: GET current returns organizer view for authenticated owner', function () {
-    [$org, $user] = ptoOrg('starter');
+    [$org, $user] = ptoOrg('creator');
     $workshop = ptoWorkshop($org);
     ptoTier($workshop, ['price_cents' => 30000]);
 

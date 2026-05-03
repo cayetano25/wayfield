@@ -36,7 +36,7 @@ test('authenticated user can create an organization', function () {
     // Free subscription created
     $this->assertDatabaseHas('subscriptions', [
         'organization_id' => $organization->id,
-        'plan_code' => 'free',
+        'plan_code' => 'foundation',
         'status' => 'active',
     ]);
 });

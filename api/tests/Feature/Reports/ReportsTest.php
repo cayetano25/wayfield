@@ -26,7 +26,7 @@ function makeReportsOrg(string $plan): array
         'is_active' => true,
     ]);
 
-    if ($plan !== 'free') {
+    if ($plan !== 'foundation') {
         Subscription::factory()->create([
             'organization_id' => $org->id,
             'plan_code' => $plan,
@@ -41,7 +41,7 @@ function makeReportsOrg(string $plan): array
 // ─── Attendance report ────────────────────────────────────────────────────────
 
 test('attendance report returns correct rates', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $session = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
@@ -75,7 +75,7 @@ test('attendance report returns correct rates', function () {
 });
 
 test('attendance report filters by workshop_id correctly', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $w1 = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $w2 = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
@@ -100,7 +100,7 @@ test('attendance report filters by workshop_id correctly', function () {
 });
 
 test('workshops report lists all org workshops with stats', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
@@ -132,7 +132,7 @@ test('workshops report lists all org workshops with stats', function () {
 });
 
 test('participants report requires workshop_id', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/participants")
@@ -140,7 +140,7 @@ test('participants report requires workshop_id', function () {
 });
 
 test('participants report returns participant list for the workshop', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -172,7 +172,7 @@ test('participants report returns participant list for the workshop', function (
 });
 
 test('export returns csv with correct headers for attendance', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -189,7 +189,7 @@ test('export returns csv with correct headers for attendance', function () {
 });
 
 test('export returns csv with correct headers for participants', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $participant = User::factory()->create();
@@ -211,19 +211,19 @@ test('export returns csv with correct headers for participants', function () {
 });
 
 test('free plan is blocked from all report endpoints', function () {
-    [$org, $owner] = makeReportsOrg('free');
+    [$org, $owner] = makeReportsOrg('foundation');
 
     foreach (['attendance', 'workshops', 'participants', 'export'] as $endpoint) {
         $this->actingAs($owner, 'sanctum')
             ->getJson("/api/v1/organizations/{$org->id}/reports/{$endpoint}")
             ->assertForbidden()
             ->assertJsonPath('error', 'plan_required')
-            ->assertJsonPath('required_plan', 'starter');
+            ->assertJsonPath('required_plan', 'creator');
     }
 });
 
 test('starter plan can access attendance report', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
@@ -232,7 +232,7 @@ test('starter plan can access attendance report', function () {
 });
 
 test('cross-workshop trend is null for starter plan', function () {
-    [$org, $owner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
 
     $trend = $this->actingAs($owner, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
@@ -243,7 +243,7 @@ test('cross-workshop trend is null for starter plan', function () {
 });
 
 test('cross-workshop trend is populated for pro plan', function () {
-    [$org, $owner] = makeReportsOrg('pro');
+    [$org, $owner] = makeReportsOrg('studio');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -264,8 +264,8 @@ test('cross-workshop trend is populated for pro plan', function () {
 });
 
 test('cross-tenant report access returns 403', function () {
-    [$org, $owner] = makeReportsOrg('starter');
-    [$otherOrg, $otherOwner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
+    [$otherOrg, $otherOwner] = makeReportsOrg('creator');
 
     // $owner tries to access $otherOrg's reports
     $this->actingAs($owner, 'sanctum')
@@ -274,8 +274,8 @@ test('cross-tenant report access returns 403', function () {
 });
 
 test('workshops report only includes org workshops, not cross-tenant', function () {
-    [$org, $owner] = makeReportsOrg('starter');
-    [$otherOrg, $otherOwner] = makeReportsOrg('starter');
+    [$org, $owner] = makeReportsOrg('creator');
+    [$otherOrg, $otherOwner] = makeReportsOrg('creator');
 
     Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $otherWorkshop = Workshop::factory()->create(['organization_id' => $otherOrg->id, 'status' => 'published']);

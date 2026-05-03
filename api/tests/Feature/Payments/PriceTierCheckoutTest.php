@@ -32,7 +32,7 @@ function ptcoOrg(): array
         'role'            => 'owner',
         'is_active'       => true,
     ]);
-    Subscription::factory()->forOrganization($org->id)->state(['plan_code' => 'starter', 'status' => 'active'])->create();
+    Subscription::factory()->forOrganization($org->id)->state(['plan_code' => 'creator', 'status' => 'active'])->create();
 
     return [$org, $user];
 }

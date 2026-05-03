@@ -43,7 +43,7 @@ function workshopPayload(): array
 // ─── Workshop count limits ─────────────────────────────────────────────────────
 
 test('free plan blocks creating a 3rd active workshop', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     // Two active workshops (draft + draft) already at limit
     Workshop::factory()->forOrganization($org->id)->draft()->create();
@@ -53,11 +53,11 @@ test('free plan blocks creating a 3rd active workshop', function () {
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload())
         ->assertStatus(403)
         ->assertJsonFragment(['error' => 'plan_limit_reached'])
-        ->assertJsonFragment(['upgrade_to' => 'starter']);
+        ->assertJsonFragment(['upgrade_to' => 'creator']);
 });
 
 test('free plan allows creating when below active workshop limit', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     // One draft workshop — one slot remaining
     Workshop::factory()->forOrganization($org->id)->draft()->create();
@@ -68,7 +68,7 @@ test('free plan allows creating when below active workshop limit', function () {
 });
 
 test('archived workshops do not count against the active limit', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     // Two archived + one draft = 1 active, limit is 2 → should allow creation
     Workshop::factory()->forOrganization($org->id)->archived()->create();
@@ -81,7 +81,7 @@ test('archived workshops do not count against the active limit', function () {
 });
 
 test('starter plan blocks creating an 11th active workshop', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     // 10 draft workshops — at the Starter limit
     Workshop::factory()->forOrganization($org->id)->draft()->count(10)->create();
@@ -90,11 +90,11 @@ test('starter plan blocks creating an 11th active workshop', function () {
         ->postJson("/api/v1/organizations/{$org->id}/workshops", workshopPayload())
         ->assertStatus(403)
         ->assertJsonFragment(['error' => 'plan_limit_reached'])
-        ->assertJsonFragment(['upgrade_to' => 'pro']);
+        ->assertJsonFragment(['upgrade_to' => 'studio']);
 });
 
 test('starter plan allows creating when below limit', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     // 9 workshops — one slot remaining
     Workshop::factory()->forOrganization($org->id)->draft()->count(9)->create();
@@ -105,7 +105,7 @@ test('starter plan allows creating when below limit', function () {
 });
 
 test('pro plan has no workshop creation limit', function () {
-    [$org, $user] = makePlanOrg('pro');
+    [$org, $user] = makePlanOrg('studio');
 
     // 50 workshops — pro has no limit
     Workshop::factory()->forOrganization($org->id)->draft()->count(50)->create();
@@ -118,7 +118,7 @@ test('pro plan has no workshop creation limit', function () {
 // ─── Participant per-workshop limits ──────────────────────────────────────────
 
 test('free plan blocks the 76th participant registration', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
 
@@ -148,7 +148,7 @@ test('free plan blocks the 76th participant registration', function () {
 });
 
 test('free plan allows the 75th participant registration', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
 
@@ -170,7 +170,7 @@ test('free plan allows the 75th participant registration', function () {
 });
 
 test('pro plan has no participant limit', function () {
-    [$org, $user] = makePlanOrg('pro');
+    [$org, $user] = makePlanOrg('studio');
 
     $workshop = Workshop::factory()->forOrganization($org->id)->published()->create();
 
@@ -194,7 +194,7 @@ test('pro plan has no participant limit', function () {
 // ─── Error response structure ──────────────────────────────────────────────────
 
 test('plan limit 403 response is structured JSON never a 500', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     Workshop::factory()->forOrganization($org->id)->draft()->count(2)->create();
 
@@ -231,17 +231,17 @@ test('organization with no subscription defaults to free plan limits', function 
 // ─── Feature gating (reporting routes) ────────────────────────────────────────
 
 test('free plan cannot access attendance report', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
         ->assertStatus(403)
         ->assertJsonFragment(['error' => 'plan_required'])
-        ->assertJsonFragment(['required_plan' => 'starter']);
+        ->assertJsonFragment(['required_plan' => 'creator']);
 });
 
 test('free plan cannot access workshops report', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/workshops")
@@ -250,7 +250,7 @@ test('free plan cannot access workshops report', function () {
 });
 
 test('starter plan can access attendance report', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
@@ -259,7 +259,7 @@ test('starter plan can access attendance report', function () {
 });
 
 test('pro plan can access attendance report', function () {
-    [$org, $user] = makePlanOrg('pro');
+    [$org, $user] = makePlanOrg('studio');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/reports/attendance")
@@ -267,7 +267,7 @@ test('pro plan can access attendance report', function () {
 });
 
 test('all plans can access usage report', function () {
-    foreach (['free', 'starter', 'pro'] as $plan) {
+    foreach (['foundation', 'creator', 'studio'] as $plan) {
         [$org, $user] = makePlanOrg($plan);
 
         $this->actingAs($user, 'sanctum')
@@ -281,7 +281,7 @@ test('all plans can access usage report', function () {
 
 // Note: JsonResource::withoutWrapping() is active globally — resources have no 'data' envelope.
 test('entitlements endpoint returns plan feature set and limits', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/entitlements")
@@ -293,18 +293,18 @@ test('entitlements endpoint returns plan feature set and limits', function () {
             'features',
             'usage' => ['active_workshop_count', 'active_manager_count', 'active_leader_count'],
         ])
-        ->assertJsonPath('plan', 'starter')
+        ->assertJsonPath('plan', 'creator')
         ->assertJsonPath('limits.max_active_workshops', 10)
         ->assertJsonPath('features.reporting', true);
 });
 
 test('free plan entitlements reflect correct limits', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/entitlements")
         ->assertOk()
-        ->assertJsonPath('plan', 'free')
+        ->assertJsonPath('plan', 'foundation')
         ->assertJsonPath('limits.max_active_workshops', 2)
         ->assertJsonPath('limits.max_participants_per_workshop', 75)
         ->assertJsonPath('limits.max_managers', 1)
@@ -312,7 +312,7 @@ test('free plan entitlements reflect correct limits', function () {
 });
 
 test('pro plan entitlements show null (unlimited) limits', function () {
-    [$org, $user] = makePlanOrg('pro');
+    [$org, $user] = makePlanOrg('studio');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/entitlements")
@@ -324,10 +324,10 @@ test('pro plan entitlements show null (unlimited) limits', function () {
 // ─── Cross-tenant reporting denial ────────────────────────────────────────────
 
 test('cross-tenant attempt on attendance report returns 403', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     $otherOrg = Organization::factory()->create();
-    Subscription::factory()->forOrganization($otherOrg->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($otherOrg->id)->creator()->active()->create();
 
     // $user belongs to $org, not $otherOrg
     $this->actingAs($user, 'sanctum')
@@ -336,10 +336,10 @@ test('cross-tenant attempt on attendance report returns 403', function () {
 });
 
 test('cross-tenant attempt on workshops report returns 403', function () {
-    [$org, $user] = makePlanOrg('starter');
+    [$org, $user] = makePlanOrg('creator');
 
     $otherOrg = Organization::factory()->create();
-    Subscription::factory()->forOrganization($otherOrg->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($otherOrg->id)->creator()->active()->create();
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$otherOrg->id}/reports/workshops")
@@ -347,7 +347,7 @@ test('cross-tenant attempt on workshops report returns 403', function () {
 });
 
 test('cross-tenant attempt on usage report returns 403', function () {
-    [$org, $user] = makePlanOrg('free');
+    [$org, $user] = makePlanOrg('foundation');
 
     $otherOrg = Organization::factory()->create();
 

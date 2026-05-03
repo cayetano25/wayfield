@@ -40,7 +40,7 @@ function orgWithOwner(): array
 
     Subscription::create([
         'organization_id' => $org->id,
-        'plan_code' => 'free',
+        'plan_code' => 'foundation',
         'status' => 'active',
         'starts_at' => now(),
         'ends_at' => null,
