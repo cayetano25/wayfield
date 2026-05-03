@@ -81,7 +81,7 @@ export default function FeatureHighlights() {
                   flexShrink: 0,
                 }}
               >
-                <Icon size={24} color="#2E2E2E" accent="#0FA3B1" aria-hidden />
+                <Icon size={24} color="#334155" accent="#0FA3B1" aria-hidden />
               </div>
               <h3
                 className="font-heading font-bold"
