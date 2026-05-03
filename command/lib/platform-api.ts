@@ -408,3 +408,89 @@ export const platformApi = {
   patch:  <T>(path: string, body?: unknown)     => api.patch<T>(path, body).then(r => r.data),
   delete: <T>(path: string)                     => api.delete<T>(path).then(r => r.data),
 };
+
+// ─── Payment control types ────────────────────────────────────────────────────
+
+export interface PaymentStatus {
+  platform_payments_enabled: boolean;
+  enabled_at: string | null;
+  orgs_payment_enabled_count: number;
+  orgs_stripe_connected_count: number;
+  orgs_stripe_charges_enabled_count: number;
+  warning: string | null;
+}
+
+export interface OrgPaymentStatus {
+  organization_id: number;
+  organization_name: string;
+  org_payments_enabled: boolean;
+  stripe_connect: {
+    connected: boolean;
+    onboarding_status: string | null;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    stripe_account_id: string | null;
+    last_webhook_received_at: string | null;
+    requirements: string[];
+  };
+  flags: {
+    deposits_enabled: boolean;
+    waitlist_payments: boolean;
+  };
+  effective_payments_active: boolean;
+}
+
+export interface TakeRate {
+  plan_code: 'foundation' | 'creator' | 'studio' | 'custom';
+  display_name: string;
+  take_rate_pct: string;
+  take_rate_decimal: number;
+  fee_on_100: string;
+  is_active: boolean;
+  notes: string | null;
+  updated_at: string;
+}
+
+export interface StripeConnectAccount {
+  organization_id: number;
+  organization_name: string;
+  stripe_account_id: string | null;
+  onboarding_status: string;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  country: string | null;
+  last_webhook_received_at: string | null;
+  has_pending_requirements: boolean;
+}
+
+export const platformPayments = {
+  status: () =>
+    api.get<PaymentStatus>('/payments/status'),
+  enable: () =>
+    api.post<PaymentStatus>('/payments/enable'),
+  disable: () =>
+    api.post<PaymentStatus>('/payments/disable'),
+  orgStatus: (orgId: number) =>
+    api.get<OrgPaymentStatus>(`/organizations/${orgId}/payments`),
+  enableOrg: (orgId: number) =>
+    api.post<OrgPaymentStatus>(`/organizations/${orgId}/payments/enable`),
+  disableOrg: (orgId: number) =>
+    api.post<OrgPaymentStatus>(`/organizations/${orgId}/payments/disable`),
+  setOrgFlag: (orgId: number, flagKey: string, isEnabled: boolean) =>
+    api.patch(`/organizations/${orgId}/payments/flags/${flagKey}`, { is_enabled: isEnabled }),
+  takeRates: () =>
+    api.get<TakeRate[]>('/payments/take-rates'),
+  updateTakeRate: (planCode: string, data: { take_rate_pct: number; notes?: string }) =>
+    api.patch<TakeRate>(`/payments/take-rates/${planCode}`, data),
+  connectAccounts: (params?: {
+    onboarding_status?: string;
+    charges_enabled?: boolean;
+    page?: number;
+  }) =>
+    api.get<Paginated<StripeConnectAccount> & { stripe_connect_not_configured?: boolean }>(
+      '/payments/connect-accounts',
+      { params },
+    ),
+};
