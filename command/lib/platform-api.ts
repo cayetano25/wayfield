@@ -60,6 +60,8 @@ export interface AdminUser {
   is_active: boolean;
   can_impersonate: boolean;
   last_login_at: string | null;
+  two_factor_enabled?: boolean;
+  two_factor_required?: boolean;
 }
 
 export interface AuditEvent {
@@ -82,6 +84,11 @@ export interface OverviewResponse {
   mrr_cents: number | null;
   recent_audit_events: AuditEvent[];
   generated_at: string;
+  admin_2fa?: {
+    total_admins: number;
+    two_factor_on: number;
+    two_factor_off: number;
+  };
 }
 
 export type OrgStatus = 'active' | 'suspended' | 'inactive';
@@ -169,11 +176,52 @@ export interface Paginated<T> {
 
 // ─── API methods ──────────────────────────────────────────────────────────────
 
+export type LoginResponse =
+  | { requires_2fa: false; two_factor_configured: boolean; token: string; admin_user: AdminUser }
+  | { requires_2fa: true; two_factor_session_token: string };
+
+export interface TwoFactorVerifyResponse {
+  token: string;
+  admin_user: AdminUser;
+  recovery_codes_exhausted?: boolean;
+}
+
 export const platformAuth = {
   login: (email: string, password: string) =>
-    api.post<{ token: string; admin_user: AdminUser }>('/auth/login', { email, password }),
+    api.post<LoginResponse>('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get<AdminUser>('/auth/me'),
+};
+
+export const platformTwoFactor = {
+  verify: (two_factor_session_token: string, code: string) =>
+    api.post<TwoFactorVerifyResponse>('/auth/two-factor', { two_factor_session_token, code }),
+
+  recovery: (two_factor_session_token: string, recovery_code: string) =>
+    api.post<TwoFactorVerifyResponse>('/auth/two-factor/recovery', {
+      two_factor_session_token,
+      recovery_code,
+    }),
+
+  setup: () =>
+    api.get<{ secret: string; qr_code_svg: string; already_configured: boolean }>(
+      '/auth/two-factor/setup',
+    ),
+
+  confirm: (code: string) =>
+    api.post<{ confirmed: true; recovery_codes: string[] }>('/auth/two-factor/confirm', { code }),
+
+  disable: (data: { password: string; code?: string; recovery_code?: string }) =>
+    api.post<{ disabled: true }>('/auth/two-factor/disable', data),
+
+  regenerateRecoveryCodes: (code: string) =>
+    api.post<{ recovery_codes: string[] }>(
+      '/auth/two-factor/recovery-codes/regenerate',
+      { code },
+    ),
+
+  disableForAdmin: (id: number) =>
+    api.post<{ disabled: true }>(`/admins/${id}/two-factor/disable`),
 };
 
 export const platformOverview = {
@@ -398,6 +446,7 @@ export interface PlatformAdminEntry {
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
+  two_factor_enabled: boolean;
 }
 
 export const platformAdmins = {
