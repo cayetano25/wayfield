@@ -209,9 +209,9 @@ export default function AuditPage() {
               <tr>
                 <td colSpan={4} className="px-4 py-16">
                   <EmptyState
-                    icon={<ClipboardList size={32} className="text-gray-400" />}
-                    title="No audit events"
-                    description="Platform activity will appear here."
+                    icon={ClipboardList}
+                    heading="No audit events"
+                    subtitle="Platform activity will appear here."
                   />
                 </td>
               </tr>

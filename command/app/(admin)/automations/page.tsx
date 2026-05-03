@@ -186,9 +186,9 @@ export default function AutomationsPage() {
               <tr>
                 <td colSpan={6} className="px-4 py-16">
                   <EmptyState
-                    icon={<Zap size={32} className="text-gray-400" />}
-                    title="No automation rules"
-                    description="Create a rule to automate platform actions."
+                    icon={Zap}
+                    heading="No automation rules"
+                    subtitle="Create a rule to automate platform actions."
                   />
                 </td>
               </tr>

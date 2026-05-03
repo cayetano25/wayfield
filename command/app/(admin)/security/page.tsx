@@ -228,9 +228,9 @@ export default function SecurityPage() {
               <tr>
                 <td colSpan={6} className="px-4 py-16">
                   <EmptyState
-                    icon={<ShieldAlert size={32} className="text-gray-400" />}
-                    title="No security events"
-                    description={severities.length > 0 ? 'No events match the selected filters.' : 'No security events recorded yet.'}
+                    icon={ShieldAlert}
+                    heading="No security events"
+                    subtitle={severities.length > 0 ? 'No events match the selected filters.' : 'No security events recorded yet.'}
                   />
                 </td>
               </tr>
