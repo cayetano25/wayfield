@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  usePathname: () => '/overview',
+  usePathname: () => '/',
   redirect: vi.fn(),
 }));
 
