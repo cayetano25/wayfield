@@ -64,7 +64,7 @@ class PaymentControlController extends Controller
 
         DB::table('payment_feature_flags')->updateOrInsert(
             ['scope' => 'platform', 'flag_key' => 'payments_enabled'],
-            ['is_enabled' => true, 'enabled_at' => now(), 'updated_at' => now()]
+            ['is_enabled' => true, 'enabled_at' => now(), 'created_at' => now(), 'updated_at' => now()]
         );
 
         $this->audit->record(
@@ -87,7 +87,7 @@ class PaymentControlController extends Controller
 
         DB::table('payment_feature_flags')->updateOrInsert(
             ['scope' => 'platform', 'flag_key' => 'payments_enabled'],
-            ['is_enabled' => false, 'enabled_at' => null, 'updated_at' => now()]
+            ['is_enabled' => false, 'enabled_at' => null, 'created_at' => now(), 'updated_at' => now()]
         );
 
         $this->audit->record(
@@ -179,7 +179,7 @@ class PaymentControlController extends Controller
 
         DB::table('payment_feature_flags')->updateOrInsert(
             ['scope' => 'organization', 'organization_id' => $id, 'flag_key' => 'org_payments_enabled'],
-            ['is_enabled' => true, 'enabled_at' => now(), 'updated_at' => now()]
+            ['is_enabled' => true, 'enabled_at' => now(), 'created_at' => now(), 'updated_at' => now()]
         );
 
         $this->audit->record(
@@ -206,7 +206,7 @@ class PaymentControlController extends Controller
 
         DB::table('payment_feature_flags')->updateOrInsert(
             ['scope' => 'organization', 'organization_id' => $id, 'flag_key' => 'org_payments_enabled'],
-            ['is_enabled' => false, 'enabled_at' => null, 'updated_at' => now()]
+            ['is_enabled' => false, 'enabled_at' => null, 'created_at' => now(), 'updated_at' => now()]
         );
 
         $this->audit->record(
@@ -245,6 +245,7 @@ class PaymentControlController extends Controller
             [
                 'is_enabled' => $data['is_enabled'],
                 'enabled_at' => $data['is_enabled'] ? now() : null,
+                'created_at' => now(),
                 'updated_at' => now(),
             ]
         );
@@ -373,7 +374,7 @@ class PaymentControlController extends Controller
                 'sca.details_submitted',
                 'sca.country',
                 'sca.last_webhook_received_at',
-                DB::raw('CASE WHEN sca.requirements_json IS NOT NULL AND JSON_LENGTH(sca.requirements_json) > 0 THEN 1 ELSE 0 END as has_pending_requirements'),
+                'sca.requirements_json',
             ]);
 
         if ($request->has('onboarding_status')) {
@@ -386,18 +387,23 @@ class PaymentControlController extends Controller
 
         $paginator = $query->paginate(25);
 
-        $items = collect($paginator->items())->map(fn ($row) => [
-            'organization_id'          => $row->organization_id,
-            'organization_name'        => $row->organization_name,
-            'stripe_account_id'        => $row->stripe_account_id,
-            'onboarding_status'        => $row->onboarding_status,
-            'charges_enabled'          => (bool) $row->charges_enabled,
-            'payouts_enabled'          => (bool) $row->payouts_enabled,
-            'details_submitted'        => (bool) $row->details_submitted,
-            'country'                  => $row->country,
-            'last_webhook_received_at' => $row->last_webhook_received_at,
-            'has_pending_requirements' => (bool) $row->has_pending_requirements,
-        ]);
+        $items = collect($paginator->items())->map(function ($row) {
+            $requirements    = $row->requirements_json ? json_decode($row->requirements_json, true) : null;
+            $hasPendingReqs  = $requirements !== null && is_array($requirements) && count($requirements) > 0;
+
+            return [
+                'organization_id'          => $row->organization_id,
+                'organization_name'        => $row->organization_name,
+                'stripe_account_id'        => $row->stripe_account_id,
+                'onboarding_status'        => $row->onboarding_status,
+                'charges_enabled'          => (bool) $row->charges_enabled,
+                'payouts_enabled'          => (bool) $row->payouts_enabled,
+                'details_submitted'        => (bool) $row->details_submitted,
+                'country'                  => $row->country,
+                'last_webhook_received_at' => $row->last_webhook_received_at,
+                'has_pending_requirements' => $hasPendingReqs,
+            ];
+        });
 
         return response()->json([
             'data'         => $items,
