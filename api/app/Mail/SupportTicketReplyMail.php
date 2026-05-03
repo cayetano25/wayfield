@@ -24,21 +24,34 @@ class SupportTicketReplyMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('support@wayfieldapp.com', 'Wayfield Support'),
-            replyTo: [new Address('support@wayfieldapp.com', 'Wayfield Support')],
-            subject: "Re: {$this->ticket->subject} [Ticket #{$this->ticket->id}]",
+            from: new Address(
+                config('mail.support_from_address', 'support@wayfieldapp.com'),
+                config('mail.support_from_name', 'Wayfield Support'),
+            ),
+            replyTo: [new Address(
+                config('mail.support_from_address', 'support@wayfieldapp.com'),
+                config('mail.support_from_name', 'Wayfield Support'),
+            )],
+            subject: "Re: {$this->ticket->subject} [#{$this->ticket->id}]",
         );
     }
 
     public function content(): Content
     {
+        $preheader = mb_substr(strip_tags($this->message->body), 0, 120);
+
         return new Content(
-            view: 'mail.support-ticket-reply',
+            view: 'emails.support-ticket-reply',
+            text: 'emails.support-ticket-reply-text',
             with: [
-                'ticket'    => $this->ticket,
-                'message'   => $this->message,
-                'firstName' => $this->ticket->submittedBy?->first_name,
-                'helpUrl'   => rtrim(config('app.frontend_url'), '/').'/help',
+                'ticket'       => $this->ticket,
+                'replyMessage' => $this->message,
+                'firstName'    => $this->ticket->submittedBy?->first_name,
+                'originalBody' => $this->ticket->body,
+                'preheader'    => $preheader,
+                'ticketUrl'    => rtrim(config('app.frontend_url'), '/').'/help?ticket='.$this->ticket->id,
+                'supportEmail' => config('mail.support_from_address', 'support@wayfieldapp.com'),
+                'submittedAt'  => $this->ticket->created_at,
             ],
         );
     }
