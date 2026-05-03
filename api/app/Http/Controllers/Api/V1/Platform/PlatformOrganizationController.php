@@ -380,6 +380,152 @@ class PlatformOrganizationController extends Controller
         ];
     }
 
+    /**
+     * GET /api/platform/v1/organizations/{id}/sales
+     * Workshop sales summary for a specific organization.
+     * Reads from the orders, order_items, and refund_transactions tables.
+     */
+    public function orgSales(int $id): JsonResponse
+    {
+        // ── Summary ──────────────────────────────────────────────────────────
+        $summary = DB::table('orders')
+            ->where('organization_id', $id)
+            ->selectRaw("
+                COUNT(*) as total_orders,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as completed_orders,
+                COALESCE(SUM(CASE WHEN status IN ('completed','partially_refunded') THEN total_cents ELSE 0 END), 0) as gross_revenue_cents,
+                COALESCE(SUM(CASE WHEN status IN ('completed','partially_refunded') THEN wayfield_fee_cents ELSE 0 END), 0) as wayfield_earnings_cents,
+                COALESCE(SUM(CASE WHEN status IN ('completed','partially_refunded') THEN organizer_payout_cents ELSE 0 END), 0) as organizer_payout_cents,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN discount_cents ELSE 0 END), 0) as total_discount_cents,
+                ROUND(COALESCE(AVG(CASE WHEN status = 'completed' THEN total_cents END), 0)) as avg_order_value_cents,
+                COALESCE(COUNT(CASE WHEN is_deposit_order = 1 AND balance_paid_at IS NULL AND status = 'completed' THEN 1 END), 0) as pending_balance_count,
+                COALESCE(SUM(CASE WHEN is_deposit_order = 1 AND balance_paid_at IS NULL AND status = 'completed' THEN balance_amount_cents ELSE 0 END), 0) as pending_balance_cents,
+                MAX(currency) as currency
+            ")
+            ->first();
+
+        // ── Actual refunds processed via Stripe ───────────────────────────────
+        $refundTotal = DB::table('refund_transactions as rt')
+            ->join('orders as o', 'rt.order_id', '=', 'o.id')
+            ->where('o.organization_id', $id)
+            ->where('rt.status', 'succeeded')
+            ->selectRaw('COALESCE(SUM(rt.amount_cents), 0) as total_refunded_cents')
+            ->first();
+
+        // ── Order counts by status ────────────────────────────────────────────
+        $byStatus = DB::table('orders')
+            ->where('organization_id', $id)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        // ── Revenue by workshop (via order_items) ─────────────────────────────
+        $byWorkshop = DB::table('order_items as oi')
+            ->join('orders as o', 'oi.order_id', '=', 'o.id')
+            ->join('workshops as w', 'oi.workshop_id', '=', 'w.id')
+            ->where('o.organization_id', $id)
+            ->whereNotNull('oi.workshop_id')
+            ->whereIn('o.status', ['completed', 'partially_refunded', 'fully_refunded'])
+            ->select(
+                'w.id as workshop_id',
+                'w.title as workshop_title',
+                'w.status as workshop_status',
+                DB::raw('COUNT(DISTINCT oi.order_id) as order_count'),
+                DB::raw('COALESCE(SUM(oi.line_total_cents), 0) as revenue_cents'),
+                DB::raw("COALESCE(SUM(CASE WHEN oi.refund_status != 'none' THEN oi.refunded_amount_cents ELSE 0 END), 0) as refunded_cents"),
+                DB::raw("COUNT(CASE WHEN oi.refund_status != 'none' THEN 1 END) as refund_count")
+            )
+            ->groupBy('w.id', 'w.title', 'w.status')
+            ->orderByDesc('revenue_cents')
+            ->get();
+
+        // ── Recent 25 orders with buyer info ──────────────────────────────────
+        $recentOrders = DB::table('orders as o')
+            ->leftJoin('users as u', 'o.user_id', '=', 'u.id')
+            ->where('o.organization_id', $id)
+            ->select(
+                'o.id',
+                'o.order_number',
+                DB::raw("TRIM(CONCAT(COALESCE(u.first_name,''), ' ', COALESCE(u.last_name,''))) as buyer_name"),
+                'u.email as buyer_email',
+                'o.total_cents',
+                'o.currency',
+                'o.status',
+                'o.payment_method',
+                'o.wayfield_fee_cents',
+                'o.organizer_payout_cents',
+                'o.discount_cents',
+                'o.is_deposit_order',
+                'o.completed_at',
+                'o.created_at'
+            )
+            ->orderByDesc('o.created_at')
+            ->limit(25)
+            ->get();
+
+        // Attach workshop titles to recent orders in a second query to avoid GROUP_CONCAT
+        $orderIds = $recentOrders->pluck('id')->all();
+        $titlesByOrder = [];
+        if (!empty($orderIds)) {
+            DB::table('order_items as oi')
+                ->join('workshops as w', 'oi.workshop_id', '=', 'w.id')
+                ->whereIn('oi.order_id', $orderIds)
+                ->whereNotNull('oi.workshop_id')
+                ->select('oi.order_id', 'w.title')
+                ->distinct()
+                ->get()
+                ->each(function ($row) use (&$titlesByOrder) {
+                    $titlesByOrder[$row->order_id][] = $row->title;
+                });
+        }
+
+        $recentOrdersMapped = $recentOrders->map(fn ($o) => array_merge(
+            (array) $o,
+            ['workshop_titles' => $titlesByOrder[$o->id] ?? []]
+        ));
+
+        return response()->json([
+            'summary'       => array_merge((array) $summary, [
+                'total_refunded_cents' => (int) $refundTotal->total_refunded_cents,
+            ]),
+            'by_status'     => $byStatus,
+            'by_workshop'   => $byWorkshop,
+            'recent_orders' => $recentOrdersMapped,
+        ]);
+    }
+
+    /**
+     * GET /api/platform/v1/organizations/{id}/activity
+     * Paginated tenant audit log for a specific organization.
+     * Returns rows from the tenant audit_logs table (not platform_audit_logs).
+     */
+    public function orgActivity(Request $request, int $id): JsonResponse
+    {
+        $perPage = min($request->integer('per_page', 50), 100);
+
+        $results = DB::table('audit_logs as al')
+            ->leftJoin('users as u', 'al.actor_user_id', '=', 'u.id')
+            ->where('al.organization_id', $id)
+            ->select(
+                'al.id',
+                'al.action',
+                'al.entity_type',
+                'al.entity_id',
+                'al.actor_user_id',
+                DB::raw("TRIM(CONCAT(COALESCE(u.first_name,''), ' ', COALESCE(u.last_name,''))) as actor_name"),
+                'u.email as actor_email',
+                'al.metadata_json',
+                'al.created_at'
+            )
+            ->when($request->input('action'), fn ($q, $action) => $q->where('al.action', 'like', "%{$action}%"))
+            ->when($request->input('date_from'), fn ($q, $from) => $q->where('al.created_at', '>=', $from))
+            ->when($request->input('date_to'), fn ($q, $to) => $q->where('al.created_at', '<=', $to))
+            ->orderBy('al.created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json($results);
+    }
+
     private function planLimits(string $planCode): array
     {
         return match ($planCode) {

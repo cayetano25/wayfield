@@ -164,6 +164,67 @@ export interface PlatformAuditLog {
   created_at: string;
 }
 
+export interface OrgSalesSummary {
+  currency: string;
+  total_orders: number;
+  completed_orders: number;
+  gross_revenue_cents: number;
+  wayfield_earnings_cents: number;
+  organizer_payout_cents: number;
+  total_discount_cents: number;
+  avg_order_value_cents: number;
+  pending_balance_count: number;
+  pending_balance_cents: number;
+  total_refunded_cents: number;
+}
+
+export interface WorkshopSalesRow {
+  workshop_id: number;
+  workshop_title: string;
+  workshop_status: string;
+  order_count: number;
+  revenue_cents: number;
+  refunded_cents: number;
+  refund_count: number;
+}
+
+export interface SalesOrderRow {
+  id: number;
+  order_number: string;
+  buyer_name: string;
+  buyer_email: string | null;
+  workshop_titles: string[];
+  total_cents: number;
+  currency: string;
+  status: string;
+  payment_method: string;
+  wayfield_fee_cents: number;
+  organizer_payout_cents: number;
+  discount_cents: number;
+  is_deposit_order: boolean;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface OrgSalesResponse {
+  summary: OrgSalesSummary;
+  by_status: Record<string, number>;
+  by_workshop: WorkshopSalesRow[];
+  recent_orders: SalesOrderRow[];
+}
+
+export interface OrgActivityLog {
+  id: number;
+  action: string;
+  entity_type: string | null;
+  entity_id: number | null;
+  actor_user_id: number | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  metadata_json: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface Paginated<T> {
   data: T[];
   current_page: number;
@@ -240,6 +301,10 @@ export const platformOrganizations = {
     api.get<FeatureFlag[]>(`/organizations/${id}/feature-flags`),
   setFeatureFlag: (id: number, feature_key: string, is_enabled: boolean) =>
     api.post(`/organizations/${id}/feature-flags`, { feature_key, is_enabled }),
+  activity: (id: number, params?: { action?: string; date_from?: string; date_to?: string; page?: number }) =>
+    api.get<Paginated<OrgActivityLog>>(`/organizations/${id}/activity`, { params }),
+  sales: (id: number) =>
+    api.get<OrgSalesResponse>(`/organizations/${id}/sales`),
 };
 
 export const platformAuditLogs = {

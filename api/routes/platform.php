@@ -85,6 +85,8 @@ Route::prefix('platform/v1')->group(function () {
         Route::get('organizations/{id}/leader-completion', [PlatformOrganizationController::class, 'leaderCompletion']);
         Route::patch('organizations/{organization}/status', [PlatformOrganizationController::class, 'updateStatus']);
         Route::get('organizations/{organization}/feature-flags', [PlatformOrganizationController::class, 'featureFlags']);
+        Route::get('organizations/{id}/activity', [PlatformOrganizationController::class, 'orgActivity']);
+        Route::get('organizations/{id}/sales',    [PlatformOrganizationController::class, 'orgSales']);
 
         // Organization mutations — super_admin, admin, billing only
         Route::middleware('platform.admin:super_admin,admin,billing')->group(function () {

@@ -11,6 +11,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Table, TableHead, Th, TableBody, Td } from '@/components/ui/Table';
 
+// MySQL datetime strings have no timezone suffix — parse explicitly as UTC
+function parseUtc(str: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(str)) {
+    return new Date(str.replace(' ', 'T') + 'Z');
+  }
+  return new Date(str);
+}
+
 // ─── Expandable row ───────────────────────────────────────────────────────────
 
 function AuditRow({ log }: { log: PlatformAuditLog }) {
@@ -39,7 +47,14 @@ function AuditRow({ log }: { log: PlatformAuditLog }) {
         <Td className="text-sm text-gray-700">{log.admin_name ?? '—'}</Td>
         <Td className="text-sm text-gray-500">{log.organization_name ?? '—'}</Td>
         <Td className="text-sm text-gray-400 whitespace-nowrap">
-          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+          <span
+            title={parseUtc(log.created_at).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
+          >
+            {formatDistanceToNow(parseUtc(log.created_at), { addSuffix: true })}
+          </span>
         </Td>
       </tr>
       {expanded && hasMeta && (
