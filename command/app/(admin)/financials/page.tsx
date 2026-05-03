@@ -29,6 +29,7 @@ import {
   type TakeRate,
   type StripeConnectAccount,
   type PaymentStatus,
+  type FailedPayment,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { useToast } from '@/components/ui/Toast';
@@ -44,7 +45,8 @@ type FinancialsTab =
   | 'invoices'
   | 'payment-controls'
   | 'take-rates'
-  | 'stripe-connect';
+  | 'stripe-connect'
+  | 'failed-payments';
 
 const TABS: Array<{ key: FinancialsTab; label: string }> = [
   { key: 'overview', label: 'Overview' },
@@ -52,6 +54,7 @@ const TABS: Array<{ key: FinancialsTab; label: string }> = [
   { key: 'payment-controls', label: 'Payment Controls' },
   { key: 'take-rates', label: 'Take Rates' },
   { key: 'stripe-connect', label: 'Stripe Connect' },
+  { key: 'failed-payments', label: 'Failed Payments' },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -1159,6 +1162,206 @@ function StripeConnectTab() {
   );
 }
 
+// ─── Failed Payments tab ─────────────────────────────────────────────────────
+
+function FailedPaymentsTab() {
+  const [payments, setPayments] = useState<FailedPayment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [lastPage, setLastPage] = useState(1);
+  const [page, setPage] = useState(1);
+  const [orgSearch, setOrgSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [webhookRequired, setWebhookRequired] = useState(false);
+
+  async function load(pg: number) {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformFinancials.failedPayments({
+        date_from: dateFrom || undefined,
+        date_to:   dateTo   || undefined,
+        page: pg,
+      });
+      if (data.stripe_webhook_required) {
+        setWebhookRequired(true);
+        setPayments([]);
+        setTotal(0);
+        setLastPage(1);
+      } else {
+        setWebhookRequired(false);
+        setPayments(data.data);
+        setTotal(data.total);
+        setLastPage(data.last_page);
+      }
+    } catch {
+      setWebhookRequired(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(page); }, [page, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleFilter() {
+    setPage(1);
+    load(1);
+  }
+
+  const filteredPayments = orgSearch.trim()
+    ? payments.filter((p) =>
+        p.organization_name.toLowerCase().includes(orgSearch.toLowerCase()),
+      )
+    : payments;
+
+  const from = total === 0 ? 0 : (page - 1) * 25 + 1;
+  const to   = Math.min(page * 25, total);
+
+  if (webhookRequired) {
+    return (
+      <div
+        className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-5 flex items-start gap-3 max-w-2xl"
+        data-testid="failed-payments-unavailable"
+      >
+        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-amber-800 mb-1">
+            Failed payment data requires the Stripe webhook to be connected.
+          </p>
+          <p className="text-sm text-amber-700">
+            See <Mono className="text-xs bg-amber-100 px-1 py-0.5 rounded">OPEN_QUESTIONS Q4</Mono> for details.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-3">
+        <input
+          type="text"
+          value={orgSearch}
+          onChange={(e) => setOrgSearch(e.target.value)}
+          placeholder="Filter by organisation…"
+          className="min-h-[36px] px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0FA3B1] w-52"
+        />
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+          className="min-h-[36px] px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0FA3B1]"
+          aria-label="Date from"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+          className="min-h-[36px] px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0FA3B1]"
+          aria-label="Date to"
+        />
+      </div>
+
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+        {error ? (
+          <div className="p-4">
+            <ErrorBanner message={error} onRetry={() => load(page)} />
+          </div>
+        ) : (
+          <Table>
+            <TableHead>
+              <Th>Organisation</Th>
+              <Th>Amount</Th>
+              <Th>Failure Reason</Th>
+              <Th>Customer Email</Th>
+              <Th>Date / Time</Th>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={5} className="px-4 py-1">
+                      <div className="animate-pulse bg-gray-100 h-10 rounded my-1" />
+                    </td>
+                  </tr>
+                ))
+              ) : filteredPayments.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-8 text-center text-sm text-gray-400"
+                    data-testid="failed-payments-empty"
+                  >
+                    No failed payments in the selected period.
+                  </td>
+                </tr>
+              ) : (
+                filteredPayments.map((p) => (
+                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                    <Td>
+                      <span className="text-sm font-medium text-gray-900">{p.organization_name}</span>
+                    </Td>
+                    <Td>
+                      <Mono className="text-sm font-medium text-gray-800">
+                        {formatCents(p.amount_cents)}
+                      </Mono>
+                    </Td>
+                    <Td>
+                      <span
+                        className="text-sm text-gray-700 block max-w-xs truncate"
+                        title={p.failure_reason ?? undefined}
+                      >
+                        {p.failure_reason
+                          ? p.failure_reason.slice(0, 80) + (p.failure_reason.length > 80 ? '…' : '')
+                          : '—'}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="text-sm text-gray-600">{p.customer_email ?? '—'}</span>
+                    </Td>
+                    <Td>
+                      <Mono className="text-xs text-gray-400">
+                        {new Date(p.created_at).toLocaleString()}
+                      </Mono>
+                    </Td>
+                  </tr>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {!loading && !error && total > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Showing {from}–{to} of {total.toLocaleString()}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page <= 1}
+              className="min-h-[36px] px-3 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= lastPage}
+              className="min-h-[36px] px-3 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FinancialsPage() {
@@ -1248,6 +1451,7 @@ export default function FinancialsPage() {
       {activeTab === 'payment-controls' && <PaymentControlsTab />}
       {activeTab === 'take-rates' && <TakeRatesTab />}
       {activeTab === 'stripe-connect' && <StripeConnectTab />}
+      {activeTab === 'failed-payments' && <FailedPaymentsTab />}
     </div>
   );
 }
