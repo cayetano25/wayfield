@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\PlatformWebhookController;
 use App\Http\Controllers\Platform\V1\OverviewController;
 use App\Http\Controllers\Platform\V1\PlatformAuthController;
+use App\Http\Controllers\Platform\V1\TwoFactorChallengeController;
+use App\Http\Controllers\Platform\V1\TwoFactorManagementController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,12 +46,35 @@ Route::prefix('platform/v1')->group(function () {
     Route::post('auth/login', [PlatformAuthController::class, 'login'])
         ->middleware('throttle:10,1');
 
+    // 2FA challenge — intermediate step between login and full token issuance.
+    // No Sanctum auth; validated by the short-lived two_factor_session_token (cache).
+    Route::post('auth/two-factor',          [TwoFactorChallengeController::class, 'verify'])
+        ->middleware('throttle:10,1');
+    Route::post('auth/two-factor/recovery', [TwoFactorChallengeController::class, 'recovery'])
+        ->middleware('throttle:10,1');
+
     // ─── Protected platform routes ────────────────────────────────────────────
+
+    // 2FA setup/confirm: auth required but exempt from platform.2fa enforcement
+    // so that admins with two_factor_required=true can still reach the setup screen.
     Route::middleware(['auth:platform_admin', 'platform.admin'])->group(function () {
+        Route::get('auth/two-factor/setup',    [TwoFactorManagementController::class, 'setup']);
+        Route::post('auth/two-factor/confirm', [TwoFactorManagementController::class, 'confirm']);
+    });
+
+    // All other protected routes enforce 2FA setup when two_factor_required=true.
+    Route::middleware(['auth:platform_admin', 'platform.admin', 'platform.2fa'])->group(function () {
 
         // Auth
         Route::post('auth/logout', [PlatformAuthController::class, 'logout']);
         Route::get('auth/me', [PlatformAuthController::class, 'me']);
+
+        // 2FA management — self-service (disable, regenerate codes)
+        Route::post('auth/two-factor/disable',                   [TwoFactorManagementController::class, 'disable']);
+        Route::post('auth/two-factor/recovery-codes/regenerate', [TwoFactorManagementController::class, 'regenerateRecoveryCodes']);
+
+        // 2FA admin override — super_admin only (enforced in controller)
+        Route::post('admins/{id}/two-factor/disable', [TwoFactorManagementController::class, 'disableForAdmin']);
 
         // Overview dashboard
         Route::get('overview', [OverviewController::class, 'index']);

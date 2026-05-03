@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'platform.admin' => EnsurePlatformAdmin::class,
             'platform.auth' => EnsurePlatformToken::class,
+            'platform.2fa'  => \App\Http\Middleware\EnsureTwoFactorSetup::class,
             'tenant.user' => EnsureTenantUser::class,
             'tenant.auth' => EnsureTenantToken::class,
             'feature' => CheckFeatureAccess::class,

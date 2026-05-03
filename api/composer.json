@@ -11,10 +11,12 @@
     "require": {
         "php": "^8.3",
         "aws/aws-sdk-php": "^3.376",
+        "bacon/bacon-qr-code": "^3.1",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "pragmarx/google2fa-laravel": "^3.0",
         "spatie/laravel-sluggable": "^4.0",
         "stripe/stripe-php": "^20.0"
     },

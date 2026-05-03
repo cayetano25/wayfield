@@ -7,6 +7,7 @@ use App\Models\AdminLoginEvent;
 use App\Models\AdminUser;
 use App\Models\PlatformConfig;
 use App\Models\SecurityEvent;
+use App\Services\Platform\TwoFactorAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -56,7 +57,25 @@ class PlatformAuthController extends Controller
             ])->status(403);
         }
 
-        // ── Successful authentication ────────────────────────────────────────
+        // ── 2FA challenge ────────────────────────────────────────────────────
+        if ($adminUser->hasTwoFactorEnabled()) {
+            $sessionToken = app(TwoFactorAuthService::class)->createSessionToken($adminUser);
+
+            AdminLoginEvent::create([
+                'admin_user_id' => $adminUser->id,
+                'email_attempted' => $data['email'],
+                'outcome' => 'success',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'requires_2fa'             => true,
+                'two_factor_session_token' => $sessionToken,
+            ]);
+        }
+
+        // ── Successful authentication (no 2FA) ───────────────────────────────
         $sessionHours = (int) PlatformConfig::get('platform_admin_session_timeout_hours', 8);
         $token = $adminUser->createToken('platform_token', ['platform:*'], now()->addHours($sessionHours));
 
@@ -71,13 +90,15 @@ class PlatformAuthController extends Controller
         ]);
 
         return response()->json([
-            'token' => $token->plainTextToken,
+            'requires_2fa'          => false,
+            'two_factor_configured' => false,
+            'token'                 => $token->plainTextToken,
             'admin_user' => [
-                'id' => $adminUser->id,
+                'id'         => $adminUser->id,
                 'first_name' => $adminUser->first_name,
-                'last_name' => $adminUser->last_name,
-                'email' => $adminUser->email,
-                'role' => $adminUser->role,
+                'last_name'  => $adminUser->last_name,
+                'email'      => $adminUser->email,
+                'role'       => $adminUser->role,
             ],
         ]);
     }
@@ -99,14 +120,16 @@ class PlatformAuthController extends Controller
         $adminUser = $request->user('platform_admin');
 
         return response()->json([
-            'id' => $adminUser->id,
-            'first_name' => $adminUser->first_name,
-            'last_name' => $adminUser->last_name,
-            'email' => $adminUser->email,
-            'role' => $adminUser->role,
-            'is_active' => $adminUser->is_active,
-            'can_impersonate' => $adminUser->can_impersonate,
-            'last_login_at' => $adminUser->last_login_at,
+            'id'                  => $adminUser->id,
+            'first_name'          => $adminUser->first_name,
+            'last_name'           => $adminUser->last_name,
+            'email'               => $adminUser->email,
+            'role'                => $adminUser->role,
+            'is_active'           => $adminUser->is_active,
+            'can_impersonate'     => $adminUser->can_impersonate,
+            'last_login_at'       => $adminUser->last_login_at,
+            'two_factor_enabled'  => $adminUser->hasTwoFactorEnabled(),
+            'two_factor_required' => $adminUser->two_factor_required,
         ]);
     }
 
