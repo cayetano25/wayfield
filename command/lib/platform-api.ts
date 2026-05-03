@@ -517,13 +517,18 @@ export interface WorkshopPricingItem {
 }
 
 export interface AddonSessionPricing {
+  id: number;
   session_id: number;
   session_title: string;
   workshop_id: number;
   workshop_title: string;
+  organization_id: number;
+  organization_name: string | null;
   session_type: 'addon' | 'invite_only';
   price_cents: number | null;
-  deposit_amount_cents: number | null;
+  currency: string | null;
+  is_nonrefundable: boolean;
+  max_purchases: number | null;
 }
 
 export const platformWorkshops = {

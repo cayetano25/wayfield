@@ -198,6 +198,46 @@ class PlatformWorkshopAuditController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/platform/v1/workshops/addon-pricing
+     * All addon/invite_only sessions that have a session_pricing record.
+     * Supports ?organization_id= filter.
+     */
+    public function addonPricing(Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('session_pricing')) {
+            return response()->json([]);
+        }
+
+        $query = DB::table('session_pricing')
+            ->join('sessions', 'session_pricing.session_id', '=', 'sessions.id')
+            ->join('workshops', 'sessions.workshop_id', '=', 'workshops.id')
+            ->leftJoin('organizations', 'workshops.organization_id', '=', 'organizations.id')
+            ->whereIn('sessions.session_type', ['addon', 'invite_only'])
+            ->when(
+                $request->input('organization_id'),
+                fn ($q, $id) => $q->where('workshops.organization_id', $id)
+            )
+            ->select([
+                'session_pricing.id',
+                'sessions.id as session_id',
+                'sessions.title as session_title',
+                'sessions.session_type',
+                'workshops.id as workshop_id',
+                'workshops.title as workshop_title',
+                'workshops.organization_id',
+                'organizations.name as organization_name',
+                'session_pricing.price_cents',
+                'session_pricing.currency',
+                'session_pricing.is_nonrefundable',
+                'session_pricing.max_purchases',
+            ])
+            ->orderBy('workshops.id')
+            ->orderBy('sessions.id');
+
+        return response()->json($query->get());
+    }
+
     private function computeReadiness(Workshop $workshop, int $confirmedLeaderCount): array
     {
         $score   = 0;

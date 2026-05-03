@@ -89,6 +89,7 @@ Route::prefix('platform/v1')->group(function () {
         // Workshop audit — read-only, all authenticated admins
         Route::get('workshops/pricing-audit', [PlatformWorkshopAuditController::class, 'pricingAudit']);
         Route::get('workshops/readiness', [PlatformWorkshopAuditController::class, 'readiness']);
+        Route::get('workshops/addon-pricing', [PlatformWorkshopAuditController::class, 'addonPricing']);
 
         // Financials — super_admin and billing only
         Route::middleware('platform.admin:super_admin,billing')->group(function () {

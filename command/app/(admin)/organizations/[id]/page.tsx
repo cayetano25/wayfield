@@ -16,6 +16,7 @@ import {
   type PlanCode,
   type OrgPaymentStatus,
   type WorkshopPricingItem,
+  type AddonSessionPricing,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { useToast } from '@/components/ui/Toast';
@@ -848,8 +849,33 @@ function MonoText({ children }: { children: React.ReactNode }) {
 }
 
 
-function AddonPricingSection() {
+const SESSION_TYPE_BADGE: Record<AddonSessionPricing['session_type'], string> = {
+  addon:       'bg-teal-50 text-teal-700 border border-teal-100',
+  invite_only: 'bg-purple-50 text-purple-700 border border-purple-100',
+};
+
+function AddonPricingSection({ orgId }: { orgId: number }) {
+  const [addons, setAddons] = useState<AddonSessionPricing[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformWorkshops.addonPricing({ organization_id: orgId });
+      setAddons(Array.isArray(data) ? data : []);
+    } catch {
+      setError('Failed to load add-on pricing.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (expanded) load();
+  }, [expanded, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -874,17 +900,66 @@ function AddonPricingSection() {
       </button>
 
       {expanded && (
-        <div className="bg-white px-5 py-4" data-testid="addon-pricing-unavailable">
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">Session pricing detail not yet available</p>
-              <p className="mt-0.5 text-xs text-amber-700">
-                The per-session pricing breakdown endpoint has not been implemented.
-                The Priced Sessions count in the table above reflects sessions with pricing configured.
-              </p>
+        <div className="bg-white">
+          {loading ? (
+            <div className="p-4 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-gray-100 h-10 rounded" />
+              ))}
             </div>
-          </div>
+          ) : error ? (
+            <div className="p-4">
+              <ErrorBanner message={error} onRetry={load} />
+            </div>
+          ) : addons.length === 0 ? (
+            <p
+              className="px-5 py-6 text-sm text-gray-400 text-center"
+              data-testid="addon-pricing-empty"
+            >
+              No add-on session pricing configured for this organisation.
+            </p>
+          ) : (
+            <Table>
+              <TableHead>
+                <Th>Session</Th>
+                <Th>Workshop</Th>
+                <Th>Type</Th>
+                <Th>Price</Th>
+                <Th>Non-Refundable</Th>
+              </TableHead>
+              <TableBody>
+                {addons.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <Td>
+                      <span className="text-sm font-medium text-gray-900">{item.session_title}</span>
+                    </Td>
+                    <Td>
+                      <span className="text-sm text-gray-600">{item.workshop_title}</span>
+                    </Td>
+                    <Td>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${SESSION_TYPE_BADGE[item.session_type] ?? 'bg-gray-100 text-gray-600 border border-gray-200'}`}
+                      >
+                        {item.session_type === 'invite_only' ? 'Invite Only' : 'Add-On'}
+                      </span>
+                    </Td>
+                    <Td>
+                      <MonoText>
+                        <span className="text-sm text-gray-800">{formatCentsLocal(item.price_cents)}</span>
+                      </MonoText>
+                    </Td>
+                    <Td>
+                      {item.is_nonrefundable ? (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-50 text-red-700 border border-red-100">Yes</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">No</span>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       )}
     </div>
@@ -987,7 +1062,7 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
       </div>
 
       {/* Add-On Session Pricing — collapsible sub-section */}
-      <AddonPricingSection />
+      <AddonPricingSection orgId={orgId} />
     </div>
   );
 }
