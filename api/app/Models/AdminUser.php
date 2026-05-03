@@ -95,6 +95,11 @@ class AdminUser extends Authenticatable
         return $this->hasRole(...self::ROLES_WITH_FLAGS);
     }
 
+    public function fullName(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
     // ─── Relationships ─────────────────────────────────────────────────────────
 
     public function platformAuditLogs(): HasMany
