@@ -29,11 +29,17 @@ class SystemAnnouncementMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
+        $preheader = mb_substr(strip_tags($this->announcement->message), 0, 90);
+
         return new Content(
-            view: 'mail.system-announcement',
+            view: 'emails.system-announcement',
+            text: 'emails.system-announcement-text',
             with: [
                 'firstName'    => $this->user->first_name,
                 'announcement' => $this->announcement,
+                'preheader'    => $preheader,
+                'dashboardUrl' => rtrim(config('app.frontend_url'), '/').'/admin',
+                'settingsUrl'  => rtrim(config('app.frontend_url'), '/').'/admin/settings/notifications',
             ],
         );
     }
