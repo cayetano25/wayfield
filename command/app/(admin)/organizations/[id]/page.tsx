@@ -3,17 +3,20 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, ChevronDown, ChevronRight, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CheckCircle, XCircle, ExternalLink, Layers } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   platformOrganizations,
   platformAuditLogs,
   platformPayments,
+  platformWorkshops,
   type OrgDetail,
   type FeatureFlag,
   type PlatformAuditLog,
   type PlanCode,
   type OrgPaymentStatus,
+  type WorkshopPricingItem,
+  type AddonSessionPricing,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { useToast } from '@/components/ui/Toast';
@@ -24,7 +27,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Table, TableHead, Th, TableBody, Td } from '@/components/ui/Table';
 
-const TABS = ['overview', 'billing', 'flags', 'usage', 'payments', 'audit'] as const;
+const TABS = ['overview', 'billing', 'flags', 'usage', 'payments', 'workshops', 'audit'] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAN_OPTIONS: Array<{ value: PlanCode; label: string }> = [
@@ -832,6 +835,230 @@ function PaymentsTab({ orgId }: { orgId: number }) {
   );
 }
 
+// ─── Workshops tab ────────────────────────────────────────────────────────────
+
+function formatCentsLocal(cents: number | null): string {
+  if (cents === null) return 'Free';
+  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+function MonoText({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}>{children}</span>
+  );
+}
+
+const SESSION_TYPE_BADGE: Record<AddonSessionPricing['session_type'], string> = {
+  addon:        'bg-teal-50 text-teal-700 border border-teal-100',
+  invite_only:  'bg-purple-50 text-purple-700 border border-purple-100',
+};
+
+function AddonPricingSection({ orgId }: { orgId: number }) {
+  const [addons, setAddons] = useState<AddonSessionPricing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformWorkshops.addonPricing({ organization_id: orgId });
+      setAddons(Array.isArray(data) ? data : []);
+    } catch {
+      setError('Failed to load add-on pricing.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (expanded) load();
+  }, [expanded, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div
+      className="rounded-xl border border-gray-200 overflow-hidden"
+      data-testid="addon-pricing-section"
+    >
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full flex items-center justify-between px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors min-h-[44px] text-left"
+        aria-expanded={expanded}
+        data-testid="addon-pricing-toggle"
+      >
+        <span className="flex items-center gap-2 font-heading text-sm font-semibold text-gray-800">
+          <Layers size={15} className="text-gray-400" />
+          Add-On Session Pricing
+        </span>
+        {expanded ? (
+          <ChevronDown size={16} className="text-gray-400 shrink-0" />
+        ) : (
+          <ChevronRight size={16} className="text-gray-400 shrink-0" />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="bg-white">
+          {loading ? (
+            <div className="p-4 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-gray-100 h-10 rounded" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-4">
+              <ErrorBanner message={error} onRetry={load} />
+            </div>
+          ) : addons.length === 0 ? (
+            <p
+              className="px-5 py-6 text-sm text-gray-400 text-center"
+              data-testid="addon-pricing-empty"
+            >
+              No add-on session pricing configured for this organisation.
+            </p>
+          ) : (
+            <Table>
+              <TableHead>
+                <Th>Session</Th>
+                <Th>Workshop</Th>
+                <Th>Type</Th>
+                <Th>Price</Th>
+                <Th>Deposit</Th>
+              </TableHead>
+              <TableBody>
+                {addons.map((item) => (
+                  <tr key={item.session_id} className="hover:bg-gray-50">
+                    <Td>
+                      <span className="text-sm font-medium text-gray-900">{item.session_title}</span>
+                    </Td>
+                    <Td>
+                      <span className="text-sm text-gray-600">{item.workshop_title}</span>
+                    </Td>
+                    <Td>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${SESSION_TYPE_BADGE[item.session_type] ?? 'bg-gray-100 text-gray-600 border border-gray-200'}`}
+                      >
+                        {item.session_type === 'invite_only' ? 'Invite Only' : 'Add-On'}
+                      </span>
+                    </Td>
+                    <Td>
+                      <MonoText>
+                        <span className="text-sm text-gray-800">{formatCentsLocal(item.price_cents)}</span>
+                      </MonoText>
+                    </Td>
+                    <Td>
+                      <MonoText>
+                        <span className="text-sm text-gray-600">{formatCentsLocal(item.deposit_amount_cents)}</span>
+                      </MonoText>
+                    </Td>
+                  </tr>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkshopsTab({ orgId }: { orgId: number }) {
+  const [items, setItems] = useState<WorkshopPricingItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await platformWorkshops.pricingAudit({ organization_id: orgId });
+      setItems(data.data);
+      setTotal(data.total);
+    } catch {
+      setError('Failed to load workshop pricing.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="animate-pulse bg-gray-100 rounded-xl h-12" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) return <ErrorBanner message={error} onRetry={load} />;
+
+  return (
+    <div className="space-y-6">
+      {/* Workshop pricing table */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="font-heading text-sm font-semibold text-gray-800">Workshop Pricing</h3>
+          <span
+            className="text-xs text-gray-400"
+            style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+          >
+            {total} workshop{total !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {items.length === 0 ? (
+          <p className="px-5 py-8 text-sm text-gray-400 text-center">No workshops found.</p>
+        ) : (
+          <Table>
+            <TableHead>
+              <Th>Workshop</Th>
+              <Th>Sessions</Th>
+              <Th>Pricing Model</Th>
+              <Th>Base Price</Th>
+              <Th>Deposit</Th>
+            </TableHead>
+            <TableBody>
+              {items.map((item) => (
+                <tr key={item.workshop_id} className="hover:bg-gray-50">
+                  <Td>
+                    <span className="text-sm font-medium text-gray-900">{item.workshop_title}</span>
+                  </Td>
+                  <Td>
+                    <span className="text-sm text-gray-600">{item.session_count}</span>
+                  </Td>
+                  <Td>
+                    <span className="text-sm text-gray-500">{item.pricing_model ?? '—'}</span>
+                  </Td>
+                  <Td>
+                    <span
+                      className="text-sm font-medium text-gray-800"
+                      style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+                    >
+                      {formatCentsLocal(item.base_price_cents)}
+                    </span>
+                  </Td>
+                  <Td>
+                    <span className="text-sm text-gray-600" style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}>
+                      {item.deposit_required ? formatCentsLocal(item.deposit_amount_cents) : '—'}
+                    </span>
+                  </Td>
+                </tr>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* Add-On Session Pricing — collapsible sub-section */}
+      <AddonPricingSection orgId={orgId} />
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -889,11 +1116,12 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
   const showAuditTab = role && !['billing', 'readonly'].includes(role);
 
   const visibleTabs: Array<{ key: Tab; label: string }> = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'billing', label: 'Billing' },
+    { key: 'overview',  label: 'Overview' },
+    { key: 'billing',   label: 'Billing' },
     ...(showFlagsTab ? [{ key: 'flags' as Tab, label: 'Feature Flags' }] : []),
-    { key: 'usage', label: 'Usage' },
-    { key: 'payments', label: 'Payments' },
+    { key: 'usage',     label: 'Usage' },
+    { key: 'payments',  label: 'Payments' },
+    { key: 'workshops', label: 'Workshops' },
     ...(showAuditTab ? [{ key: 'audit' as Tab, label: 'Audit' }] : []),
   ];
 
@@ -944,6 +1172,7 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
       {activeTab === 'flags' && showFlagsTab && <FeatureFlagsTab orgId={orgId} />}
       {activeTab === 'usage' && <UsageTab org={org} />}
       {activeTab === 'payments' && <PaymentsTab orgId={orgId} />}
+      {activeTab === 'workshops' && <WorkshopsTab orgId={orgId} />}
       {activeTab === 'audit' && showAuditTab && <AuditTab orgId={orgId} />}
     </div>
   );
