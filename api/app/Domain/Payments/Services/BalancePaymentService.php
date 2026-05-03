@@ -119,7 +119,7 @@ class BalancePaymentService
         $paymentMethodId = $depositIntent->payment_method;
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,
@@ -229,7 +229,7 @@ class BalancePaymentService
         }
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,
@@ -290,7 +290,7 @@ class BalancePaymentService
         $stripe          = new StripeClient(config('stripe.secret_key'));
 
         $org      = $order->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $order->balance_amount_cents,
             $planCode,

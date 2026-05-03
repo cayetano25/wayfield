@@ -115,7 +115,7 @@ class CheckoutService
             throw new StripeConnectNotReadyException;
         }
 
-        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
         // Fees are calculated on the effective (post-coupon) amount.
         $fees = $this->feeCalculationService->calculateFees(
             $effectiveAmount,

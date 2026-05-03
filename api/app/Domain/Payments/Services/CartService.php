@@ -306,7 +306,7 @@ class CartService
     {
         $cart->load('items.workshop', 'items.session', 'organization');
 
-        $planCode = $cart->organization->activeSubscription?->plan_code ?? 'free';
+        $planCode = $cart->organization->activeSubscription?->plan_code ?? 'foundation';
         $fees     = $this->feeCalculationService->calculateFees(
             $cart->subtotal_cents,
             $planCode,

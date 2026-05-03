@@ -31,7 +31,7 @@ class CreateOrganizationAction
 
         Subscription::create([
             'organization_id' => $organization->id,
-            'plan_code' => 'free',
+            'plan_code' => 'foundation',
             'status' => 'active',
             'starts_at' => now(),
             'ends_at' => null,

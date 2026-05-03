@@ -59,9 +59,9 @@ class OverviewController extends Controller
                 'total'      => Organization::count(),
                 'by_status'  => $orgByStatus,
                 'by_plan'    => [
-                    'free'       => (int) ($planCounts['free'] ?? 0),
-                    'starter'    => (int) ($planCounts['starter'] ?? 0),
-                    'pro'        => (int) ($planCounts['pro'] ?? 0),
+                    'foundation' => (int) ($planCounts['foundation'] ?? 0),
+                    'creator'    => (int) ($planCounts['creator']    ?? 0),
+                    'studio'     => (int) ($planCounts['studio']     ?? 0),
                     'enterprise' => (int) ($planCounts['enterprise'] ?? 0),
                 ],
             ],

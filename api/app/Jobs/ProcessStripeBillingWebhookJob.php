@@ -92,12 +92,12 @@ class ProcessStripeBillingWebhookJob implements ShouldQueue
 
         // Merged from both legacy controllers:
         // V1: stripe_status, ends_at
-        // BillingController: plan_code reset to free
+        // plan_code reset to foundation on cancellation
         $subscription->update([
             'status'        => 'canceled',
             'stripe_status' => 'canceled',
             'ends_at'       => now(),
-            'plan_code'     => 'free',
+            'plan_code'     => 'foundation',
         ]);
 
         AuditLogService::record([
@@ -107,7 +107,7 @@ class ProcessStripeBillingWebhookJob implements ShouldQueue
             'action'          => 'subscription_deleted_via_webhook',
             'metadata'        => [
                 'stripe_subscription_id' => $stripeSub['id'],
-                'plan_code_reset_to'     => 'free',
+                'plan_code_reset_to'     => 'foundation',
             ],
         ]);
     }

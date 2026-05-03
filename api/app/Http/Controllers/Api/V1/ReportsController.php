@@ -33,7 +33,7 @@ class ReportsController extends Controller
         if (! $this->gateService->isFeatureEnabled($organization, 'reporting')) {
             return response()->json([
                 'error' => 'plan_required',
-                'required_plan' => 'starter',
+                'required_plan' => 'creator',
                 'upgrade_url' => '/billing',
             ], 403);
         }
@@ -43,9 +43,9 @@ class ReportsController extends Controller
 
     private function isProOrAbove(Organization $organization): bool
     {
-        $planCode = $organization->subscription?->plan_code ?? 'free';
+        $planCode = $organization->subscription?->plan_code ?? 'foundation';
 
-        return in_array($planCode, ['pro', 'enterprise'], true);
+        return in_array($planCode, ['studio', 'enterprise'], true);
     }
 
     // ─── Attendance report ────────────────────────────────────────────────────

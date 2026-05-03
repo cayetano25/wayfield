@@ -226,7 +226,7 @@ class WaitlistPromotionService
         }
 
         $org      = $workshop->organization;
-        $planCode = $org->activeSubscription?->plan_code ?? 'free';
+        $planCode = $org->activeSubscription?->plan_code ?? 'foundation';
         $fees     = $this->feeCalculationService->calculateFees(
             (int) $pricing->base_price_cents,
             $planCode,

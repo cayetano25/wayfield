@@ -28,7 +28,7 @@ class EnforceFeatureGateService
      */
     public function hasFeature(Organization $org, string $featureKey): bool
     {
-        $planCode = $org->subscription?->plan_code ?? 'free';
+        $planCode = $org->subscription?->plan_code ?? 'foundation';
         $features = config("plans.features.{$planCode}", []);
 
         return (bool) ($features[$featureKey] ?? false);
@@ -42,7 +42,7 @@ class EnforceFeatureGateService
      */
     public function getLimit(Organization $org, string $limitKey): ?int
     {
-        $planCode = $org->subscription?->plan_code ?? 'free';
+        $planCode = $org->subscription?->plan_code ?? 'foundation';
         $limits = config("plans.limits.{$planCode}", []);
 
         return $limits[$limitKey] ?? null;
@@ -67,11 +67,11 @@ class EnforceFeatureGateService
 
     /**
      * Returns the display name for the org's current plan from config.
-     * e.g. 'starter' → 'Creator'
+     * e.g. 'creator' → 'Creator'
      */
     public function getPlanDisplayName(Organization $org): string
     {
-        $planCode = $org->subscription?->plan_code ?? 'free';
+        $planCode = $org->subscription?->plan_code ?? 'foundation';
 
         return config("plans.display_names.{$planCode}", ucfirst($planCode));
     }
@@ -83,7 +83,7 @@ class EnforceFeatureGateService
     public function isUpgrade(Organization $org, string $targetPlanCode): bool
     {
         $order = config('plans.order', []);
-        $currentCode = $org->subscription?->plan_code ?? 'free';
+        $currentCode = $org->subscription?->plan_code ?? 'foundation';
         $currentIdx = array_search($currentCode, $order, true);
         $targetIdx = array_search($targetPlanCode, $order, true);
 
@@ -105,7 +105,7 @@ class EnforceFeatureGateService
         PlanLimitExceededException $e,
         string $configLimitKey,
     ): array {
-        $planCode = $org->subscription?->plan_code ?? 'free';
+        $planCode = $org->subscription?->plan_code ?? 'foundation';
         $displayName = config("plans.display_names.{$planCode}", ucfirst($planCode));
         $nextPlan = $this->nextPlanUp($planCode);
         $limit = $e->max;
@@ -147,7 +147,7 @@ class EnforceFeatureGateService
      */
     public function requiredPlanFor(string $featureKey): string
     {
-        return ResolveOrganizationEntitlementsService::FEATURE_REQUIRED_PLAN[$featureKey] ?? 'starter';
+        return ResolveOrganizationEntitlementsService::FEATURE_REQUIRED_PLAN[$featureKey] ?? 'creator';
     }
 
     /**
@@ -246,7 +246,7 @@ class EnforceFeatureGateService
 
     private function nextPlanUp(string $currentPlan): string
     {
-        $order = config('plans.order', ['free', 'starter', 'pro', 'enterprise']);
+        $order = config('plans.order', ['foundation', 'creator', 'studio', 'enterprise']);
         $idx = array_search($currentPlan, $order, true);
 
         return ($idx !== false && isset($order[$idx + 1])) ? $order[$idx + 1] : 'enterprise';

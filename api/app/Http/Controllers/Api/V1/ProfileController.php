@@ -181,7 +181,7 @@ class ProfileController extends Controller
                     'slug' => $membership->organization->slug,
                     'role' => $membership->role,
                     'status' => $membership->organization->status,
-                    'plan_code' => $membership->organization->subscription?->plan_code ?? 'free',
+                    'plan_code' => $membership->organization->subscription?->plan_code ?? 'foundation',
                 ];
             })->values()
         );
