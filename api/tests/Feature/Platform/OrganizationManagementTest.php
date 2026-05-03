@@ -79,11 +79,11 @@ test('GET organizations filters by search name', function () {
 test('GET organizations filters by plan', function () {
     $admin = ccAdmin();
     $org = makeOrg();
-    $org->subscriptions()->create(['plan_code' => 'starter', 'status' => 'active', 'starts_at' => now()]);
+    $org->subscriptions()->create(['plan_code' => 'creator', 'status' => 'active', 'starts_at' => now()]);
     makeOrg(); // no subscription → free
 
     $response = $this->withToken(ccToken($admin))
-        ->getJson('/api/platform/v1/organizations?plan=starter')
+        ->getJson('/api/platform/v1/organizations?plan=creator')
         ->assertStatus(200);
 
     expect($response->json('data'))->toHaveCount(1);
@@ -175,11 +175,11 @@ test('super_admin can change plan and audit log is written', function () {
 
     $this->withToken(ccToken($admin))
         ->postJson("/api/platform/v1/organizations/{$org->id}/billing/plan", [
-            'plan_code' => 'starter',
+            'plan_code' => 'creator',
             'reason' => 'Manual upgrade for testing',
         ])
         ->assertStatus(200)
-        ->assertJsonPath('plan_code', 'starter');
+        ->assertJsonPath('plan_code', 'creator');
 
     $this->assertDatabaseHas('platform_audit_logs', [
         'action' => 'organization.plan_changed',
@@ -193,7 +193,7 @@ test('billing role can change plan', function () {
 
     $this->withToken(ccToken($admin))
         ->postJson("/api/platform/v1/organizations/{$org->id}/billing/plan", [
-            'plan_code' => 'pro',
+            'plan_code' => 'studio',
             'reason' => 'Upgrade',
         ])
         ->assertStatus(200);
@@ -205,7 +205,7 @@ test('admin role cannot change plan', function () {
 
     $this->withToken(ccToken($admin))
         ->postJson("/api/platform/v1/organizations/{$org->id}/billing/plan", [
-            'plan_code' => 'starter',
+            'plan_code' => 'creator',
             'reason' => 'test',
         ])
         ->assertStatus(403);
@@ -217,7 +217,7 @@ test('support role cannot change plan', function () {
 
     $this->withToken(ccToken($admin))
         ->postJson("/api/platform/v1/organizations/{$org->id}/billing/plan", [
-            'plan_code' => 'starter',
+            'plan_code' => 'creator',
             'reason' => 'test',
         ])
         ->assertStatus(403);
@@ -230,14 +230,14 @@ test('changePlan creates subscription row when none exists', function () {
 
     $this->withToken(ccToken($admin))
         ->postJson("/api/platform/v1/organizations/{$org->id}/billing/plan", [
-            'plan_code' => 'starter',
+            'plan_code' => 'creator',
             'reason' => 'New subscription',
         ])
         ->assertStatus(200);
 
     $this->assertDatabaseHas('subscriptions', [
         'organization_id' => $org->id,
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
     ]);
 });
 

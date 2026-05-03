@@ -83,7 +83,7 @@ test('overview by_plan contains all four plan keys', function () {
 
     $byPlan = $response->json('organizations.by_plan');
 
-    expect($byPlan)->toHaveKeys(['free', 'starter', 'pro', 'enterprise']);
+    expect($byPlan)->toHaveKeys(['foundation', 'creator', 'studio', 'enterprise']);
 });
 
 // ─── Counts reflect database state ───────────────────────────────────────────

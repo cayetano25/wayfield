@@ -43,7 +43,7 @@ function makeMessagingFixture(): array
     $org = Organization::factory()->create();
 
     // Leader messaging requires Starter plan or higher.
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
         ->published()

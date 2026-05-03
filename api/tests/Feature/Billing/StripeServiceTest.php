@@ -101,33 +101,33 @@ test('resolvePriceId returns the configured price ID for starter/monthly', funct
     configureTestPriceIds();
 
     $service = new StripeService();
-    expect($service->resolvePriceId('starter', 'monthly'))->toBe(TEST_STARTER_MONTHLY_PRICE_ID);
+    expect($service->resolvePriceId('creator', 'monthly'))->toBe(TEST_STARTER_MONTHLY_PRICE_ID);
 });
 
 test('resolvePriceId returns the configured price ID for starter/annual', function () {
     configureTestPriceIds();
 
     $service = new StripeService();
-    expect($service->resolvePriceId('starter', 'annual'))->toBe('price_starter_annual_test');
+    expect($service->resolvePriceId('creator', 'annual'))->toBe('price_starter_annual_test');
 });
 
 test('resolvePriceId returns the configured price ID for pro/monthly', function () {
     configureTestPriceIds();
 
     $service = new StripeService();
-    expect($service->resolvePriceId('pro', 'monthly'))->toBe('price_pro_monthly_test');
+    expect($service->resolvePriceId('studio', 'monthly'))->toBe('price_pro_monthly_test');
 });
 
 test('resolvePriceId returns the configured price ID for pro/annual', function () {
     configureTestPriceIds();
 
     $service = new StripeService();
-    expect($service->resolvePriceId('pro', 'annual'))->toBe(TEST_PRO_ANNUAL_PRICE_ID);
+    expect($service->resolvePriceId('studio', 'annual'))->toBe(TEST_PRO_ANNUAL_PRICE_ID);
 });
 
 test('resolvePriceId throws InvalidArgumentException for free plan', function () {
     $service = new StripeService();
-    expect(fn () => $service->resolvePriceId('free', 'monthly'))
+    expect(fn () => $service->resolvePriceId('foundation', 'monthly'))
         ->toThrow(\InvalidArgumentException::class);
 });
 
@@ -141,7 +141,7 @@ test('resolvePriceId throws when price ID env var is not configured', function (
     config(['services.stripe.prices.creator_monthly' => null]);
 
     $service = new StripeService();
-    expect(fn () => $service->resolvePriceId('starter', 'monthly'))
+    expect(fn () => $service->resolvePriceId('creator', 'monthly'))
         ->toThrow(\InvalidArgumentException::class);
 });
 

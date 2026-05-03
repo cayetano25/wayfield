@@ -38,9 +38,8 @@ function pricingWorkshop(Organization $org, array $overrides = []): Workshop
 
 function enableDepositsForOrg(): void
 {
-    // The CREATOR_PLANS check in PaymentFeatureFlagService uses plan codes ('creator',
-    // 'studio', 'custom') that don't exist in the subscriptions ENUM ('free','starter',
-    // 'pro','enterprise'). Mock the service so the plan-tier gate returns true in tests.
+    // Mock PaymentFeatureFlagService so the plan-tier gate returns true in tests.
+    // CREATOR_PLANS = ['creator', 'studio', 'enterprise'].
     $mock = Mockery::mock(PaymentFeatureFlagService::class)->makePartial();
     $mock->shouldReceive('isDepositsEnabled')->andReturn(true);
     app()->instance(PaymentFeatureFlagService::class, $mock);

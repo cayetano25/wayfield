@@ -45,7 +45,7 @@ function makeDashboardScenario(string $plan): array
 // ─── Core Metrics — All Plans ─────────────────────────────────────────────────
 
 test('dashboard returns core metrics for free plan', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -58,7 +58,7 @@ test('dashboard returns core metrics for free plan', function () {
 });
 
 test('free plan dashboard returns null for all analytics metrics', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $response = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -72,7 +72,7 @@ test('free plan dashboard returns null for all analytics metrics', function () {
 });
 
 test('dashboard core shows correct participant count', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $workshop = Workshop::factory()->create([
         'organization_id' => $org->id,
@@ -93,7 +93,7 @@ test('dashboard core shows correct participant count', function () {
 // ─── Starter Plan Analytics ───────────────────────────────────────────────────
 
 test('starter plan returns attendance_metrics, capacity_metrics, and session_breakdown', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $response = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -106,7 +106,7 @@ test('starter plan returns attendance_metrics, capacity_metrics, and session_bre
 });
 
 test('attendance rate calculation is correct', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $session = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
@@ -128,7 +128,7 @@ test('attendance rate calculation is correct', function () {
 });
 
 test('no show rate calculation is correct', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $session = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
@@ -150,7 +150,7 @@ test('no show rate calculation is correct', function () {
 });
 
 test('attendance rate is null when no registrations exist', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $rate = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -161,7 +161,7 @@ test('attendance rate is null when no registrations exist', function () {
 });
 
 test('starter plan returns session breakdown ordered by enrollment desc', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $session1 = Session::factory()->create(['workshop_id' => $workshop->id, 'is_published' => true]);
@@ -185,7 +185,7 @@ test('starter plan returns session breakdown ordered by enrollment desc', functi
 });
 
 test('starter plan returns capacity utilization', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $session = Session::factory()->create([
@@ -210,7 +210,7 @@ test('starter plan returns capacity utilization', function () {
 });
 
 test('capacity utilization is null when all sessions have unlimited capacity', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -230,7 +230,7 @@ test('capacity utilization is null when all sessions have unlimited capacity', f
 });
 
 test('starter plan returns null for registration trend', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $trend = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -243,7 +243,7 @@ test('starter plan returns null for registration trend', function () {
 // ─── Pro Plan Analytics ───────────────────────────────────────────────────────
 
 test('pro plan returns registration trend with exactly 12 weeks', function () {
-    [$user, $org] = makeDashboardScenario('pro');
+    [$user, $org] = makeDashboardScenario('studio');
 
     $trend = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -254,7 +254,7 @@ test('pro plan returns registration trend with exactly 12 weeks', function () {
 });
 
 test('registration trend includes weeks with zero registrations', function () {
-    [$user, $org] = makeDashboardScenario('pro');
+    [$user, $org] = makeDashboardScenario('studio');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -281,7 +281,7 @@ test('registration trend includes weeks with zero registrations', function () {
 // ─── Pro Plan — All Analytics Populated ───────────────────────────────────────
 
 test('pro plan returns all four analytics keys populated', function () {
-    [$user, $org] = makeDashboardScenario('pro');
+    [$user, $org] = makeDashboardScenario('studio');
 
     $analytics = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -297,7 +297,7 @@ test('pro plan returns all four analytics keys populated', function () {
 // ─── Both Rates Null When No Registrations ────────────────────────────────────
 
 test('no_show_rate is null when no registrations exist', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $noShowRate = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
@@ -310,7 +310,7 @@ test('no_show_rate is null when no registrations exist', function () {
 // ─── Session Breakdown Max 10 ─────────────────────────────────────────────────
 
 test('session breakdown returns at most 10 entries even when more sessions exist', function () {
-    [$user, $org] = makeDashboardScenario('starter');
+    [$user, $org] = makeDashboardScenario('creator');
 
     $workshop = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
 
@@ -331,7 +331,7 @@ test('session breakdown returns at most 10 entries even when more sessions exist
 // ─── Stub Metrics — All Plans ─────────────────────────────────────────────────
 
 test('dashboard always returns stub metrics regardless of plan', function () {
-    foreach (['free', 'starter', 'pro'] as $plan) {
+    foreach (['foundation', 'creator', 'studio'] as $plan) {
         [$user, $org] = makeDashboardScenario($plan);
 
         $stubs = $this->actingAs($user, 'sanctum')
@@ -347,23 +347,23 @@ test('dashboard always returns stub metrics regardless of plan', function () {
 });
 
 test('all stub metrics have an available_on field', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $stubs = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard")
         ->assertOk()
         ->json('stubs');
 
-    expect($stubs['revenue']['available_on'])->toBe('starter');
-    expect($stubs['satisfaction']['available_on'])->toBe('starter');
-    expect($stubs['engagement']['available_on'])->toBe('pro');
-    expect($stubs['learning_outcomes']['available_on'])->toBe('pro');
+    expect($stubs['revenue']['available_on'])->toBe('creator');
+    expect($stubs['satisfaction']['available_on'])->toBe('creator');
+    expect($stubs['engagement']['available_on'])->toBe('studio');
+    expect($stubs['learning_outcomes']['available_on'])->toBe('studio');
 });
 
 // ─── Security: Plan Spoofing ──────────────────────────────────────────────────
 
 test('plan_code cannot be spoofed via query string to unlock analytics', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $response = $this->actingAs($user, 'sanctum')
         ->getJson("/api/v1/organizations/{$org->id}/dashboard?plan=pro")
@@ -377,11 +377,11 @@ test('plan_code cannot be spoofed via query string to unlock analytics', functio
 });
 
 test('plan_code cannot be spoofed via request body to unlock analytics', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     // Send a JSON body containing a plan override — must be ignored
     $response = $this->actingAs($user, 'sanctum')
-        ->json('GET', "/api/v1/organizations/{$org->id}/dashboard", ['plan_code' => 'pro', 'plan' => 'enterprise'])
+        ->json('GET', "/api/v1/organizations/{$org->id}/dashboard", ['plan_code' => 'studio', 'plan' => 'enterprise'])
         ->assertOk()
         ->json('analytics');
 
@@ -394,8 +394,8 @@ test('plan_code cannot be spoofed via request body to unlock analytics', functio
 // ─── Authorization ────────────────────────────────────────────────────────────
 
 test('dashboard is not accessible to user from different organization', function () {
-    [$user, $org] = makeDashboardScenario('free');
-    [, $otherOrg] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
+    [, $otherOrg] = makeDashboardScenario('foundation');
 
     // $user belongs to $org but not $otherOrg
     $this->actingAs($user, 'sanctum')
@@ -406,7 +406,7 @@ test('dashboard is not accessible to user from different organization', function
 // ─── Workshop-Scoped Analytics ────────────────────────────────────────────────
 
 test('workshop analytics endpoint scopes data to single workshop', function () {
-    [$user, $org] = makeDashboardScenario('free');
+    [$user, $org] = makeDashboardScenario('foundation');
 
     $workshop1 = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);
     $workshop2 = Workshop::factory()->create(['organization_id' => $org->id, 'status' => 'published']);

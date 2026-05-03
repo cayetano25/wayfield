@@ -41,7 +41,7 @@ uses(RefreshDatabase::class);
 function wmFixture(string $timezone = 'Asia/Tokyo'): array
 {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
@@ -179,7 +179,7 @@ test('validate() uses workshop timezone — UTC offset wrong but JST window corr
 test('validate() throws plan_required with required_plan starter when org is on free plan', function () {
     $org = Organization::factory()->create();
     // Free plan — no Starter subscription
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create();
 
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
@@ -212,7 +212,7 @@ test('validate() throws plan_required with required_plan starter when org is on 
         $this->fail('Expected LeaderMessagingDeniedException was not thrown');
     } catch (LeaderMessagingDeniedException $e) {
         expect($e->getErrorCode())->toBe('plan_required');
-        expect($e->getResponseData()['required_plan'])->toBe('starter');
+        expect($e->getResponseData()['required_plan'])->toBe('creator');
     } finally {
         wmThaw();
     }

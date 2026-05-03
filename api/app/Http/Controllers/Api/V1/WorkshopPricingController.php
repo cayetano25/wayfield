@@ -103,7 +103,7 @@ class WorkshopPricingController extends Controller
         }
 
         $workshop->loadMissing('organization');
-        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'free';
+        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'foundation';
 
         $baseFees = $this->feeService->calculateFees($pricing->base_price_cents, $planCode);
 

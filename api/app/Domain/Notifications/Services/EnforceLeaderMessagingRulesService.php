@@ -48,9 +48,9 @@ class EnforceLeaderMessagingRulesService
 
         // 1. Plan gate: Starter or higher required
         $subscription = $workshop->organization->subscription;
-        $planCode = $subscription?->plan_code ?? 'free';
+        $planCode = $subscription?->plan_code ?? 'foundation';
 
-        if (in_array($planCode, ['free'], true)) {
+        if (in_array($planCode, ['foundation'], true)) {
             $this->auditDenied($user, $session, 'plan_required');
             throw LeaderMessagingDeniedException::planRequired();
         }

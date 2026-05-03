@@ -68,11 +68,11 @@ class E2ETestSeeder extends Seeder
             ['role' => 'staff', 'is_active' => true]
         );
 
-        // Subscription (Starter plan)
+        // Subscription (Creator plan)
         Subscription::firstOrCreate(
             ['organization_id' => $org->id],
             [
-                'plan_code' => 'starter',
+                'plan_code' => 'creator',
                 'status'    => 'active',
                 'starts_at' => now(),
             ]

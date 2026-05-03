@@ -73,7 +73,7 @@ const mockOrgList: platformApi.Paginated<platformApi.OrgListItem> = {
       primary_contact_email: 'c@cascade.test', logo_url: null,
       created_at: '2026-01-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z',
       workshops_count: 4, active_workshops_count: 3,
-      subscription: { id: 1, organization_id: 1, stripe_customer_id: null, stripe_subscription_id: null, billing_cycle: null, current_period_end: null, plan_code: 'starter', status: 'active', starts_at: '2026-01-01T00:00:00Z', ends_at: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
+      subscription: { id: 1, organization_id: 1, stripe_customer_id: null, stripe_subscription_id: null, billing_cycle: null, current_period_end: null, plan_code: 'creator', status: 'active', starts_at: '2026-01-01T00:00:00Z', ends_at: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
       organization_users: [],
     },
     {
@@ -91,7 +91,7 @@ const mockOrgDetail: platformApi.OrgDetail = {
   id: 1, name: 'Cascade Photo Workshops', slug: 'cascade', status: 'active',
   contact_email: 'c@cascade.test', contact_phone: null,
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z',
-  subscription: { plan_code: 'starter', status: 'active', current_period_start: null, current_period_end: null },
+  subscription: { plan_code: 'creator', status: 'active', current_period_start: null, current_period_end: null },
   usage: { workshop_count: 4, workshop_limit: 10, participant_count: 120, participant_limit: 250, manager_count: 3, manager_limit: 10 },
 };
 
@@ -156,7 +156,7 @@ describe('Organisations list', () => {
   });
 
   it('plan filter shows count badge when plans selected', async () => {
-    mockPlanParam = 'starter';
+    mockPlanParam = 'creator';
     render(<OrgsPage />);
     await waitFor(() => expect(screen.getByText('1')).toBeDefined());
   });
@@ -198,7 +198,7 @@ describe('Organisation detail', () => {
     renderDetail();
     await waitFor(() => expect(screen.getByText('Cascade Photo Workshops')).toBeDefined());
     expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Starter').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Creator').length).toBeGreaterThan(0);
   });
 
   it('billing tab always shows staleness notice', async () => {

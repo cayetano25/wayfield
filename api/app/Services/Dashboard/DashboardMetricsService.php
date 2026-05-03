@@ -20,17 +20,17 @@ class DashboardMetricsService
         private ?int $workshopId = null,
     ) {
         // Plan code is ALWAYS resolved from the database — never from any request input.
-        $this->planCode = $org->subscription?->plan_code ?? 'free';
+        $this->planCode = $org->subscription?->plan_code ?? 'foundation';
     }
 
     private function isStarterOrAbove(): bool
     {
-        return in_array($this->planCode, ['starter', 'pro', 'enterprise'], true);
+        return in_array($this->planCode, ['creator', 'studio', 'enterprise'], true);
     }
 
     private function isProOrAbove(): bool
     {
-        return in_array($this->planCode, ['pro', 'enterprise'], true);
+        return in_array($this->planCode, ['studio', 'enterprise'], true);
     }
 
     /**
@@ -315,25 +315,25 @@ class DashboardMetricsService
             'revenue' => [
                 'stub' => true,
                 'label' => 'Revenue',
-                'available_on' => 'starter',
+                'available_on' => 'creator',
                 'description' => 'Track revenue from paid workshops',
             ],
             'satisfaction' => [
                 'stub' => true,
                 'label' => 'Satisfaction Score',
-                'available_on' => 'starter',
+                'available_on' => 'creator',
                 'description' => 'Measure participant satisfaction with NPS',
             ],
             'engagement' => [
                 'stub' => true,
                 'label' => 'Engagement Score',
-                'available_on' => 'pro',
+                'available_on' => 'studio',
                 'description' => 'Track polls, Q&A, and participant engagement',
             ],
             'learning_outcomes' => [
                 'stub' => true,
                 'label' => 'Learning Outcomes',
-                'available_on' => 'pro',
+                'available_on' => 'studio',
                 'description' => 'Measure learning outcomes with pre/post assessments',
             ],
         ];
@@ -342,9 +342,9 @@ class DashboardMetricsService
     private function planLimits(): array
     {
         return match ($this->planCode) {
-            'free' => ['workshops_limit' => 2, 'participants_limit' => 75],
-            'starter' => ['workshops_limit' => 10, 'participants_limit' => 250],
-            'pro',
+            'foundation' => ['workshops_limit' => 2, 'participants_limit' => 75],
+            'creator' => ['workshops_limit' => 10, 'participants_limit' => 250],
+            'studio',
             'enterprise' => ['workshops_limit' => null, 'participants_limit' => null],
             default => ['workshops_limit' => 2, 'participants_limit' => 75],
         };

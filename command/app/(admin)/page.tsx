@@ -15,16 +15,16 @@ import { platformOverview, type OverviewResponse } from '@/lib/platform-api';
 // ─── Plan display names ───────────────────────────────────────────────────────
 
 const PLAN_DISPLAY: Record<string, string> = {
-  free:       'Foundation',
-  starter:    'Creator',
-  pro:        'Studio',
+  foundation: 'Foundation',
+  creator:    'Creator',
+  studio:     'Studio',
   enterprise: 'Enterprise',
 };
 
 const PLAN_COLORS: Record<string, string> = {
-  free:       '#9CA3AF',
-  starter:    '#0FA3B1',
-  pro:        '#E67E22',
+  foundation: '#9CA3AF',
+  creator:    '#0FA3B1',
+  studio:     '#E67E22',
   enterprise: '#8B5CF6',
 };
 

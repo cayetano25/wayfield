@@ -171,7 +171,7 @@ class BillingController extends Controller
     public function checkout(Request $request, Organization $organization): JsonResponse
     {
         $data = $request->validate([
-            'plan_code' => ['required', Rule::in(['starter', 'pro'])],
+            'plan_code' => ['required', Rule::in(['creator', 'studio'])],
             'billing' => ['required', Rule::in(['monthly', 'annual'])],
         ]);
 
@@ -276,7 +276,7 @@ class BillingController extends Controller
             ->latest('starts_at')
             ->first();
 
-        $planCode = $subscription?->plan_code ?? 'free';
+        $planCode = $subscription?->plan_code ?? 'foundation';
         $displayName = config("plans.display_names.{$planCode}", ucfirst($planCode));
 
         // Usage
@@ -403,7 +403,7 @@ class BillingController extends Controller
         }
 
         $subscription->update([
-            'plan_code' => 'free',
+            'plan_code' => 'foundation',
             'status' => 'canceled',
         ]);
 
@@ -453,7 +453,7 @@ class BillingController extends Controller
             ->latest('current_period_end')
             ->first();
 
-        $planCode    = $subscription?->plan_code ?? 'free';
+        $planCode    = $subscription?->plan_code ?? 'foundation';
         $displayName = config("plans.display_names.{$planCode}", ucfirst($planCode));
         $planOrder   = config('plans.order', []);
 
@@ -512,7 +512,7 @@ class BillingController extends Controller
         } else {
             Subscription::create([
                 'organization_id' => $org->id,
-                'plan_code' => 'free',
+                'plan_code' => 'foundation',
                 'status' => 'active',
                 'stripe_customer_id' => $customer->id,
                 'starts_at' => now(),

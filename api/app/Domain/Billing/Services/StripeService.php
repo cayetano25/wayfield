@@ -19,11 +19,11 @@ class StripeService
     public function __construct()
     {
         $this->priceMap = [
-            'starter' => [
+            'creator' => [
                 'monthly' => config('services.stripe.prices.creator_monthly'),
                 'annual'  => config('services.stripe.prices.creator_annual'),
             ],
-            'pro' => [
+            'studio' => [
                 'monthly' => config('services.stripe.prices.studio_monthly'),
                 'annual'  => config('services.stripe.prices.studio_annual'),
             ],
@@ -53,13 +53,13 @@ class StripeService
     /**
      * Map a plan code + billing interval to a Stripe Price ID.
      *
-     * @throws InvalidArgumentException for free/enterprise plans
+     * @throws InvalidArgumentException for foundation/enterprise plans
      */
     public function resolvePriceId(string $planCode, string $interval): string
     {
         if (!isset($this->priceMap[$planCode])) {
             throw new InvalidArgumentException(
-                "Plan code '{$planCode}' does not have a Stripe price. Only 'starter' and 'pro' are billable."
+                "Plan code '{$planCode}' does not have a Stripe price. Only 'creator' and 'studio' are billable."
             );
         }
 

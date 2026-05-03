@@ -13,9 +13,9 @@ class PlatformFinancialController extends Controller
 {
     // Monthly revenue (cents) per plan code
     private const PLAN_MRR = [
-        'free'       => 0,
-        'starter'    => 4900,
-        'pro'        => 12900,
+        'foundation' => 0,
+        'creator'    => 4900,
+        'studio'     => 12900,
         'enterprise' => 49900,
     ];
 
@@ -59,9 +59,9 @@ class PlatformFinancialController extends Controller
                 'past_due' => (int) ($byStatus['past_due'] ?? 0),
                 'canceled' => (int) ($byStatus['canceled'] ?? 0),
                 'by_plan'  => [
-                    'free'       => (int) ($byPlan['free']       ?? 0),
-                    'starter'    => (int) ($byPlan['starter']    ?? 0),
-                    'pro'        => (int) ($byPlan['pro']        ?? 0),
+                    'foundation' => (int) ($byPlan['foundation'] ?? 0),
+                    'creator'    => (int) ($byPlan['creator']    ?? 0),
+                    'studio'     => (int) ($byPlan['studio']     ?? 0),
                     'enterprise' => (int) ($byPlan['enterprise'] ?? 0),
                 ],
             ],

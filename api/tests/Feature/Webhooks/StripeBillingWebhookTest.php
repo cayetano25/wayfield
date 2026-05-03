@@ -83,7 +83,7 @@ test('same event id sent twice dispatches job only once', function () {
     $customerId = 'cus_idem_' . uniqid();
     $org        = billingOrgWithCustomer($customerId);
 
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create([
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create([
         'stripe_subscription_id' => 'sub_idem_' . uniqid(),
     ]);
 

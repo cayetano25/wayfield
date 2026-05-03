@@ -35,7 +35,7 @@ function makeLeaderFixture(array $sessionOverrides = []): array
     $org = Organization::factory()->create();
 
     // Starter plan required for leader messaging
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $workshop = Workshop::factory()
         ->forOrganization($org->id)
@@ -240,7 +240,7 @@ test('user with no leader profile returns 403', function () {
 
 test('assigned leader in window with no participants enrolled returns 422', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $workshop = Workshop::factory()
         ->forOrganization($org->id)

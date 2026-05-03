@@ -16,7 +16,7 @@ test('plans endpoint returns all four plans in order', function () {
     $plans = $response->json();
 
     expect($plans)->toHaveCount(4);
-    expect(array_column($plans, 'code'))->toBe(['free', 'starter', 'pro', 'enterprise']);
+    expect(array_column($plans, 'code'))->toBe(['foundation', 'creator', 'studio', 'enterprise']);
 });
 
 test('plans endpoint returns correct display names', function () {
@@ -25,9 +25,9 @@ test('plans endpoint returns correct display names', function () {
     $response->assertOk();
     $plans = collect($response->json())->keyBy('code');
 
-    expect($plans['free']['display_name'])->toBe('Foundation');
-    expect($plans['starter']['display_name'])->toBe('Creator');
-    expect($plans['pro']['display_name'])->toBe('Studio');
+    expect($plans['foundation']['display_name'])->toBe('Foundation');
+    expect($plans['creator']['display_name'])->toBe('Creator');
+    expect($plans['studio']['display_name'])->toBe('Studio');
     expect($plans['enterprise']['display_name'])->toBe('Enterprise');
 });
 
@@ -37,7 +37,7 @@ test('plans endpoint includes limits and features for each plan', function () {
     $response->assertOk();
     $plans = collect($response->json())->keyBy('code');
 
-    foreach (['free', 'starter', 'pro', 'enterprise'] as $code) {
+    foreach (['foundation', 'creator', 'studio', 'enterprise'] as $code) {
         expect($plans[$code])->toHaveKey('limits');
         expect($plans[$code])->toHaveKey('features');
         expect($plans[$code])->toHaveKey('monthly_cents');
@@ -55,19 +55,19 @@ test('plans endpoint does not require authentication', function () {
 test('custom_branding is false for free plan', function () {
     $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
-    expect($plans['free']['features']['custom_branding'])->toBeFalse();
+    expect($plans['foundation']['features']['custom_branding'])->toBeFalse();
 });
 
 test('custom_branding is false for starter plan', function () {
     $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
-    expect($plans['starter']['features']['custom_branding'])->toBeFalse();
+    expect($plans['creator']['features']['custom_branding'])->toBeFalse();
 });
 
 test('custom_branding is true for pro plan', function () {
     $plans = collect($this->getJson('/api/v1/plans')->json())->keyBy('code');
 
-    expect($plans['pro']['features']['custom_branding'])->toBeTrue();
+    expect($plans['studio']['features']['custom_branding'])->toBeTrue();
 });
 
 test('custom_branding is true for enterprise plan', function () {
@@ -80,7 +80,7 @@ test('custom_branding is true for enterprise plan', function () {
 
 test('EnforceFeatureGateService hasFeature reads from config not hardcoded values', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->pro()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->studio()->active()->create();
 
     $service = app(EnforceFeatureGateService::class);
 
@@ -88,14 +88,14 @@ test('EnforceFeatureGateService hasFeature reads from config not hardcoded value
     expect($service->hasFeature($org, 'custom_branding'))->toBeTrue();
 
     $orgFree = Organization::factory()->create();
-    Subscription::factory()->forOrganization($orgFree->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($orgFree->id)->foundation()->active()->create();
 
     expect($service->hasFeature($orgFree, 'custom_branding'))->toBeFalse();
 });
 
 test('isWithinLimit returns true when limit is null (unlimited)', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->pro()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->studio()->active()->create();
 
     $service = app(EnforceFeatureGateService::class);
 
@@ -105,7 +105,7 @@ test('isWithinLimit returns true when limit is null (unlimited)', function () {
 
 test('isWithinLimit returns false when at the limit', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create();
 
     $service = app(EnforceFeatureGateService::class);
 
@@ -116,31 +116,31 @@ test('isWithinLimit returns false when at the limit', function () {
 
 test('isUpgrade returns true when target plan is higher', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create();
 
     $service = app(EnforceFeatureGateService::class);
 
-    expect($service->isUpgrade($org, 'starter'))->toBeTrue();
-    expect($service->isUpgrade($org, 'pro'))->toBeTrue();
+    expect($service->isUpgrade($org, 'creator'))->toBeTrue();
+    expect($service->isUpgrade($org, 'studio'))->toBeTrue();
     expect($service->isUpgrade($org, 'enterprise'))->toBeTrue();
 });
 
 test('isUpgrade returns false when target plan is same or lower', function () {
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     $service = app(EnforceFeatureGateService::class);
 
-    expect($service->isUpgrade($org, 'free'))->toBeFalse();
-    expect($service->isUpgrade($org, 'starter'))->toBeFalse();
-    expect($service->isUpgrade($org, 'pro'))->toBeTrue();
+    expect($service->isUpgrade($org, 'foundation'))->toBeFalse();
+    expect($service->isUpgrade($org, 'creator'))->toBeFalse();
+    expect($service->isUpgrade($org, 'studio'))->toBeTrue();
 });
 
 test('getPlanDisplayName returns correct display name from config', function () {
     $service = app(EnforceFeatureGateService::class);
 
     $org = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create();
 
     expect($service->getPlanDisplayName($org))->toBe('Creator');
 });

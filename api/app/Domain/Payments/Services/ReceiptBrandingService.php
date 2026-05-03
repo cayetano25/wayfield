@@ -9,9 +9,9 @@ use App\Models\Organization;
  * Resolves receipt branding based on the organization's active plan.
  *
  * Plan tiers and their branding entitlements:
- *   free       → no org logo, Wayfield brand shown
- *   starter    → org logo shown, Wayfield brand shown
- *   pro        → org logo shown, custom primary_color, no Wayfield brand
+ *   foundation → no org logo, Wayfield brand shown
+ *   creator    → org logo shown, Wayfield brand shown
+ *   studio     → org logo shown, custom primary_color, no Wayfield brand
  *   enterprise → org logo shown, custom primary_color, no Wayfield brand
  */
 class ReceiptBrandingService
@@ -20,7 +20,7 @@ class ReceiptBrandingService
 
     public function getBranding(Organization $org): ReceiptBranding
     {
-        $planCode = $org->subscription?->plan_code ?? 'free';
+        $planCode = $org->subscription?->plan_code ?? 'foundation';
 
         return new ReceiptBranding(
             logoUrl:           $this->getLogoUrl($org, $planCode),
@@ -28,14 +28,14 @@ class ReceiptBrandingService
             orgEmail:          $org->primary_contact_email,
             orgPhone:          $org->primary_contact_phone,
             primaryColor:      $this->getPrimaryColor($org, $planCode),
-            showWayfieldBrand: in_array($planCode, ['free', 'starter'], true),
-            showOrgLogo:       in_array($planCode, ['starter', 'pro', 'enterprise'], true),
+            showWayfieldBrand: in_array($planCode, ['foundation', 'creator'], true),
+            showOrgLogo:       in_array($planCode, ['creator', 'studio', 'enterprise'], true),
         );
     }
 
     private function getLogoUrl(Organization $org, string $planCode): ?string
     {
-        if (! in_array($planCode, ['starter', 'pro', 'enterprise'], true)) {
+        if (! in_array($planCode, ['creator', 'studio', 'enterprise'], true)) {
             return null;
         }
 
@@ -44,7 +44,7 @@ class ReceiptBrandingService
 
     private function getPrimaryColor(Organization $org, string $planCode): string
     {
-        if (in_array($planCode, ['pro', 'enterprise'], true) && $org->primary_color) {
+        if (in_array($planCode, ['studio', 'enterprise'], true) && $org->primary_color) {
             return $org->primary_color;
         }
 

@@ -24,7 +24,7 @@ const mockOverviewData = {
   organizations: {
     total: 42,
     by_status: { active: 38, suspended: 4 },
-    by_plan: { free: 10, starter: 15, pro: 12, enterprise: 5 },
+    by_plan: { foundation: 10, creator: 15, studio: 12, enterprise: 5 },
   },
   users: { total: 1200, active_30_days: 850, new_7_days: 42 },
   workshops: {

@@ -22,8 +22,8 @@ class LeaderMessagingDeniedException extends RuntimeException
     {
         return new self(
             'plan_required',
-            'Leader notifications require a Starter plan or higher.',
-            ['required_plan' => 'starter'],
+            'Leader notifications require a Creator plan or higher.',
+            ['required_plan' => 'creator'],
         );
     }
 

@@ -29,7 +29,7 @@ class ResolveOrganizationEntitlementsService
      * Plan-level feature availability (before manual overrides are applied).
      */
     private const PLAN_FEATURES = [
-        'free' => [
+        'foundation' => [
             'analytics' => false,
             'reporting' => false,
             'automation' => false,
@@ -41,7 +41,7 @@ class ResolveOrganizationEntitlementsService
             'webhooks' => false,
             'segmentation' => false,
         ],
-        'starter' => [
+        'creator' => [
             'analytics' => true,
             'reporting' => true,
             'automation' => true,
@@ -53,7 +53,7 @@ class ResolveOrganizationEntitlementsService
             'webhooks' => false,
             'segmentation' => false,
         ],
-        'pro' => [
+        'studio' => [
             'analytics' => true,
             'reporting' => true,
             'automation' => true,
@@ -83,16 +83,16 @@ class ResolveOrganizationEntitlementsService
      * The minimum plan required to access each feature.
      */
     public const FEATURE_REQUIRED_PLAN = [
-        'analytics' => 'starter',
-        'reporting' => 'starter',
-        'automation' => 'starter',
-        'advanced_notifications' => 'starter',
-        'waitlists' => 'starter',
-        'branded_pages' => 'starter',
-        'leader_messaging' => 'starter',
-        'api_access' => 'pro',
-        'webhooks' => 'pro',
-        'segmentation' => 'pro',
+        'analytics' => 'creator',
+        'reporting' => 'creator',
+        'automation' => 'creator',
+        'advanced_notifications' => 'creator',
+        'waitlists' => 'creator',
+        'branded_pages' => 'creator',
+        'leader_messaging' => 'creator',
+        'api_access' => 'studio',
+        'webhooks' => 'studio',
+        'segmentation' => 'studio',
     ];
 
     /**
@@ -113,11 +113,11 @@ class ResolveOrganizationEntitlementsService
             ->latest('starts_at')
             ->first();
 
-        $planCode = $subscription?->plan_code ?? 'free';
+        $planCode = $subscription?->plan_code ?? 'foundation';
         $subStatus = $subscription?->status ?? 'none';
 
         $limits = $this->resolveLimits($planCode);
-        $features = self::PLAN_FEATURES[$planCode] ?? self::PLAN_FEATURES['free'];
+        $features = self::PLAN_FEATURES[$planCode] ?? self::PLAN_FEATURES['foundation'];
 
         // Apply manual_override rows from feature_flags
         $overrides = $organization->featureFlags()
@@ -171,7 +171,7 @@ class ResolveOrganizationEntitlementsService
      */
     private function resolveLimits(string $planCode): array
     {
-        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.free', []));
+        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.foundation', []));
         $mapped = [];
         foreach (self::LIMIT_KEY_MAP as $configKey => $legacyKey) {
             $mapped[$legacyKey] = $configLimits[$configKey] ?? null;
@@ -185,7 +185,7 @@ class ResolveOrganizationEntitlementsService
      */
     public static function planLimits(string $planCode): array
     {
-        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.free', []));
+        $configLimits = config("plans.limits.{$planCode}", config('plans.limits.foundation', []));
         $mapped = [];
         foreach (self::LIMIT_KEY_MAP as $configKey => $legacyKey) {
             $mapped[$legacyKey] = $configLimits[$configKey] ?? null;

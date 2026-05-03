@@ -15,9 +15,9 @@ class SubscriptionController extends Controller
     ) {}
 
     private const PLAN_NAMES = [
-        'free' => 'Foundation',
-        'starter' => 'Starter',
-        'pro' => 'Pro',
+        'foundation' => 'Foundation',
+        'creator' => 'Creator',
+        'studio' => 'Studio',
         'enterprise' => 'Enterprise',
     ];
 

@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 function billingAuthOrg(string $role = 'owner'): array
 {
     $org  = Organization::factory()->create(['stripe_customer_id' => 'cus_auth_test']);
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create([
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create([
         'stripe_subscription_id' => 'sub_auth_test',
         'stripe_status'          => 'active',
     ]);
@@ -206,20 +206,20 @@ test('admin cannot access billing portal', function () {
 
 test('owner can initiate checkout (reaches Stripe, not auth-blocked)', function () {
     [$org, $user] = billingAuthOrg('owner');
-    config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
+    config(['plans.pricing.creator.stripe_monthly_price_id' => null]);
 
     $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing'   => 'monthly',
     ])->assertStatus(422)->assertJsonFragment(['error' => 'stripe_not_configured']);
 });
 
 test('billing_admin can initiate checkout (reaches Stripe, not auth-blocked)', function () {
     [$org, $user] = billingAuthOrg('billing_admin');
-    config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
+    config(['plans.pricing.creator.stripe_monthly_price_id' => null]);
 
     $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing'   => 'monthly',
     ])->assertStatus(422)->assertJsonFragment(['error' => 'stripe_not_configured']);
 });
@@ -228,7 +228,7 @@ test('staff cannot initiate checkout', function () {
     [$org, $user] = billingAuthOrg('staff');
 
     $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing'   => 'monthly',
     ])->assertForbidden();
 });
@@ -237,7 +237,7 @@ test('admin cannot initiate checkout', function () {
     [$org, $user] = billingAuthOrg('admin');
 
     $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
-        'plan_code' => 'starter',
+        'plan_code' => 'creator',
         'billing'   => 'monthly',
     ])->assertForbidden();
 });
@@ -284,7 +284,7 @@ test('billing status hides stripe_customer_id from non-billing roles', function 
 
 test('billing status exposes stripe_customer_id to billing_admin', function () {
     $org  = Organization::factory()->create(['stripe_customer_id' => 'cus_visible']);
-    Subscription::factory()->forOrganization($org->id)->starter()->active()->create([
+    Subscription::factory()->forOrganization($org->id)->creator()->active()->create([
         'stripe_customer_id' => 'cus_visible',
     ]);
     $user = User::factory()->create();
@@ -305,7 +305,7 @@ test('billing status exposes stripe_customer_id to billing_admin', function () {
 test('owner of org A cannot view billing for org B', function () {
     // Org A — user is owner
     $orgA = Organization::factory()->create();
-    Subscription::factory()->forOrganization($orgA->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($orgA->id)->foundation()->active()->create();
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $orgA->id,
@@ -316,7 +316,7 @@ test('owner of org A cannot view billing for org B', function () {
 
     // Org B — user has no relationship
     $orgB = Organization::factory()->create();
-    Subscription::factory()->forOrganization($orgB->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($orgB->id)->foundation()->active()->create();
 
     $this->actingAs($user)->getJson("/api/v1/organizations/{$orgB->id}/billing")
         ->assertForbidden();
@@ -324,7 +324,7 @@ test('owner of org A cannot view billing for org B', function () {
 
 test('billing_admin of org A cannot cancel subscription for org B', function () {
     $orgA = Organization::factory()->create();
-    Subscription::factory()->forOrganization($orgA->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($orgA->id)->foundation()->active()->create();
     $user = User::factory()->create();
     OrganizationUser::factory()->create([
         'organization_id' => $orgA->id,
@@ -334,7 +334,7 @@ test('billing_admin of org A cannot cancel subscription for org B', function () 
     ]);
 
     $orgB = Organization::factory()->create();
-    Subscription::factory()->forOrganization($orgB->id)->starter()->active()->create([
+    Subscription::factory()->forOrganization($orgB->id)->creator()->active()->create([
         'stripe_subscription_id' => 'sub_orgb',
     ]);
 
@@ -344,7 +344,7 @@ test('billing_admin of org A cannot cancel subscription for org B', function () 
 
 test('participant (no org membership) cannot access any billing endpoint', function () {
     $org  = Organization::factory()->create();
-    Subscription::factory()->forOrganization($org->id)->free()->active()->create();
+    Subscription::factory()->forOrganization($org->id)->foundation()->active()->create();
 
     $participant = User::factory()->create();
     // No OrganizationUser row — pure participant with no org membership

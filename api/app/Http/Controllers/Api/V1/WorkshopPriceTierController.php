@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 class WorkshopPriceTierController extends Controller
 {
     // Plans that support price tiers (DB enum values).
-    private const TIER_PLANS = ['starter', 'pro', 'enterprise'];
+    private const TIER_PLANS = ['creator', 'studio', 'enterprise'];
 
     public function __construct(
         private readonly PriceResolutionService $priceResolutionService,
@@ -241,7 +241,7 @@ class WorkshopPriceTierController extends Controller
     private function assertPlanAllowsTiers(Workshop $workshop): void
     {
         $workshop->loadMissing('organization');
-        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'free';
+        $planCode = $workshop->organization->activeSubscription?->plan_code ?? 'foundation';
 
         if (! in_array($planCode, self::TIER_PLANS, true)) {
             abort(402, 'Price tiers are available on Creator and Studio plans.');

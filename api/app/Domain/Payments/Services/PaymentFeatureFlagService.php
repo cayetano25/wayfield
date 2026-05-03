@@ -10,7 +10,7 @@ class PaymentFeatureFlagService
 {
     private const PLATFORM_CACHE_TTL = 60;
 
-    private const CREATOR_PLANS = ['starter', 'pro', 'enterprise'];
+    private const CREATOR_PLANS = ['creator', 'studio', 'enterprise'];
 
     public function isPaymentsEnabled(): bool
     {

@@ -56,7 +56,7 @@ class PlatformOrganizationController extends Controller
         ]);
         $organization->loadCount(['workshops', 'organizationUsers']);
 
-        $planCode = $organization->subscription?->plan_code ?? 'free';
+        $planCode = $organization->subscription?->plan_code ?? 'foundation';
         $limits = $this->planLimits($planCode);
 
         return response()->json([
@@ -138,12 +138,12 @@ class PlatformOrganizationController extends Controller
         }
 
         $data = $request->validate([
-            'plan_code' => ['required', Rule::in(['free', 'starter', 'pro', 'enterprise'])],
+            'plan_code' => ['required', Rule::in(['foundation', 'creator', 'studio', 'enterprise'])],
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
         $subscription = $organization->subscription;
-        $oldPlan = $subscription?->plan_code ?? 'free';
+        $oldPlan = $subscription?->plan_code ?? 'foundation';
 
         if ($subscription) {
             $subscription->update(['plan_code' => $data['plan_code']]);
@@ -189,7 +189,7 @@ class PlatformOrganizationController extends Controller
             ->get()
             ->keyBy('feature_key');
 
-        $planCode = $organization->subscription?->plan_code ?? 'free';
+        $planCode = $organization->subscription?->plan_code ?? 'foundation';
 
         $flags = $catalog->map(function ($definition) use ($overrides, $planCode) {
             $override = $overrides->get($definition->feature_key);
@@ -261,8 +261,8 @@ class PlatformOrganizationController extends Controller
     private function planLimits(string $planCode): array
     {
         return match ($planCode) {
-            'starter' => ['active_workshops' => 10, 'participants_per_workshop' => 250, 'organizers' => 10],
-            'pro', 'enterprise' => ['active_workshops' => null, 'participants_per_workshop' => null, 'organizers' => null],
+            'creator' => ['active_workshops' => 10, 'participants_per_workshop' => 250, 'organizers' => 10],
+            'studio', 'enterprise' => ['active_workshops' => null, 'participants_per_workshop' => null, 'organizers' => null],
             default => ['active_workshops' => 2, 'participants_per_workshop' => 75, 'organizers' => 3],
         };
     }

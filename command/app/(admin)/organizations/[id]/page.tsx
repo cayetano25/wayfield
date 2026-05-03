@@ -26,9 +26,9 @@ const TABS = ['overview', 'billing', 'flags', 'usage', 'audit'] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAN_OPTIONS: Array<{ value: PlanCode; label: string }> = [
-  { value: 'free', label: 'Free' },
-  { value: 'starter', label: 'Starter' },
-  { value: 'pro', label: 'Pro' },
+  { value: 'foundation', label: 'Foundation' },
+  { value: 'creator', label: 'Creator' },
+  { value: 'studio', label: 'Studio' },
   { value: 'enterprise', label: 'Enterprise' },
 ];
 
@@ -42,7 +42,7 @@ interface PlanChangeModalProps {
 }
 
 function PlanChangeModal({ orgId, currentPlan, onClose, onSuccess }: PlanChangeModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState<PlanCode>(currentPlan ?? 'free');
+  const [selectedPlan, setSelectedPlan] = useState<PlanCode>(currentPlan ?? 'foundation');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -616,7 +616,7 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="font-heading text-2xl font-bold text-gray-900">{org.name}</h1>
           <StatusBadge status={org.status} />
-          <PlanBadge plan={org.subscription?.plan_code ?? 'free'} />
+          <PlanBadge plan={org.subscription?.plan_code ?? 'foundation'} />
         </div>
         <Link
           href="/organizations"
