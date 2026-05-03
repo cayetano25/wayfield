@@ -5,6 +5,7 @@ import { PageProvider } from '@/contexts/PageContext'
 import { ToastProvider } from '@/components/ui/Toast'
 import { AppTopNav } from '@/components/nav/AppTopNav'
 import { CartProvider } from '@/contexts/CartContext'
+import { SystemAnnouncementBanner } from '@/components/shared/SystemAnnouncementBanner'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             <AppTopNav />
             {/* pt-14 = 56px — clears the fixed AppTopNav */}
             <main className="pt-14">
+              <SystemAnnouncementBanner />
               {children}
             </main>
           </div>

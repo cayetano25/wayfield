@@ -2,6 +2,7 @@
 import { AppTopNav } from '@/components/nav/AppTopNav';
 import { CartProvider } from '@/contexts/CartContext';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { SystemAnnouncementBanner } from '@/components/shared/SystemAnnouncementBanner';
 
 export default function PublicLayout({
   children,
@@ -13,6 +14,7 @@ export default function PublicLayout({
       <div className="min-h-screen bg-white flex flex-col">
         <AppTopNav />
         <main className="pt-14 flex-1">
+          <SystemAnnouncementBanner />
           {children}
         </main>
         <SiteFooter />

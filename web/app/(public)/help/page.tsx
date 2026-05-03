@@ -1,6 +1,7 @@
 'use client';
 
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle, X } from 'lucide-react';
@@ -208,7 +209,7 @@ function NewTicketForm({ onSubmitted }: { onSubmitted: (ticket: SupportTicket) =
 
 /* --- Main page ------------------------------------------------------------ */
 
-export default function HelpPage() {
+function HelpPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const highlightId = searchParams.get('ticket') ? Number(searchParams.get('ticket')) : null;
@@ -332,5 +333,13 @@ export default function HelpPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HelpPage() {
+  return (
+    <Suspense>
+      <HelpPageContent />
+    </Suspense>
   );
 }
