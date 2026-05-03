@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1\Platform;
 use App\Domain\Platform\Services\PlatformAuditService;
 use App\Http\Controllers\Api\V1\SystemAnnouncementController;
 use App\Http\Controllers\Controller;
+use App\Jobs\BroadcastAnnouncementEmailJob;
+use App\Jobs\MaintenanceModeEmailJob;
 use App\Models\AdminUser;
 use App\Models\PlatformConfig;
 use App\Models\SystemAnnouncement;
@@ -57,18 +59,19 @@ class PlatformAnnouncementController extends Controller
         }
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'message' => ['required', 'string'],
+            'title'             => ['required', 'string', 'max:255'],
+            'message'           => ['required', 'string'],
             'announcement_type' => ['required', 'string', Rule::in(['info', 'warning', 'maintenance', 'outage', 'update'])],
-            'severity' => ['sometimes', 'string', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'target_audience' => ['sometimes', 'string', Rule::in(['all', 'organizers'])],
-            'is_dismissable' => ['sometimes', 'boolean'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['nullable', 'date', 'after:starts_at'],
+            'severity'          => ['sometimes', 'string', Rule::in(['low', 'medium', 'high', 'critical'])],
+            'target_audience'   => ['sometimes', 'string', Rule::in(['all', 'organizers'])],
+            'is_dismissable'    => ['sometimes', 'boolean'],
+            'starts_at'         => ['required', 'date'],
+            'ends_at'           => ['nullable', 'date', 'after:starts_at'],
+            'send_email'        => ['sometimes', 'boolean'],
         ]);
 
         $announcement = SystemAnnouncement::create([
-            ...$validated,
+            ...collect($validated)->except('send_email')->all(),
             'created_by_admin_id' => $adminUser->id,
         ]);
 
@@ -77,16 +80,22 @@ class PlatformAnnouncementController extends Controller
             adminUser: $adminUser,
             options: [
                 'entity_type' => 'system_announcement',
-                'entity_id' => $announcement->id,
-                'ip_address' => $request->ip(),
+                'entity_id'   => $announcement->id,
+                'ip_address'  => $request->ip(),
                 'metadata_json' => [
-                    'title' => $announcement->title,
-                    'type' => $announcement->announcement_type,
-                    'severity' => $announcement->severity,
+                    'title'     => $announcement->title,
+                    'type'      => $announcement->announcement_type,
+                    'severity'  => $announcement->severity,
                     'starts_at' => $announcement->starts_at?->toIso8601String(),
                 ],
             ]
         );
+
+        SystemAnnouncementController::invalidateCache();
+
+        if ($validated['send_email'] ?? false) {
+            BroadcastAnnouncementEmailJob::dispatch($announcement->id);
+        }
 
         return response()->json($announcement, 201);
     }
@@ -230,9 +239,13 @@ class PlatformAnnouncementController extends Controller
         }
 
         $validated = $request->validate([
-            'message' => ['required', 'string', 'max:1000'],
-            'ends_at' => ['nullable', 'date'],
+            'message'    => ['required', 'string', 'max:1000'],
+            'starts_at'  => ['nullable', 'date'],
+            'ends_at'    => ['nullable', 'date'],
+            'send_email' => ['sometimes', 'boolean'],
         ]);
+
+        $startsAt = $validated['starts_at'] ?? now()->toIso8601String();
 
         $this->setPlatformConfig('maintenance_mode', 'true', $adminUser->id);
         $this->setPlatformConfig('maintenance_message', $validated['message'], $adminUser->id);
@@ -248,15 +261,25 @@ class PlatformAnnouncementController extends Controller
             options: [
                 'ip_address'    => $request->ip(),
                 'metadata_json' => [
-                    'message' => $validated['message'],
-                    'ends_at' => $validated['ends_at'] ?? null,
+                    'message'    => $validated['message'],
+                    'starts_at'  => $startsAt,
+                    'ends_at'    => $validated['ends_at'] ?? null,
                 ],
             ]
         );
 
+        if ($validated['send_email'] ?? false) {
+            MaintenanceModeEmailJob::dispatch(
+                $validated['message'],
+                $startsAt,
+                $validated['ends_at'] ?? null,
+            );
+        }
+
         return response()->json([
             'maintenance_mode' => true,
             'message'          => $validated['message'],
+            'starts_at'        => $startsAt,
             'ends_at'          => $validated['ends_at'] ?? null,
         ]);
     }

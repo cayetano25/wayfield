@@ -18,6 +18,7 @@ class MaintenanceModeEmailJob implements ShouldQueue
 
     public function __construct(
         public readonly string $message,
+        public readonly ?string $startsAt,
         public readonly ?string $endsAt,
     ) {}
 
@@ -38,7 +39,7 @@ class MaintenanceModeEmailJob implements ShouldQueue
                     continue;
                 }
                 Mail::to($user->email)->queue(
-                    new MaintenanceModeMail($user, $this->message, $this->endsAt)
+                    new MaintenanceModeMail($user, $this->message, $this->startsAt, $this->endsAt)
                 );
             }
         }
