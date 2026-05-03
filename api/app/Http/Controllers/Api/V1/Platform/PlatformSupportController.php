@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendSupportTicketReplyJob;
 use App\Models\SupportTicket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -69,12 +70,17 @@ class PlatformSupportController extends Controller
             'is_internal' => ['sometimes', 'boolean'],
         ]);
 
+        // Platform admins are admin_users, not users — sender_user_id is nullable.
         $message = $ticket->messages()->create([
-            'sender_user_id' => $request->user()->id,
-            'body' => $validated['body'],
-            'is_internal' => $validated['is_internal'] ?? false,
+            'sender_user_id' => null,
+            'body'           => $validated['body'],
+            'is_internal'    => $validated['is_internal'] ?? false,
         ]);
 
-        return response()->json($message->load('senderUser'), 201);
+        if (! $message->is_internal) {
+            SendSupportTicketReplyJob::dispatch($ticket->id, $message->id);
+        }
+
+        return response()->json($message->load('sender'), 201);
     }
 }
