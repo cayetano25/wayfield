@@ -14,6 +14,13 @@ export class ApiError extends Error {
   }
 }
 
+export class MaintenanceError extends Error {
+  constructor(message = 'System under maintenance') {
+    super(message);
+    this.name = 'MaintenanceError';
+  }
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -34,6 +41,13 @@ async function request<T>(
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
+  if (res.status === 503 && res.headers.get('X-Maintenance-Mode') === 'true') {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('wayfield:maintenance', { detail: { active: true } }));
+    }
+    throw new MaintenanceError();
+  }
 
   if (res.status === 401) {
     const hadToken = !!token;

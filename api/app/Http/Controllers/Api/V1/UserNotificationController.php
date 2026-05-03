@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\NotificationRecipient;
+use App\Models\SupportTicket;
 use App\Services\Notification\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserNotificationController extends Controller
 {
@@ -147,8 +149,21 @@ class UserNotificationController extends Controller
      */
     public function unreadCount(Request $request, NotificationService $service): JsonResponse
     {
+        $userId = $request->user()->id;
+
+        // Tickets with at least one non-internal admin reply (sender_user_id IS NULL)
+        // that the user has not yet acknowledged via support_ticket_reads.
+        $hasSupportReplies = SupportTicket::where('submitted_by_user_id', $userId)
+            ->whereHas('messages', fn ($q) => $q
+                ->whereNull('sender_user_id')
+                ->where('is_internal', false)
+            )
+            ->whereNotIn('id', DB::table('support_ticket_reads')->where('user_id', $userId)->select('ticket_id'))
+            ->exists();
+
         return response()->json([
-            'unread_count' => $service->getUnreadCount($request->user()->id),
+            'unread_count'        => $service->getUnreadCount($userId),
+            'has_support_replies' => $hasSupportReplies,
         ]);
     }
 

@@ -689,6 +689,67 @@ export interface FailedPayment {
   created_at: string;
 }
 
+// ─── Announcements types ──────────────────────────────────────────────────────
+
+export type AnnouncementType = 'info' | 'warning' | 'critical';
+
+export interface SystemAnnouncement {
+  id: number;
+  title: string;
+  message: string;
+  type: AnnouncementType;
+  is_active: boolean;
+  is_dismissible: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceStatus {
+  is_active: boolean;
+  message: string | null;
+  ends_at: string | null;
+  enabled_at: string | null;
+  enabled_by_name: string | null;
+}
+
+export const platformAnnouncements = {
+  list: () => api.get<SystemAnnouncement[]>('/announcements'),
+  create: (data: {
+    title: string;
+    message: string;
+    type: AnnouncementType;
+    is_dismissible: boolean;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    send_email?: boolean;
+  }) => api.post<SystemAnnouncement>('/announcements', data),
+  update: (id: number, data: Partial<{
+    title: string;
+    message: string;
+    type: AnnouncementType;
+    is_dismissible: boolean;
+    is_active: boolean;
+    starts_at: string | null;
+    ends_at: string | null;
+    send_email: boolean;
+  }>) => api.patch<SystemAnnouncement>(`/announcements/${id}`, data),
+  delete: (id: number) => api.delete(`/announcements/${id}`),
+};
+
+export const platformMaintenance = {
+  status: () => api.get<MaintenanceStatus>('/maintenance/status'),
+  enable: (data: {
+    message: string;
+    ends_at?: string | null;
+    send_email?: boolean;
+    create_banner?: boolean;
+  }) => api.post<MaintenanceStatus>('/maintenance/enable', data),
+  disable: () => api.post<MaintenanceStatus>('/maintenance/disable'),
+};
+
 // ─── Refund policy types ──────────────────────────────────────────────────────
 
 export interface RefundPolicy {

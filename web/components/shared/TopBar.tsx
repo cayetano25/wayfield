@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Megaphone, CheckCheck, Menu, User, LogOut, Heart, Receipt } from 'lucide-react';
+import { Bell, Megaphone, CheckCheck, Menu, User, LogOut, Heart, Receipt, MessageSquare } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import type { AdminUser } from '@/lib/auth/session';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -11,6 +11,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { UserAvatar } from '@/components/nav/UserAvatar';
 import { NavLink } from '@/components/nav/NavLink';
 import { useNavContext } from '@/lib/hooks/useNavContext';
+import { fetchUnreadCount } from '@/lib/api/notifications';
+import { markTicketRead } from '@/lib/api/support';
 
 /* --- Types ---------------------------------------------------------------- */
 
@@ -132,28 +134,35 @@ function UserMenuDropdown({
 
 function NotificationDropdown({
   notifications,
+  hasSupportReplies,
   onMarkRead,
   onMarkAllRead,
   onNavigate,
+  onSupportClick,
 }: {
   notifications: InAppNotification[];
+  hasSupportReplies: boolean;
   onMarkRead: (id: number) => Promise<void>;
   onMarkAllRead: () => void;
   onNavigate: (workshopId: number | null) => void;
+  onSupportClick: () => void;
 }) {
   const unread = notifications.filter((n) => !n.read_at);
+  const hasAnyUnread = unread.length > 0 || hasSupportReplies;
 
   async function handleItemClick(n: InAppNotification) {
     if (!n.read_at) await onMarkRead(n.id);
     onNavigate(n.workshop_id);
   }
 
+  const isEmpty = notifications.length === 0 && !hasSupportReplies;
+
   return (
     <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl border border-border-gray shadow-lg z-50 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-gray">
         <span className="font-heading text-sm font-semibold text-dark">Notifications</span>
-        {unread.length > 0 && (
+        {hasAnyUnread && (
           <button
             onClick={onMarkAllRead}
             className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
@@ -165,12 +174,37 @@ function NotificationDropdown({
       </div>
 
       {/* List */}
-      {notifications.length === 0 ? (
+      {isEmpty ? (
         <div className="py-10 text-center text-sm text-medium-gray">
           No notifications yet
         </div>
       ) : (
         <ul className="divide-y divide-border-gray">
+          {/* Support reply entry — always first when present */}
+          {hasSupportReplies && (
+            <li
+              className="px-4 py-3 cursor-pointer hover:bg-surface transition-colors bg-primary/[0.03]"
+              onClick={onSupportClick}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-primary block" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-dark truncate">
+                      Support reply received
+                    </span>
+                  </div>
+                  <p className="text-xs text-medium-gray leading-relaxed">
+                    Wayfield support has replied to your ticket.
+                  </p>
+                </div>
+              </div>
+            </li>
+          )}
+
           {notifications.map((n) => (
             <li
               key={n.id}
@@ -226,15 +260,17 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const [hasSupportReplies, setHasSupportReplies] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
+  const notifUnreadCount = notifications.filter((n) => !n.read_at).length;
+  const unreadCount = notifUnreadCount + (hasSupportReplies ? 1 : 0);
 
-  // Fetch on mount
+  // Fetch notifications on mount
   useEffect(() => {
     apiGet<{ data?: RawNotificationItem[] } | RawNotificationItem[]>('/me/notifications')
       .then((res) => {
@@ -249,9 +285,34 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
           read_at: r.read_at,
           created_at: r.created_at,
         }));
-        setNotifications(list.slice(0, 5));
+        setNotifications(list.slice(0, 9)); // leave room for support reply entry
       })
-      .catch(() => {/* silent — non-critical */});
+      .catch(() => {/* silent */});
+  }, []);
+
+  // Poll unread count (including support replies) every 60s when tab is visible
+  useEffect(() => {
+    function pollCount() {
+      fetchUnreadCount()
+        .then((meta) => setHasSupportReplies(meta.has_support_replies))
+        .catch(() => {/* silent */});
+    }
+
+    pollCount(); // initial fetch
+
+    const id = setInterval(() => {
+      if (!document.hidden) pollCount();
+    }, 60_000);
+
+    function onVisibilityChange() {
+      if (!document.hidden) pollCount();
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   // Close notification dropdown on outside click
@@ -301,6 +362,12 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
     if (workshopId) {
       router.push(`/dashboard/workshops/${workshopId}/notifications`);
     }
+  }, [router]);
+
+  const handleSupportClick = useCallback(async () => {
+    setDropdownOpen(false);
+    setHasSupportReplies(false);
+    router.push('/help');
   }, [router]);
 
   const markAllRead = useCallback(async () => {
@@ -361,9 +428,11 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
           {dropdownOpen && (
             <NotificationDropdown
               notifications={notifications}
+              hasSupportReplies={hasSupportReplies}
               onMarkRead={markRead}
               onMarkAllRead={markAllRead}
               onNavigate={handleNavigate}
+              onSupportClick={handleSupportClick}
             />
           )}
         </div>

@@ -165,6 +165,12 @@ Route::prefix('platform/v1')->group(function () {
         Route::post('system-announcements', [PlatformAnnouncementController::class, 'store']);
         Route::patch('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'update']);
         Route::delete('system-announcements/{announcement}', [PlatformAnnouncementController::class, 'destroy']);
+        Route::post('system-announcements/{announcement}/deactivate', [PlatformAnnouncementController::class, 'deactivate']);
+
+        // Maintenance Mode
+        Route::get('maintenance', [PlatformAnnouncementController::class, 'maintenanceStatus']);
+        Route::post('maintenance/enable', [PlatformAnnouncementController::class, 'enableMaintenance']);
+        Route::post('maintenance/disable', [PlatformAnnouncementController::class, 'disableMaintenance']);
 
         // Automations — read: any admin; write: super_admin and admin only
         Route::get('automations', [PlatformAutomationController::class, 'index']);

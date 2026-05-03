@@ -68,6 +68,7 @@ use App\Http\Controllers\Api\V1\SessionSelectionController;
 use App\Http\Controllers\Api\V1\SsoController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\SystemAnnouncementController;
+use App\Http\Controllers\Api\V1\TenantSupportController;
 use App\Http\Controllers\Api\V1\TrackController;
 use App\Http\Controllers\Api\V1\UserNotificationController;
 use App\Http\Controllers\Api\V1\WebhookController;
@@ -550,9 +551,19 @@ Route::prefix('v1')->group(function () {
             [StripeConnectController::class, 'status']
         );
 
+        // ─── Support Tickets (tenant-submitted) ──────────────────────────────
+        Route::get('me/support/tickets', [TenantSupportController::class, 'index']);
+        Route::post('me/support/tickets', [TenantSupportController::class, 'store']);
+        Route::post('notifications/support-tickets/{ticket}/mark-read', [TenantSupportController::class, 'markRead']);
+
         // ─── System Announcements ─────────────────────────────────────────────
+        // GET is public — auth.optional enriches is_dismissed for logged-in users.
         Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
+            ->withoutMiddleware(['auth:sanctum', 'tenant.auth'])
+            ->middleware('auth.optional')
             ->name('system-announcements.index');
+        Route::post('system/announcements/{id}/dismiss', [SystemAnnouncementController::class, 'dismiss'])
+            ->name('system-announcements.dismiss');
 
         // ─── File Uploads ─────────────────────────────────────────────────────
         Route::post('files/presigned-url', [FileUploadController::class, 'presignedUrl']);

@@ -1,17 +1,24 @@
 'use client';
 
+// Presentation-only component. The canonical self-fetching version is SystemAnnouncementBanner.
+// This component is kept for cases where announcements are pre-fetched server-side.
+
 import { useEffect, useState } from 'react';
 import { X, Info, AlertTriangle, Wrench, AlertOctagon, Sparkles } from 'lucide-react';
+import { apiPost } from '@/lib/api/client';
 
 type AnnouncementType = 'info' | 'warning' | 'maintenance' | 'outage' | 'update';
 
 export interface Announcement {
   id: number;
-  type: AnnouncementType;
   title: string;
   message: string;
-  is_dismissable: boolean;
+  announcement_type: AnnouncementType;
   severity: 'critical' | 'high' | 'medium' | 'low';
+  is_dismissable: boolean;
+  is_dismissed: boolean;
+  ends_at: string | null;
+  created_at: string;
 }
 
 const STORAGE_KEY = 'wf_dismissed_announcements';
@@ -35,8 +42,13 @@ function AnnouncementBanner({
   onDismiss: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = typeConfig[announcement.type];
+  const cfg = typeConfig[announcement.announcement_type] ?? typeConfig.info;
   const Icon = cfg.icon;
+
+  const canDismiss =
+    announcement.is_dismissable &&
+    announcement.severity !== 'critical' &&
+    !cfg.isOutage;
 
   return (
     <div
@@ -66,7 +78,7 @@ function AnnouncementBanner({
           </button>
         )}
       </div>
-      {announcement.is_dismissable && !cfg.isOutage && (
+      {canDismiss && (
         <button
           type="button"
           onClick={() => onDismiss(announcement.id)}
@@ -92,7 +104,7 @@ export function AnnouncementBannerClient({ announcements }: { announcements: Ann
     }
   }, []);
 
-  function handleDismiss(id: number) {
+  async function handleDismiss(id: number) {
     const next = [...dismissed, id];
     setDismissed(next);
     try {
@@ -100,9 +112,16 @@ export function AnnouncementBannerClient({ announcements }: { announcements: Ann
     } catch {
       // ignore
     }
+    try {
+      await apiPost(`/system/announcements/${id}/dismiss`);
+    } catch {
+      // Best-effort — localStorage dismissal already applied
+    }
   }
 
-  const visible = announcements.filter((a) => !dismissed.includes(a.id));
+  const visible = announcements.filter(
+    (a) => !a.is_dismissed && !dismissed.includes(a.id),
+  );
   if (visible.length === 0) return null;
 
   return (

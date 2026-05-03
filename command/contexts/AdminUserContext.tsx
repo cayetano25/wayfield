@@ -81,4 +81,5 @@ export const can = {
   manageSettings:     (role: AdminRole) => role === 'super_admin',
   managePayments:     (role: AdminRole) => (['super_admin', 'billing'] as AdminRole[]).includes(role),
   manageTakeRates:    (role: AdminRole) => role === 'super_admin',
+  manageAnnouncements:(role: AdminRole) => (['super_admin', 'admin'] as AdminRole[]).includes(role),
 };

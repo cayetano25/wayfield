@@ -111,8 +111,12 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        'address' => env('MAIL_FROM_ADDRESS', 'noreply@wayfieldapp.com'),
+        'name' => env('MAIL_FROM_NAME', 'Wayfield'),
     ],
+
+    // Support reply-to: routes user replies to a monitored inbox
+    'support_from_address' => env('SUPPORT_FROM_ADDRESS', 'support@wayfieldapp.com'),
+    'support_from_name'    => env('SUPPORT_FROM_NAME', 'Wayfield Support'),
 
 ];

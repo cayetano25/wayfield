@@ -10,7 +10,7 @@ import {
 import type { AppNotification, UnreadMeta } from '@/lib/types/notifications'
 
 const POLL_INTERVAL_MS = 30_000
-const EMPTY_META: UnreadMeta = { unread_count: 0, has_urgent_unread: false, has_leader_unread: false }
+const EMPTY_META: UnreadMeta = { unread_count: 0, has_urgent_unread: false, has_leader_unread: false, has_support_replies: false }
 
 export function useNotifications(isAuthenticated: boolean) {
   const [unreadMeta, setUnreadMeta]       = useState<UnreadMeta>(EMPTY_META)
@@ -48,11 +48,12 @@ export function useNotifications(isAuthenticated: boolean) {
       setHasLoaded(true)
       // Seed priority flags from list meta when available
       if (res.meta) {
-        setUnreadMeta({
-          unread_count:      res.meta.unread_count      ?? 0,
-          has_urgent_unread: res.meta.has_urgent_unread ?? false,
-          has_leader_unread: res.meta.has_leader_unread ?? false,
-        })
+        setUnreadMeta((prev) => ({
+          ...prev,
+          unread_count:      res.meta!.unread_count      ?? 0,
+          has_urgent_unread: res.meta!.has_urgent_unread ?? false,
+          has_leader_unread: res.meta!.has_leader_unread ?? false,
+        }))
       }
     } catch {
       // Silently fail — show empty state
