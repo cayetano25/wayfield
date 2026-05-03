@@ -842,7 +842,7 @@ function TakeRatesTab() {
     setError(null);
     try {
       const { data } = await platformPayments.takeRates();
-      setRates(data);
+      setRates(Array.isArray(data) ? data : (data as unknown as { data: TakeRate[] }).data ?? []);
     } catch {
       setError('Failed to load take rates.');
     } finally {

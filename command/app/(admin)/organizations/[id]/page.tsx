@@ -787,11 +787,11 @@ function PaymentsTab({ orgId }: { orgId: number }) {
             })}
           </p>
         )}
-        {stripe_connect.requirements.length > 0 && (
+        {(stripe_connect.requirements ?? []).length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
             <p className="text-xs font-medium text-amber-700 mb-1">Pending requirements:</p>
             <ul className="text-xs text-amber-600 space-y-0.5">
-              {stripe_connect.requirements.map((req) => (
+              {(stripe_connect.requirements ?? []).map((req) => (
                 <li key={req}>{req}</li>
               ))}
             </ul>
