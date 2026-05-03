@@ -91,7 +91,7 @@ describe('LoginPage', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('stores token and redirects to /overview on valid credentials', async () => {
+  it('stores token and redirects to / on valid credentials', async () => {
     const mockAdminUser = {
       id: 1, first_name: 'Tom', last_name: 'Admin', email: 'tom@wayfield.io',
       role: 'super_admin' as const, is_active: true, can_impersonate: false, last_login_at: null,
@@ -111,7 +111,7 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(platformApi.setToken).toHaveBeenCalledWith('test-token-123');
       expect(mockSetAdminUser).toHaveBeenCalledWith(mockAdminUser);
-      expect(mockReplace).toHaveBeenCalledWith('/overview');
+      expect(mockReplace).toHaveBeenCalledWith('/');
     });
   });
 
@@ -136,7 +136,7 @@ describe('LoginPage', () => {
     vi.spyOn(platformApi, 'getToken').mockReturnValue('existing-token');
     render(<LoginPage />);
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/overview');
+      expect(mockReplace).toHaveBeenCalledWith('/');
     });
   });
 });

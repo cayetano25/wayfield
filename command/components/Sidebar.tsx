@@ -12,6 +12,7 @@ import {
   Shield,
   ClipboardList,
   Settings,
+  Megaphone,
 } from 'lucide-react';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
 import { AdminRole } from '@/lib/platform-api';
@@ -31,34 +32,39 @@ export default function Sidebar() {
 
   const role = adminUser.role as AdminRole;
 
-  // Build nav items dynamically based on role
   const group1: NavItem[] = [
-    { href: '/overview',      label: 'Overview',       icon: LayoutDashboard },
-    { href: '/organizations', label: 'Organisations',  icon: Building2 },
+    { href: '/',             label: 'Overview',      icon: LayoutDashboard },
+    { href: '/organizations', label: 'Organisations', icon: Building2 },
     ...(can.viewUsers(role)      ? [{ href: '/users',      label: 'Users',      icon: Users }]         : []),
     ...(can.viewFinancials(role) ? [{ href: '/financials', label: 'Financials', icon: CreditCard }]    : []),
     ...(can.viewSupport(role)    ? [{ href: '/support',    label: 'Support',    icon: MessageCircle }] : []),
   ];
 
   const group2: NavItem[] = [
-    ...(can.manageAutomations(role) ? [{ href: '/automations', label: 'Automations', icon: Zap }]             : []),
-    ...(can.viewSecurity(role)      ? [{ href: '/security',    label: 'Security',    icon: Shield }]           : []),
-    ...(can.viewAuditLog(role)      ? [{ href: '/audit',       label: 'Audit Log',   icon: ClipboardList }]    : []),
-    ...(can.manageSettings(role)    ? [{ href: '/settings',    label: 'Settings',    icon: Settings }]         : []),
+    ...(can.manageAutomations(role)                          ? [{ href: '/automations',  label: 'Automations', icon: Zap }]          : []),
+    ...(can.viewSecurity(role)                               ? [{ href: '/security',     label: 'Security',    icon: Shield }]        : []),
+    ...(can.viewAuditLog(role)                               ? [{ href: '/audit',        label: 'Audit Log',   icon: ClipboardList }] : []),
+    ...(role === 'super_admin' || role === 'admin'           ? [{ href: '/announcements',label: 'Announcements',icon: Megaphone }]    : []),
+    ...(can.manageSettings(role)                             ? [{ href: '/settings',     label: 'Settings',    icon: Settings }]      : []),
   ];
 
+  function isActive(href: string) {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(href + '/');
+  }
+
   function NavLink({ href, label, icon: Icon }: NavItem) {
-    const active = pathname === href || pathname.startsWith(href + '/');
+    const active = isActive(href);
     return (
       <Link
         href={href}
-        className={`h-10 flex items-center gap-3 rounded-lg text-sm px-3 transition-colors duration-150 ${
+        className={`h-10 flex items-center gap-3 rounded-lg text-sm transition-colors duration-150 ${
           active
-            ? 'border-l-2 border-[#0FA3B1] bg-[#0FA3B1]/10 text-white pl-[10px]'
-            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+            ? 'border-l-2 border-[#0FA3B1] bg-[#0FA3B1]/10 text-white pl-[10px] ml-[-12px] pr-3'
+            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 px-3'
         }`}
       >
-        <Icon size={16} />
+        <Icon size={18} className={active ? 'text-[#0FA3B1]' : ''} />
         {label}
       </Link>
     );
@@ -66,7 +72,7 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-56 z-20 bg-gray-900 overflow-hidden flex flex-col px-3 pt-16 pb-6">
-      <nav className="flex flex-col gap-0.5">
+      <nav className="flex-1 flex flex-col gap-0.5">
         {group1.map((item) => (
           <NavLink key={item.href} {...item} />
         ))}
@@ -81,7 +87,6 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* Bottom: role badge + name */}
       <div className="mt-auto">
         <RoleBadge role={adminUser.role} size="xs" />
         <p

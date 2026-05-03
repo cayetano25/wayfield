@@ -20,7 +20,7 @@ export default function LoginPage() {
   const { setAdminUser } = useAdminUser();
 
   useEffect(() => {
-    if (getToken()) router.replace('/overview');
+    if (getToken()) router.replace('/');
   }, [router]);
 
   const {
@@ -35,7 +35,7 @@ export default function LoginPage() {
       const { data } = await platformAuth.login(values.email, values.password);
       setToken(data.token);
       setAdminUser(data.admin_user);
-      router.replace('/overview');
+      router.replace('/');
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401 || status === 422) {

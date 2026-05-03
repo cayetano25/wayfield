@@ -1,11 +1,26 @@
 import { AdminRole } from '@/lib/platform-api';
 
 const CONFIG: Record<AdminRole, { label: string; className: string }> = {
-  super_admin: { label: 'Super Admin', className: 'bg-teal-900/60 text-teal-300 ring-teal-700/40' },
-  admin:       { label: 'Admin',       className: 'bg-blue-900/60 text-blue-300 ring-blue-700/40' },
-  support:     { label: 'Support',     className: 'bg-purple-900/60 text-purple-300 ring-purple-700/40' },
-  billing:     { label: 'Billing',     className: 'bg-amber-900/60 text-amber-300 ring-amber-700/40' },
-  readonly:    { label: 'Read Only',   className: 'bg-gray-700/60 text-gray-400 ring-gray-600/40' },
+  super_admin: {
+    label: 'SUPER ADMIN',
+    className: 'bg-[#E94F37]/15 text-[#E94F37] border border-[#E94F37]/30',
+  },
+  admin: {
+    label: 'ADMIN',
+    className: 'bg-blue-500/15 text-blue-500 border border-blue-500/30',
+  },
+  support: {
+    label: 'SUPPORT',
+    className: 'bg-purple-500/15 text-purple-500 border border-purple-500/30',
+  },
+  billing: {
+    label: 'BILLING',
+    className: 'bg-[#E67E22]/15 text-[#E67E22] border border-[#E67E22]/30',
+  },
+  readonly: {
+    label: 'READ ONLY',
+    className: 'bg-gray-500/15 text-gray-400 border border-gray-500/30',
+  },
 };
 
 interface RoleBadgeProps {
@@ -15,11 +30,11 @@ interface RoleBadgeProps {
 
 export default function RoleBadge({ role, size = 'sm' }: RoleBadgeProps) {
   const { label, className } = CONFIG[role] ?? CONFIG.readonly;
-  const sizeClass = size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs';
+  const sizeClass = size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[10px]';
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium ring-1 ${sizeClass} ${className}`}
+      className={`inline-flex items-center rounded-full font-mono font-medium tracking-wide ${sizeClass} ${className}`}
     >
       {label}
     </span>
