@@ -180,14 +180,15 @@ class PlatformAdminUserController extends Controller
     private function formatAdmin(AdminUser $admin): array
     {
         return [
-            'id'            => $admin->id,
-            'first_name'    => $admin->first_name,
-            'last_name'     => $admin->last_name,
-            'email'         => $admin->email,
-            'role'          => $admin->role,
-            'is_active'     => $admin->is_active,
-            'last_login_at' => $admin->last_login_at?->toIso8601String(),
-            'created_at'    => $admin->created_at?->toIso8601String(),
+            'id'                 => $admin->id,
+            'first_name'         => $admin->first_name,
+            'last_name'          => $admin->last_name,
+            'email'              => $admin->email,
+            'role'               => $admin->role,
+            'is_active'          => $admin->is_active,
+            'last_login_at'      => $admin->last_login_at?->toIso8601String(),
+            'created_at'         => $admin->created_at?->toIso8601String(),
+            'two_factor_enabled' => $admin->hasTwoFactorEnabled(),
         ];
     }
 }

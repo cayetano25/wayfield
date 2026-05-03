@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Platform\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Workshop;
@@ -78,6 +79,11 @@ class OverviewController extends Controller
             ],
             'stripe_note'         => 'Plan data reflects Stripe mirror tables. May be stale until webhook handler is wired (Q4).',
             'recent_audit_events' => $recentAuditEvents,
+            'admin_2fa'           => [
+                'total_admins'   => AdminUser::where('is_active', true)->count(),
+                'two_factor_on'  => AdminUser::where('is_active', true)->whereNotNull('two_factor_confirmed_at')->count(),
+                'two_factor_off' => AdminUser::where('is_active', true)->whereNull('two_factor_confirmed_at')->count(),
+            ],
             'generated_at'        => now()->toIso8601String(),
         ]);
     }
