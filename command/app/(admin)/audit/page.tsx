@@ -188,7 +188,7 @@ export default function AuditPage() {
         }
       />
 
-      {error && <ErrorBanner message={error} onRetry={load} className="mb-6" />}
+      {error && <div className="mb-6"><ErrorBanner message={error} onRetry={load} /></div>}
 
       {!loading && !error && (
         <p className="mb-4 text-sm text-gray-400">{total} event{total !== 1 ? 's' : ''}</p>

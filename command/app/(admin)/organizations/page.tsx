@@ -216,7 +216,7 @@ export default function OrganizationsPage() {
             <Th>Participants</Th>
             <Th>Workshops</Th>
             <Th>Last Active</Th>
-            <Th className="w-16" />
+            <Th><span className="sr-only">Actions</span></Th>
           </TableHead>
           <TableBody>
             {loading ? (

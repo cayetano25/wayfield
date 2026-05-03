@@ -53,7 +53,7 @@ function StatusPill({ active }: { active: boolean }) {
 export default function AutomationsPage() {
   const { adminUser } = useAdminUser();
   const router = useRouter();
-  const toast = useToast();
+  const { toast } = useToast();
 
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [meta, setMeta] = useState<Omit<Paginated<AutomationRule>, 'data'> | null>(null);
@@ -82,7 +82,7 @@ export default function AutomationsPage() {
       .list(params)
       .then(({ data }) => {
         setRules(data.data);
-        setMeta({ ...data, data: undefined as never });
+        const { data: _items, ...meta } = data; setMeta(meta);
       })
       .catch(() => setError('Failed to load automation rules.'))
       .finally(() => setLoading(false));
@@ -95,9 +95,9 @@ export default function AutomationsPage() {
     try {
       const { data } = await platformAutomations.update(rule.id, { is_active: !rule.is_active });
       setRules((prev) => prev.map((r) => (r.id === data.id ? data : r)));
-      toast.show(`Rule "${data.name}" ${data.is_active ? 'activated' : 'deactivated'}.`, 'success');
+      toast(`Rule "${data.name}" ${data.is_active ? 'activated' : 'deactivated'}.`, 'success');
     } catch {
-      toast.show('Failed to update rule.', 'error');
+      toast('Failed to update rule.', 'error');
     } finally {
       setToggling(null);
     }
@@ -109,10 +109,10 @@ export default function AutomationsPage() {
     try {
       await platformAutomations.delete(deleteTarget.id);
       setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.show(`Rule "${deleteTarget.name}" deleted.`, 'success');
+      toast(`Rule "${deleteTarget.name}" deleted.`, 'success');
       setDeleteTarget(null);
     } catch {
-      toast.show('Failed to delete rule.', 'error');
+      toast('Failed to delete rule.', 'error');
       setDeleting(false);
     }
   }
@@ -123,7 +123,7 @@ export default function AutomationsPage() {
       return idx >= 0 ? prev.map((r) => (r.id === saved.id ? saved : r)) : [saved, ...prev];
     });
     setEditorOpen(false);
-    toast.show(`Rule "${saved.name}" ${editingRule ? 'updated' : 'created'}.`, 'success');
+    toast(`Rule "${saved.name}" ${editingRule ? 'updated' : 'created'}.`, 'success');
     setEditingRule(null);
   }
 
@@ -154,7 +154,7 @@ export default function AutomationsPage() {
         </span>
       </div>
 
-      {error && <ErrorBanner message={error} onRetry={load} className="mb-6" />}
+      {error && <div className="mb-6"><ErrorBanner message={error} onRetry={load} /></div>}
 
       {/* Filter bar */}
       <div className="mb-4 flex gap-3">

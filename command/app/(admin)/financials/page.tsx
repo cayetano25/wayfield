@@ -307,7 +307,7 @@ function InvoicesTab() {
             <Th>Date</Th>
             <Th>Amount Due</Th>
             <Th>Status</Th>
-            <Th className="w-16" />
+            <Th><span className="sr-only">Actions</span></Th>
           </TableHead>
           <TableBody>
             {loading ? (
@@ -908,7 +908,7 @@ function TakeRatesTab() {
             <Th>Take Rate</Th>
             <Th>Fee on $100</Th>
             <Th>Notes</Th>
-            {canEdit && <Th className="w-24" />}
+            {canEdit && <Th><span className="sr-only">Actions</span></Th>}
           </TableHead>
           <TableBody>
             {rates.map((rate) => (
@@ -1108,7 +1108,7 @@ function StripeConnectTab() {
             <Th>Submitted</Th>
             <Th>Last Webhook</Th>
             <Th>Reqs</Th>
-            <Th className="w-10" />
+            <Th><span className="sr-only">Actions</span></Th>
           </TableHead>
           <TableBody>
             {accounts.map((acct) => (

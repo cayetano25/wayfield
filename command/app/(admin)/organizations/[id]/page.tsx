@@ -16,6 +16,7 @@ import {
   type PlanCode,
   type OrgPaymentStatus,
   type WorkshopPricingItem,
+  type WorkshopReadinessItem,
   type AddonSessionPricing,
 } from '@/lib/platform-api';
 import { useAdminUser, can } from '@/contexts/AdminUserContext';
@@ -27,7 +28,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Table, TableHead, Th, TableBody, Td } from '@/components/ui/Table';
 
-const TABS = ['overview', 'billing', 'flags', 'usage', 'payments', 'workshops', 'audit'] as const;
+const TABS = ['overview', 'billing', 'workshops', 'flags', 'usage', 'payments', 'audit'] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAN_OPTIONS: Array<{ value: PlanCode; label: string }> = [
@@ -232,7 +233,40 @@ function OverviewTab({ org }: { org: OrgDetail }) {
             <p className="font-heading text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
           </div>
         ))}
+
+        {/* Leader Profiles completion card */}
+        {org.leader_completion !== null && org.leader_completion !== undefined && (
+          <LeaderProfilesCard completion={org.leader_completion} />
+        )}
       </div>
+    </div>
+  );
+}
+
+interface LeaderCompletion { total: number; complete: number; completion_rate_pct: number }
+
+function LeaderProfilesCard({ completion }: { completion: LeaderCompletion }) {
+  const pct = completion.completion_rate_pct;
+  const valueColor =
+    pct === 100 ? 'text-teal-600' :
+    pct >= 50   ? 'text-amber-600' :
+                  'text-red-600';
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4" data-testid="leader-profiles-card">
+      <p
+        className="text-xs uppercase tracking-widest text-gray-400 mb-1"
+        style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+      >
+        Leader Profiles
+      </p>
+      <p
+        className={`font-heading text-2xl font-bold ${valueColor}`}
+        data-testid="leader-profiles-value"
+      >
+        {completion.complete} / {completion.total}
+      </p>
+      <p className="text-sm text-gray-500 mt-0.5">{pct}% complete</p>
+      <p className="text-xs text-[#0FA3B1] mt-2">View details →</p>
     </div>
   );
 }
@@ -487,7 +521,7 @@ function AuditTab({ orgId }: { orgId: number }) {
           <Th>Admin</Th>
           <Th>Action</Th>
           <Th>Entity</Th>
-          <Th className="w-8" />
+          <Th><span className="sr-only">Actions</span></Th>
         </TableHead>
         <TableBody>
           {logs.length === 0 ? (
@@ -966,19 +1000,46 @@ function AddonPricingSection({ orgId }: { orgId: number }) {
   );
 }
 
+type PricingFilter = 'all' | 'paid' | 'free';
+
+function ReadinessDot({ score }: { score: number | undefined }) {
+  if (score === undefined) return <span className="inline-block w-2 h-2 rounded-full bg-gray-200 shrink-0" aria-hidden="true" />;
+  const color = score >= 80 ? 'bg-teal-500' : score >= 50 ? 'bg-amber-400' : 'bg-red-500';
+  const label = score >= 80 ? 'Ready' : score >= 50 ? 'Needs attention' : 'Incomplete';
+  return (
+    <span
+      className={`inline-block w-2 h-2 rounded-full shrink-0 ${color}`}
+      aria-label={label}
+      title={`Readiness: ${score}/100 — ${label}`}
+    />
+  );
+}
+
 function WorkshopsTab({ orgId }: { orgId: number }) {
   const [items, setItems] = useState<WorkshopPricingItem[]>([]);
+  const [readinessMap, setReadinessMap] = useState<Record<number, number>>({});
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<PricingFilter>('all');
 
-  async function load() {
+  async function load(f: PricingFilter = filter) {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await platformWorkshops.pricingAudit({ organization_id: orgId });
-      setItems(data.data);
-      setTotal(data.total);
+      const hasPricingParam =
+        f === 'paid' ? true : f === 'free' ? false : undefined;
+      const [pricingRes, readinessRes] = await Promise.all([
+        platformWorkshops.pricingAudit({ organization_id: orgId, has_pricing: hasPricingParam }),
+        platformWorkshops.readiness({ organization_id: orgId }),
+      ]);
+      setItems(pricingRes.data.data);
+      setTotal(pricingRes.data.total);
+      const map: Record<number, number> = {};
+      for (const r of (readinessRes.data as unknown as { data: WorkshopReadinessItem[] }).data ?? []) {
+        map[r.workshop_id] = r.readiness_score;
+      }
+      setReadinessMap(map);
     } catch {
       setError('Failed to load workshop pricing.');
     } finally {
@@ -988,10 +1049,15 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
 
   useEffect(() => { load(); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function handleFilter(f: PricingFilter) {
+    setFilter(f);
+    load(f);
+  }
+
   if (loading) {
     return (
       <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="animate-pulse bg-gray-100 rounded-xl h-12" />
         ))}
       </div>
@@ -1000,48 +1066,78 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
 
   if (error) return <ErrorBanner message={error} onRetry={load} />;
 
+  const FILTER_OPTS: Array<{ key: PricingFilter; label: string }> = [
+    { key: 'all', label: 'All' },
+    { key: 'paid', label: 'Paid only' },
+    { key: 'free', label: 'Free only' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Filter bar */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 mr-1">Show:</span>
+        {FILTER_OPTS.map((opt) => (
+          <button
+            key={opt.key}
+            onClick={() => handleFilter(opt.key)}
+            className={`min-h-[36px] px-3 text-xs rounded-lg border transition-colors ${
+              filter === opt.key
+                ? 'bg-[#0FA3B1] text-white border-[#0FA3B1]'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+        <span
+          className="ml-auto text-xs text-gray-400"
+          style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
+        >
+          {total} workshop{total !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {/* Workshop pricing table */}
       <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h3 className="font-heading text-sm font-semibold text-gray-800">Workshop Pricing</h3>
-          <span
-            className="text-xs text-gray-400"
-            style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
-          >
-            {total} workshop{total !== 1 ? 's' : ''}
-          </span>
-        </div>
         {items.length === 0 ? (
           <p className="px-5 py-8 text-sm text-gray-400 text-center">No workshops found.</p>
         ) : (
           <Table>
             <TableHead>
-              <Th>Workshop</Th>
+              <Th>Title</Th>
               <Th>Status</Th>
-              <Th>Priced Sessions</Th>
+              <Th>Paid?</Th>
               <Th>Base Price</Th>
               <Th>Deposit</Th>
+              <Th>Active Tiers</Th>
+              <Th>Add-On Sessions</Th>
             </TableHead>
             <TableBody>
               {items.map((item) => (
                 <tr key={item.workshop_id} className="hover:bg-gray-50">
                   <Td>
-                    <span className="text-sm font-medium text-gray-900">{item.title}</span>
+                    <span className="flex items-center gap-2">
+                      <ReadinessDot score={readinessMap[item.workshop_id]} />
+                      <span className="text-sm font-medium text-gray-900">{item.title}</span>
+                    </span>
                   </Td>
                   <Td>
-                    <span className="text-sm text-gray-500 capitalize">{item.status}</span>
+                    <StatusBadge status={item.status} />
                   </Td>
                   <Td>
-                    <MonoText>
-                      <span className="text-sm text-gray-600">{item.pricing.session_pricing_count}</span>
-                    </MonoText>
+                    {item.pricing.has_pricing ? (
+                      <CheckCircle size={16} className="text-teal-500" aria-label="Paid" />
+                    ) : (
+                      <XCircle size={16} className="text-gray-300" aria-label="Free" />
+                    )}
                   </Td>
                   <Td>
                     <MonoText>
                       <span className="text-sm font-medium text-gray-800">
-                        {item.pricing.has_pricing ? formatCentsLocal(item.pricing.base_price_cents) : '—'}
+                        {item.pricing.has_pricing
+                          ? `${item.pricing.currency?.toUpperCase() ?? 'USD'} ${formatCentsLocal(item.pricing.base_price_cents)}`
+                          : 'Free'}
                       </span>
                     </MonoText>
                   </Td>
@@ -1051,6 +1147,20 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
                         {item.pricing.deposit_enabled
                           ? formatCentsLocal(item.pricing.deposit_amount_cents)
                           : '—'}
+                      </span>
+                    </MonoText>
+                  </Td>
+                  <Td>
+                    <MonoText>
+                      <span className="text-sm text-gray-600">
+                        {item.pricing.active_tier_count > 0 ? item.pricing.active_tier_count : '—'}
+                      </span>
+                    </MonoText>
+                  </Td>
+                  <Td>
+                    <MonoText>
+                      <span className="text-sm text-gray-600">
+                        {item.pricing.session_pricing_count > 0 ? item.pricing.session_pricing_count : '—'}
                       </span>
                     </MonoText>
                   </Td>
@@ -1126,10 +1236,10 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
   const visibleTabs: Array<{ key: Tab; label: string }> = [
     { key: 'overview',  label: 'Overview' },
     { key: 'billing',   label: 'Billing' },
+    { key: 'workshops', label: 'Workshops' },
     ...(showFlagsTab ? [{ key: 'flags' as Tab, label: 'Feature Flags' }] : []),
     { key: 'usage',     label: 'Usage' },
     { key: 'payments',  label: 'Payments' },
-    { key: 'workshops', label: 'Workshops' },
     ...(showAuditTab ? [{ key: 'audit' as Tab, label: 'Audit' }] : []),
   ];
 

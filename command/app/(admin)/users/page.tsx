@@ -147,7 +147,7 @@ export default function UsersPage() {
             <Th>Orgs</Th>
             <Th>Last Login</Th>
             <Th>Verified</Th>
-            <Th className="w-16" />
+            <Th><span className="sr-only">Actions</span></Th>
           </TableHead>
           <TableBody>
             {loading ? (

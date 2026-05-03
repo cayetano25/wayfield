@@ -188,7 +188,7 @@ export default function SecurityPage() {
     <div>
       <PageHeader title="Security Events" />
 
-      {error && <ErrorBanner message={error} onRetry={load} className="mb-6" />}
+      {error && <div className="mb-6"><ErrorBanner message={error} onRetry={load} /></div>}
 
       {/* Filter bar */}
       <div className="mb-4 flex gap-3">

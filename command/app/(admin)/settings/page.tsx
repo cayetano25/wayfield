@@ -38,7 +38,7 @@ function RoleBadge({ role }: { role: AdminRole }) {
 // ─── Inline config editor row ─────────────────────────────────────────────────
 
 function ConfigRow({ item, onSaved }: { item: PlatformConfig; onSaved: (updated: PlatformConfig) => void }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,9 +59,9 @@ function ConfigRow({ item, onSaved }: { item: PlatformConfig; onSaved: (updated:
       const { data } = await platformConfig.update(item.config_key, draft);
       onSaved(data);
       setEditing(false);
-      toast.show(`Config "${item.config_key}" updated.`, 'success');
+      toast(`Config "${item.config_key}" updated.`, 'success');
     } catch {
-      toast.show('Failed to update config.', 'error');
+      toast('Failed to update config.', 'error');
     } finally {
       setSaving(false);
     }
@@ -143,7 +143,7 @@ interface InviteAdminModalProps {
 }
 
 function InviteAdminModal({ onClose, onCreated }: InviteAdminModalProps) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -171,7 +171,7 @@ function InviteAdminModal({ onClose, onCreated }: InviteAdminModalProps) {
         role,
       });
       onCreated(data);
-      toast.show(`${data.first_name} ${data.last_name} added.`, 'success');
+      toast(`${data.first_name} ${data.last_name} added.`, 'success');
     } catch {
       setErrors({ general: 'Failed to create admin. The email may already be in use.' });
       setSaving(false);
@@ -287,7 +287,7 @@ interface EditRoleModalProps {
 }
 
 function EditRoleModal({ target, isLastSuperAdmin, currentUserId, onClose, onSaved }: EditRoleModalProps) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [role, setRole] = useState<AdminRole>(target.role);
   const [saving, setSaving] = useState(false);
 
@@ -298,9 +298,9 @@ function EditRoleModal({ target, isLastSuperAdmin, currentUserId, onClose, onSav
     try {
       const { data } = await platformAdmins.updateRole(target.id, role);
       onSaved(data);
-      toast.show(`${target.first_name}'s role updated.`, 'success');
+      toast(`${target.first_name}'s role updated.`, 'success');
     } catch {
-      toast.show('Failed to update role.', 'error');
+      toast('Failed to update role.', 'error');
       setSaving(false);
     }
   }
@@ -370,7 +370,7 @@ function EditRoleModal({ target, isLastSuperAdmin, currentUserId, onClose, onSav
 export default function SettingsPage() {
   const { adminUser } = useAdminUser();
   const router = useRouter();
-  const toast = useToast();
+  const { toast } = useToast();
 
   const [configs, setConfigs] = useState<PlatformConfig[]>([]);
   const [configLoading, setConfigLoading] = useState(true);
@@ -418,10 +418,10 @@ export default function SettingsPage() {
     try {
       const { data } = await platformAdmins.updateStatus(deactivateTarget.id, false);
       setAdmins((prev) => prev.map((a) => (a.id === data.id ? data : a)));
-      toast.show(`${deactivateTarget.first_name} deactivated.`, 'success');
+      toast(`${deactivateTarget.first_name} deactivated.`, 'success');
       setDeactivateTarget(null);
     } catch {
-      toast.show('Failed to update status.', 'error');
+      toast('Failed to update status.', 'error');
       setDeactivating(false);
     }
   }
@@ -439,7 +439,7 @@ export default function SettingsPage() {
           Platform Config
         </h2>
 
-        {configError && <ErrorBanner message={configError} className="mb-4" />}
+        {configError && <div className="mb-4"><ErrorBanner message={configError} /></div>}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-6">
           {configLoading ? (
@@ -477,7 +477,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {adminsError && <ErrorBanner message={adminsError} className="mb-4" />}
+        {adminsError && <div className="mb-4"><ErrorBanner message={adminsError} /></div>}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {adminsLoading ? (

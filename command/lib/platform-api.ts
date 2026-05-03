@@ -79,6 +79,7 @@ export interface OverviewResponse {
   users: { total: number; active_30_days: number; new_7_days: number };
   workshops: { total: number; by_status: Record<string, number> };
   stripe_note: string;
+  mrr_cents: number | null;
   recent_audit_events: AuditEvent[];
   generated_at: string;
 }
@@ -128,6 +129,11 @@ export interface OrgDetail {
     manager_count: number;
     manager_limit: number | null;
   };
+  leader_completion: {
+    total: number;
+    complete: number;
+    completion_rate_pct: number;
+  } | null;
 }
 
 export interface FeatureFlag {
@@ -286,6 +292,11 @@ export const platformFinancials = {
   failedPayments: (params?: { organization_id?: number; date_from?: string; date_to?: string; page?: number }) =>
     api.get<Paginated<FailedPayment> & { stripe_webhook_required?: boolean }>(
       '/financials/failed-payments',
+      { params },
+    ),
+  refundPolicies: (params?: { policy_level?: string; organization_id?: number; page?: number }) =>
+    api.get<{ summary: RefundPolicySummary; data: Paginated<RefundPolicy> | RefundPolicy[] }>(
+      '/financials/refund-policies',
       { params },
     ),
 };
@@ -531,11 +542,24 @@ export interface AddonSessionPricing {
   max_purchases: number | null;
 }
 
+export interface WorkshopReadinessItem {
+  workshop_id: number;
+  title: string;
+  organization_id: number;
+  organization_name: string | null;
+  status: string;
+  readiness_score: number;
+  missing_items: string[];
+  ready_to_publish: boolean;
+}
+
 export const platformWorkshops = {
-  pricingAudit: (params?: { organization_id?: number; page?: number }) =>
+  pricingAudit: (params?: { organization_id?: number; has_pricing?: boolean; page?: number }) =>
     api.get<Paginated<WorkshopPricingItem>>('/workshops/pricing-audit', { params }),
   addonPricing: (params?: { organization_id?: number }) =>
     api.get<AddonSessionPricing[]>('/workshops/addon-pricing', { params }),
+  readiness: (params?: { organization_id?: number; status?: string; min_score?: number; max_score?: number; page?: number }) =>
+    api.get<Paginated<WorkshopReadinessItem>>('/workshops/readiness', { params }),
 };
 
 // ─── Failed payments type ─────────────────────────────────────────────────────
@@ -550,6 +574,33 @@ export interface FailedPayment {
   customer_email: string | null;
   created_at: string;
 }
+
+// ─── Refund policy types ──────────────────────────────────────────────────────
+
+export interface RefundPolicy {
+  id: number;
+  policy_level: 'platform' | 'organization' | 'workshop';
+  organization_id: number | null;
+  organization_name: string | null;
+  workshop_id: number | null;
+  workshop_title: string | null;
+  policy_type: 'custom' | 'standard';
+  custom_policy_text: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface RefundPolicySummary {
+  unavailable?: boolean;
+  reason?: string;
+  total?: number;
+  platform_level?: number;
+  org_level?: number;
+  workshop_level?: number;
+  workshops_without_policy?: number;
+}
+
+
 
 export const platformPayments = {
   status: () =>
