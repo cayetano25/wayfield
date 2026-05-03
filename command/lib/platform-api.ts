@@ -285,3 +285,118 @@ export const platformFinancials = {
   invoices: (params?: { status?: string; organization_id?: number; page?: number }) =>
     api.get<Paginated<InvoiceListItem>>('/financials/invoices', { params }),
 };
+
+// ─── Automation types ─────────────────────────────────────────────────────────
+
+export interface AutomationRule {
+  id: number;
+  organization_id: number | null;
+  organization_name: string | null;
+  name: string;
+  trigger_type: string;
+  action_type: string;
+  is_active: boolean;
+  last_run_at: string | null;
+  created_at: string;
+}
+
+export const platformAutomations = {
+  list: (params?: {
+    organization_id?: number;
+    trigger_type?: string;
+    is_active?: boolean;
+    page?: number;
+  }) => api.get<Paginated<AutomationRule>>('/automations', { params }),
+  get: (id: number) => api.get<AutomationRule>(`/automations/${id}`),
+  create: (data: {
+    name: string;
+    trigger_type: string;
+    action_type: string;
+    organization_id?: number | null;
+    is_active?: boolean;
+    conditions_json?: string | null;
+    action_config_json?: string | null;
+  }) => api.post<AutomationRule>('/automations', data),
+  update: (id: number, data: Partial<{
+    name: string;
+    trigger_type: string;
+    action_type: string;
+    organization_id: number | null;
+    is_active: boolean;
+    conditions_json: string | null;
+    action_config_json: string | null;
+  }>) => api.patch<AutomationRule>(`/automations/${id}`, data),
+  delete: (id: number) => api.delete(`/automations/${id}`),
+};
+
+// ─── Security event types ─────────────────────────────────────────────────────
+
+export type SecuritySeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface SecurityEvent {
+  id: number;
+  event_type: string;
+  severity: SecuritySeverity;
+  description: string | null;
+  organization_id: number | null;
+  organization_name: string | null;
+  user_id: number | null;
+  user_email: string | null;
+  metadata_json: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export const platformSecurity = {
+  listEvents: (params?: {
+    severity?: string;
+    event_type?: string;
+    organization_id?: number;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+  }) => api.get<Paginated<SecurityEvent>>('/security/events', { params }),
+};
+
+// ─── Platform config types ────────────────────────────────────────────────────
+
+export interface PlatformConfig {
+  config_key: string;
+  config_value: string;
+  description: string | null;
+  updated_at: string;
+}
+
+export const platformConfig = {
+  list: () => api.get<PlatformConfig[]>('/config'),
+  update: (key: string, value: string) =>
+    api.put<PlatformConfig>(`/config/${key}`, { value }),
+};
+
+// ─── Platform admin management types ─────────────────────────────────────────
+
+export interface PlatformAdminEntry {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: AdminRole;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+export const platformAdmins = {
+  list: () => api.get<{ data: PlatformAdminEntry[] }>('/admins'),
+  create: (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+    role: Exclude<AdminRole, 'super_admin'>;
+  }) => api.post<PlatformAdminEntry>('/admins', data),
+  updateRole: (id: number, role: AdminRole) =>
+    api.patch<PlatformAdminEntry>(`/admins/${id}/role`, { role }),
+  updateStatus: (id: number, is_active: boolean) =>
+    api.patch<PlatformAdminEntry>(`/admins/${id}/status`, { is_active }),
+};
