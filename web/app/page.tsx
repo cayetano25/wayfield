@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AppTopNav } from '@/components/nav/AppTopNav';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { CartProvider } from '@/contexts/CartContext';
+import { SystemAnnouncementBanner } from '@/components/shared/SystemAnnouncementBanner';
 
 export const metadata: Metadata = {
   title: 'Wayfield — Creative Workshop Management',
@@ -89,6 +90,7 @@ export default function HomePage() {
         <AppTopNav />
 
         <main className="pt-14 flex-1">
+          <SystemAnnouncementBanner />
           {/* ── Hero ──────────────────────────────────────────────────────── */}
           <section
             style={{
