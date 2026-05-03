@@ -9,12 +9,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { AlertTriangle, CheckCircle, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, ShieldCheck, ShieldAlert, Wrench } from 'lucide-react';
 import {
   platformOverview,
   platformWorkshops,
+  platformMaintenance,
   type OverviewResponse,
   type WorkshopReadinessItem,
+  type MaintenanceStatus,
 } from '@/lib/platform-api';
 
 // ─── Plan display names ───────────────────────────────────────────────────────
@@ -307,14 +309,18 @@ export default function OverviewPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [readiness, setReadiness] = useState<WorkshopReadinessItem[]>([]);
   const [readinessLoaded, setReadinessLoaded] = useState(false);
+  const [maintenanceStatus, setMaintenanceStatus] = useState<MaintenanceStatus | null>(null);
+  const [maintenanceDisabling, setMaintenanceDisabling] = useState(false);
+  const [maintenanceDisableError, setMaintenanceDisableError] = useState(false);
 
   async function load(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
-    const [overviewRes, readinessRes] = await Promise.allSettled([
+    const [overviewRes, readinessRes, maintenanceRes] = await Promise.allSettled([
       platformOverview.get(),
       platformWorkshops.readiness({ status: 'draft', max_score: 79 }),
+      platformMaintenance.status(),
     ]);
     if (overviewRes.status === 'fulfilled') {
       setData(overviewRes.value.data);
@@ -324,9 +330,26 @@ export default function OverviewPage() {
     if (readinessRes.status === 'fulfilled') {
       setReadiness(readinessRes.value.data.data);
     }
+    if (maintenanceRes.status === 'fulfilled') {
+      setMaintenanceStatus(maintenanceRes.value.data);
+    }
     setReadinessLoaded(true);
     setLoading(false);
     setRefreshing(false);
+  }
+
+  async function handleDisableMaintenance() {
+    setMaintenanceDisabling(true);
+    setMaintenanceDisableError(false);
+    try {
+      await platformMaintenance.disable();
+      const { data: status } = await platformMaintenance.status();
+      setMaintenanceStatus(status);
+    } catch {
+      setMaintenanceDisableError(true);
+    } finally {
+      setMaintenanceDisabling(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -400,6 +423,33 @@ export default function OverviewPage() {
   return (
     <div>
       {header}
+
+      {/* Maintenance mode banner */}
+      {maintenanceStatus?.maintenance_mode && (
+        <div className="mb-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1 flex items-start gap-3">
+            <Wrench size={22} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-mono text-sm font-bold uppercase tracking-widest text-amber-800">
+                Maintenance Mode Is Active
+              </p>
+              {maintenanceStatus.maintenance_message && (
+                <p className="text-sm text-amber-700 mt-0.5">{maintenanceStatus.maintenance_message}</p>
+              )}
+              {maintenanceDisableError && (
+                <p className="text-xs text-red-600 mt-1">Failed to disable — try again.</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleDisableMaintenance}
+            disabled={maintenanceDisabling}
+            className="min-h-[44px] px-5 text-sm font-medium text-white bg-[#0FA3B1] rounded-lg hover:bg-[#0d8f9c] disabled:opacity-50 transition-colors shrink-0"
+          >
+            {maintenanceDisabling ? 'Disabling…' : 'Disable Maintenance Mode'}
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

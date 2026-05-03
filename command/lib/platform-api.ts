@@ -708,11 +708,9 @@ export interface SystemAnnouncement {
 }
 
 export interface MaintenanceStatus {
-  is_active: boolean;
-  message: string | null;
-  ends_at: string | null;
-  enabled_at: string | null;
-  enabled_by_name: string | null;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  maintenance_ends_at: string | null;
 }
 
 export const platformAnnouncements = {
@@ -739,7 +737,7 @@ export const platformAnnouncements = {
 };
 
 export const platformMaintenance = {
-  status: () => api.get<MaintenanceStatus>('/maintenance/status'),
+  status: () => api.get<MaintenanceStatus>('/maintenance'),
   enable: (data: {
     message: string;
     ends_at?: string | null;

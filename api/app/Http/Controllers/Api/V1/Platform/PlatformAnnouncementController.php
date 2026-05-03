@@ -216,9 +216,15 @@ class PlatformAnnouncementController extends Controller
      */
     public function maintenanceStatus(): JsonResponse
     {
+        $rawMode = DB::table('platform_config')
+            ->where('config_key', 'maintenance_mode')
+            ->value('config_value') ?? 'false';
+
         return response()->json([
-            'maintenance_mode'    => PlatformConfig::get('maintenance_mode', false),
-            'maintenance_message' => PlatformConfig::get('maintenance_message'),
+            'maintenance_mode'    => filter_var($rawMode, FILTER_VALIDATE_BOOLEAN),
+            'maintenance_message' => DB::table('platform_config')
+                ->where('config_key', 'maintenance_message')
+                ->value('config_value'),
             'maintenance_ends_at' => DB::table('platform_config')
                 ->where('config_key', 'maintenance_ends_at')
                 ->value('config_value'),
@@ -318,12 +324,13 @@ class PlatformAnnouncementController extends Controller
 
     private function setPlatformConfig(string $key, ?string $value, int $adminId): void
     {
-        DB::table('platform_config')
-            ->where('config_key', $key)
-            ->update([
+        DB::table('platform_config')->updateOrInsert(
+            ['config_key' => $key],
+            [
                 'config_value'        => $value ?? '',
                 'updated_by_admin_id' => $adminId,
                 'updated_at'          => now(),
-            ]);
+            ]
+        );
     }
 }

@@ -452,7 +452,7 @@ function EnableMaintenanceModal({
   onEnabled,
 }: {
   onClose: () => void;
-  onEnabled: (status: MaintenanceStatus) => void;
+  onEnabled: () => void;
 }) {
   const { toast } = useToast();
   const [message, setMessage] = useState(DEFAULT_MAINTENANCE_MESSAGE);
@@ -468,14 +468,14 @@ function EnableMaintenanceModal({
     if (!canConfirm) return;
     setLoading(true);
     try {
-      const { data } = await platformMaintenance.enable({
+      await platformMaintenance.enable({
         message: message.trim(),
         ends_at: endsAt || null,
         send_email: sendEmail,
         create_banner: createBanner,
       });
       toast('Maintenance mode enabled.', 'success');
-      onEnabled(data);
+      onEnabled();
     } catch {
       toast('Failed to enable maintenance mode.', 'error');
     } finally {
@@ -667,10 +667,10 @@ export default function AnnouncementsPage() {
   async function handleDisable() {
     setDisabling(true);
     try {
-      const { data } = await platformMaintenance.disable();
-      setMaintenanceStatus(data);
+      await platformMaintenance.disable();
       setDisableModalOpen(false);
       toast('Maintenance mode disabled.', 'success');
+      loadMaintenance();
     } catch {
       toast('Failed to disable maintenance mode.', 'error');
     } finally {
@@ -717,7 +717,7 @@ export default function AnnouncementsPage() {
 
   if (!adminUser || !can.manageAnnouncements(adminUser.role)) return null;
 
-  const isMaintenanceActive = maintenanceStatus?.is_active ?? false;
+  const isMaintenanceActive = maintenanceStatus?.maintenance_mode ?? false;
   const filteredAnnouncements = filterByTab(announcements, activeTab);
 
   const tabs: { key: FilterTab; label: string }[] = [
@@ -767,14 +767,14 @@ export default function AnnouncementsPage() {
                     Maintenance Mode Is Active
                   </span>
                 </div>
-                {maintenanceStatus?.message && (
-                  <p className="text-sm text-amber-700 mb-1">{maintenanceStatus.message}</p>
+                {maintenanceStatus?.maintenance_message && (
+                  <p className="text-sm text-amber-700 mb-1">{maintenanceStatus.maintenance_message}</p>
                 )}
-                {maintenanceStatus?.ends_at && (
+                {maintenanceStatus?.maintenance_ends_at && (
                   <p className="flex items-center gap-1.5 text-xs text-amber-600 font-mono">
                     <Clock size={12} />
                     Ends{' '}
-                    {formatDistanceToNow(new Date(maintenanceStatus.ends_at), {
+                    {formatDistanceToNow(new Date(maintenanceStatus.maintenance_ends_at), {
                       addSuffix: true,
                     })}
                   </p>
@@ -932,10 +932,10 @@ export default function AnnouncementsPage() {
       {enableModalOpen && (
         <EnableMaintenanceModal
           onClose={() => setEnableModalOpen(false)}
-          onEnabled={(status) => {
-            setMaintenanceStatus(status);
+          onEnabled={() => {
             setEnableModalOpen(false);
-            if (status.is_active) loadAnnouncements();
+            loadMaintenance();
+            loadAnnouncements();
           }}
         />
       )}
