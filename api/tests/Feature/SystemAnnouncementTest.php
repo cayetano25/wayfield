@@ -45,7 +45,7 @@ function makeAnnouncement(array $overrides = []): SystemAnnouncement
 
 // ─── Tenant endpoint ─────────────────────────────────────────────────────────
 
-test('test_active_announcement_appears_in_tenant_endpoint', function () {
+test('active announcement appears in tenant endpoint', function () {
     $user = User::factory()->create();
     $announcement = makeAnnouncement([
         'is_active' => true,
@@ -57,57 +57,160 @@ test('test_active_announcement_appears_in_tenant_endpoint', function () {
         ->getJson('/api/v1/system/announcements')
         ->assertStatus(200);
 
-    $data = $response->json('data');
+    $data = $response->json('announcements');
     expect($data)->toHaveCount(1);
 
     $item = $data[0];
-    expect($item)->toHaveKeys(['id', 'title', 'message', 'announcement_type', 'severity', 'is_dismissable', 'color']);
+    expect($item)->toHaveKeys(['id', 'title', 'message', 'announcement_type', 'severity', 'is_dismissable', 'is_dismissed', 'color']);
     expect($item['id'])->toBe($announcement->id);
     expect($item)->not->toHaveKey('created_by_admin_id');
     expect($item)->not->toHaveKey('is_active');
     expect($item['color'])->toBe(SystemAnnouncement::TYPE_COLORS['info']);
+    expect($item['is_dismissed'])->toBeFalse();
 });
 
-test('test_inactive_announcement_not_returned', function () {
-    $user = User::factory()->create();
+test('inactive announcement not returned', function () {
     makeAnnouncement(['is_active' => false]);
 
-    $this->actingAs($user)
-        ->getJson('/api/v1/system/announcements')
+    $this->getJson('/api/v1/system/announcements')
         ->assertStatus(200)
-        ->assertJson(['data' => []]);
+        ->assertJsonPath('announcements', []);
 });
 
-test('test_future_announcement_not_yet_shown', function () {
-    $user = User::factory()->create();
+test('future announcement not yet shown', function () {
     makeAnnouncement([
         'is_active' => true,
         'starts_at' => now()->addHours(2),
     ]);
 
-    $this->actingAs($user)
-        ->getJson('/api/v1/system/announcements')
+    $this->getJson('/api/v1/system/announcements')
         ->assertStatus(200)
-        ->assertJson(['data' => []]);
+        ->assertJsonPath('announcements', []);
 });
 
-test('test_expired_announcement_not_returned', function () {
-    $user = User::factory()->create();
+test('expired announcement not returned', function () {
     makeAnnouncement([
         'is_active' => true,
         'starts_at' => now()->subHours(3),
         'ends_at' => now()->subHour(),
     ]);
 
-    $this->actingAs($user)
-        ->getJson('/api/v1/system/announcements')
+    $this->getJson('/api/v1/system/announcements')
         ->assertStatus(200)
-        ->assertJson(['data' => []]);
+        ->assertJsonPath('announcements', []);
 });
 
-test('test_unauthenticated_request_cannot_read_announcements', function () {
+test('unauthenticated request returns 200 for public endpoint', function () {
     $this->getJson('/api/v1/system/announcements')
-        ->assertStatus(401);
+        ->assertStatus(200)
+        ->assertJsonStructure(['maintenance_mode', 'maintenance_message', 'maintenance_ends_at', 'announcements']);
+});
+
+test('critical severity forces is_dismissable false in response', function () {
+    makeAnnouncement([
+        'severity' => 'critical',
+        'is_dismissable' => true, // column allows true, but response must force false
+    ]);
+
+    $data = $this->getJson('/api/v1/system/announcements')
+        ->assertStatus(200)
+        ->json('announcements');
+
+    expect($data[0]['is_dismissable'])->toBeFalse();
+});
+
+test('dismissed announcement shows is_dismissed true for that user', function () {
+    $user = User::factory()->create();
+    $announcement = makeAnnouncement();
+
+    \App\Models\AnnouncementDismissal::create([
+        'announcement_id' => $announcement->id,
+        'user_id'         => $user->id,
+        'dismissed_at'    => now(),
+    ]);
+
+    $data = $this->actingAs($user)
+        ->getJson('/api/v1/system/announcements')
+        ->assertStatus(200)
+        ->json('announcements');
+
+    expect($data[0]['is_dismissed'])->toBeTrue();
+});
+
+test('is_dismissed false for different user', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $announcement = makeAnnouncement();
+
+    \App\Models\AnnouncementDismissal::create([
+        'announcement_id' => $announcement->id,
+        'user_id'         => $otherUser->id,
+        'dismissed_at'    => now(),
+    ]);
+
+    $data = $this->actingAs($user)
+        ->getJson('/api/v1/system/announcements')
+        ->assertStatus(200)
+        ->json('announcements');
+
+    expect($data[0]['is_dismissed'])->toBeFalse();
+});
+
+test('dismiss endpoint records dismissal', function () {
+    $user = User::factory()->create();
+    $announcement = makeAnnouncement(['severity' => 'low']);
+
+    $this->actingAs($user)
+        ->postJson("/api/v1/system/announcements/{$announcement->id}/dismiss")
+        ->assertStatus(200)
+        ->assertJson(['dismissed' => true]);
+
+    $this->assertDatabaseHas('announcement_dismissals', [
+        'announcement_id' => $announcement->id,
+        'user_id'         => $user->id,
+    ]);
+});
+
+test('dismissing same announcement twice is idempotent', function () {
+    $user = User::factory()->create();
+    $announcement = makeAnnouncement(['severity' => 'low']);
+
+    $this->actingAs($user)
+        ->postJson("/api/v1/system/announcements/{$announcement->id}/dismiss")
+        ->assertStatus(200);
+
+    $this->actingAs($user)
+        ->postJson("/api/v1/system/announcements/{$announcement->id}/dismiss")
+        ->assertStatus(200)
+        ->assertJson(['dismissed' => true]);
+
+    expect(\App\Models\AnnouncementDismissal::where('announcement_id', $announcement->id)
+        ->where('user_id', $user->id)->count())->toBe(1);
+});
+
+test('dismissing critical announcement returns 422', function () {
+    $user = User::factory()->create();
+    $announcement = makeAnnouncement(['severity' => 'critical']);
+
+    $this->actingAs($user)
+        ->postJson("/api/v1/system/announcements/{$announcement->id}/dismiss")
+        ->assertStatus(422)
+        ->assertJsonPath('error', 'critical_not_dismissable');
+});
+
+test('dismiss returns 404 for non-existent announcement', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/system/announcements/999999/dismiss')
+        ->assertStatus(404);
+});
+
+test('response includes maintenance_mode fields', function () {
+    $response = $this->getJson('/api/v1/system/announcements')->assertStatus(200);
+
+    expect($response->json('maintenance_mode'))->toBeBool();
+    expect($response->json())->toHaveKeys(['maintenance_mode', 'maintenance_message', 'maintenance_ends_at', 'announcements']);
 });
 
 // ─── Platform admin endpoints ─────────────────────────────────────────────────

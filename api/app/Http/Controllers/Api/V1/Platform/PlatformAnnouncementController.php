@@ -296,7 +296,7 @@ class PlatformAnnouncementController extends Controller
         DB::table('platform_config')
             ->where('config_key', $key)
             ->update([
-                'config_value'        => $value,
+                'config_value'        => $value ?? '',
                 'updated_by_admin_id' => $adminId,
                 'updated_at'          => now(),
             ]);
