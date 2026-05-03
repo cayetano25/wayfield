@@ -14,10 +14,10 @@ test('tenant user token is rejected on platform routes', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
     $token = $user->createToken('web')->plainTextToken;
 
+    // auth:platform_admin cannot authenticate a tenant token — returns 401
     $this->withToken($token)
         ->getJson('/api/platform/v1/health')
-        ->assertStatus(403)
-        ->assertJson(['error' => 'platform_auth_required']);
+        ->assertStatus(401);
 });
 
 // ─── Platform token is rejected on tenant routes ─────────
@@ -56,7 +56,7 @@ test('valid platform token authenticates on platform routes', function () {
     $this->withToken($token)
         ->getJson('/api/platform/v1/health')
         ->assertStatus(200)
-        ->assertJson(['status' => 'platform ok']);
+        ->assertJsonStructure(['date', 'last_hour_failed_logins', 'security_events_24h']);
 });
 
 // ─── Inactive platform admin is rejected ─────────────────

@@ -92,6 +92,7 @@ test('public leader resource never exposes private fields', function () {
         'website_url',
         'city',
         'state_or_region',
+        'formatted_location', // Phase 16: derived display string, no PII
     ];
 
     expect(array_keys($leaderData))->toEqual($allowedKeys);

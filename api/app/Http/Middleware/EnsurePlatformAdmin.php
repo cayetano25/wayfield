@@ -31,7 +31,7 @@ class EnsurePlatformAdmin
         }
 
         if (! $adminUser->is_active) {
-            return response()->json(['message' => 'Account is inactive.'], 403);
+            return response()->json(['error' => 'account_inactive', 'message' => 'Account is inactive.'], 403);
         }
 
         if (! empty($roles) && ! in_array($adminUser->role, $roles, true)) {

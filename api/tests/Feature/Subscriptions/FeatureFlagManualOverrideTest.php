@@ -68,8 +68,8 @@ test('owner can set a manual override and audit log is created', function () {
         ->assertJsonFragment(['is_enabled' => true])
         ->assertJsonFragment(['source' => 'manual_override']);
 
-    // Verify feature_flags row exists
-    $this->assertDatabaseHas('feature_flags', [
+    // Verify organization_feature_flags row exists (per-org overrides live here, not feature_flags)
+    $this->assertDatabaseHas('organization_feature_flags', [
         'organization_id' => $org->id,
         'feature_key' => 'reporting',
         'is_enabled' => true,

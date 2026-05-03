@@ -38,20 +38,20 @@ test('leader can update their own profile', function () {
     $user = User::factory()->create();
     $leader = Leader::factory()->withUser($user->id)->create();
 
+    // city is no longer accepted on this endpoint (Phase 16 — update via PATCH /api/v1/me)
     $this->actingAs($user, 'sanctum')
         ->patchJson('/api/v1/leader/profile', [
             'bio' => 'Updated bio.',
-            'city' => 'Portland',
             'website_url' => 'https://example.com',
         ])
         ->assertStatus(200)
         ->assertJsonPath('leader_profile.bio', 'Updated bio.')
-        ->assertJsonPath('leader_profile.city', 'Portland');
+        ->assertJsonPath('leader_profile.website_url', 'https://example.com');
 
     $this->assertDatabaseHas('leaders', [
         'id' => $leader->id,
         'bio' => 'Updated bio.',
-        'city' => 'Portland',
+        'website_url' => 'https://example.com',
     ]);
 });
 
