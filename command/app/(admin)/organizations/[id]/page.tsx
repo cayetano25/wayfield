@@ -1016,8 +1016,8 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
           <Table>
             <TableHead>
               <Th>Workshop</Th>
-              <Th>Sessions</Th>
-              <Th>Pricing Model</Th>
+              <Th>Status</Th>
+              <Th>Priced Sessions</Th>
               <Th>Base Price</Th>
               <Th>Deposit</Th>
             </TableHead>
@@ -1025,26 +1025,31 @@ function WorkshopsTab({ orgId }: { orgId: number }) {
               {items.map((item) => (
                 <tr key={item.workshop_id} className="hover:bg-gray-50">
                   <Td>
-                    <span className="text-sm font-medium text-gray-900">{item.workshop_title}</span>
+                    <span className="text-sm font-medium text-gray-900">{item.title}</span>
                   </Td>
                   <Td>
-                    <span className="text-sm text-gray-600">{item.session_count}</span>
+                    <span className="text-sm text-gray-500 capitalize">{item.status}</span>
                   </Td>
                   <Td>
-                    <span className="text-sm text-gray-500">{item.pricing_model ?? '—'}</span>
+                    <MonoText>
+                      <span className="text-sm text-gray-600">{item.pricing.session_pricing_count}</span>
+                    </MonoText>
                   </Td>
                   <Td>
-                    <span
-                      className="text-sm font-medium text-gray-800"
-                      style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}
-                    >
-                      {formatCentsLocal(item.base_price_cents)}
-                    </span>
+                    <MonoText>
+                      <span className="text-sm font-medium text-gray-800">
+                        {item.pricing.has_pricing ? formatCentsLocal(item.pricing.base_price_cents) : '—'}
+                      </span>
+                    </MonoText>
                   </Td>
                   <Td>
-                    <span className="text-sm text-gray-600" style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)' }}>
-                      {item.deposit_required ? formatCentsLocal(item.deposit_amount_cents) : '—'}
-                    </span>
+                    <MonoText>
+                      <span className="text-sm text-gray-600">
+                        {item.pricing.deposit_enabled
+                          ? formatCentsLocal(item.pricing.deposit_amount_cents)
+                          : '—'}
+                      </span>
+                    </MonoText>
                   </Td>
                 </tr>
               ))}

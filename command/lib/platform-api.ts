@@ -501,12 +501,19 @@ export const platformHealth = {
 
 export interface WorkshopPricingItem {
   workshop_id: number;
-  workshop_title: string;
-  session_count: number;
-  pricing_model: string | null;
-  base_price_cents: number | null;
-  deposit_required: boolean;
-  deposit_amount_cents: number | null;
+  title: string;
+  organization_id: number;
+  organization_name: string | null;
+  status: string;
+  pricing: {
+    has_pricing: boolean;
+    base_price_cents: number | null;
+    currency: string | null;
+    deposit_enabled: boolean;
+    deposit_amount_cents: number | null;
+    active_tier_count: number;
+    session_pricing_count: number;
+  };
 }
 
 export interface AddonSessionPricing {
