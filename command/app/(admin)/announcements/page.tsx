@@ -76,7 +76,7 @@ export function getAnnouncementStatus(a: SystemAnnouncement): AnnouncementStatus
   return 'live';
 }
 
-export function getRowBorderClass(status: AnnouncementStatus, type: AnnouncementType): string {
+export function getRowBorderClass(status: AnnouncementStatus, type: string): string {
   if (status === 'live' && type === 'critical') return 'border-l-2 border-l-red-400';
   if (status === 'live') return 'border-l-2 border-l-teal-400';
   return 'border-l-2 border-l-transparent';
@@ -120,11 +120,11 @@ function StatusBadge({ status }: { status: AnnouncementStatus }) {
 
 // ─── Type Badge ───────────────────────────────────────────────────────────────
 
-function TypeBadge({ type }: { type: AnnouncementType }) {
-  const { badgeClass, label } = TYPE_CONFIG[type];
+function TypeBadge({ type }: { type: string }) {
+  const cfg = TYPE_CONFIG[type as AnnouncementType] ?? TYPE_CONFIG.info;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium ${badgeClass}`}>
-      {label}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium ${cfg.badgeClass}`}>
+      {cfg.label}
     </span>
   );
 }
@@ -140,7 +140,7 @@ export function BannerPreview({
   message: string;
   type: AnnouncementType;
 }) {
-  const { bg, border, text, icon: Icon } = TYPE_CONFIG[type];
+  const { bg, border, text, icon: Icon } = TYPE_CONFIG[type] ?? TYPE_CONFIG.info;
   const empty = !title && !message;
   return (
     <div className={`rounded-lg border ${bg} ${border} px-4 py-3 flex items-start gap-3`}>
@@ -188,8 +188,8 @@ function AnnouncementModal({
     return {
       title: announcement.title,
       message: announcement.message,
-      type: announcement.type,
-      is_dismissible: announcement.is_dismissible,
+      type: (announcement.announcement_type as AnnouncementType) || 'info',
+      is_dismissible: announcement.is_dismissable,
       starts_at: announcement.starts_at ? announcement.starts_at.slice(0, 16) : '',
       ends_at: announcement.ends_at ? announcement.ends_at.slice(0, 16) : '',
       send_email: false,
@@ -214,9 +214,9 @@ function AnnouncementModal({
       const payload = {
         title: form.title.trim(),
         message: form.message.trim(),
-        type: form.type,
-        is_dismissible: form.is_dismissible,
-        starts_at: form.starts_at || null,
+        announcement_type: form.type,        // backend field name
+        is_dismissable: form.is_dismissible, // backend field name (one 's')
+        starts_at: form.starts_at || null,   // null → backend defaults to now()
         ends_at: form.ends_at || null,
         send_email: form.send_email,
       };
@@ -654,7 +654,7 @@ export default function AnnouncementsPage() {
     setAnnouncementsError(null);
     platformAnnouncements
       .list()
-      .then(({ data }) => setAnnouncements(data))
+      .then(({ data }) => setAnnouncements(data.data))
       .catch(() => setAnnouncementsError('Failed to load announcements.'))
       .finally(() => setAnnouncementsLoading(false));
   }, []);
@@ -868,7 +868,7 @@ export default function AnnouncementsPage() {
           ) : (
             filteredAnnouncements.map((a) => {
               const status = getAnnouncementStatus(a);
-              const rowBorder = getRowBorderClass(status, a.type);
+              const rowBorder = getRowBorderClass(status, a.announcement_type);
               return (
                 <tr
                   key={a.id}
@@ -882,14 +882,14 @@ export default function AnnouncementsPage() {
                     </div>
                   </Td>
                   <Td>
-                    <TypeBadge type={a.type} />
+                    <TypeBadge type={a.announcement_type} />
                   </Td>
                   <Td>
                     <StatusBadge status={status} />
                   </Td>
                   <Td className="text-sm text-gray-500">{formatDateDisplay(a.starts_at)}</Td>
                   <Td className="text-sm text-gray-500">{formatDateDisplay(a.ends_at)}</Td>
-                  <Td className="text-sm text-gray-500">{a.created_by_name ?? '—'}</Td>
+                  <Td className="text-sm text-gray-500">{a.created_by_admin_id ? `Admin #${a.created_by_admin_id}` : '—'}</Td>
                   <Td>
                     <div className="flex items-center gap-1">
                       <button

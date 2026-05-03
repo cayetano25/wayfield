@@ -61,14 +61,16 @@ class PlatformAnnouncementController extends Controller
         $validated = $request->validate([
             'title'             => ['required', 'string', 'max:255'],
             'message'           => ['required', 'string'],
-            'announcement_type' => ['required', 'string', Rule::in(['info', 'warning', 'maintenance', 'outage', 'update'])],
+            'announcement_type' => ['required', 'string', Rule::in(['info', 'warning', 'maintenance', 'outage', 'update', 'critical'])],
             'severity'          => ['sometimes', 'string', Rule::in(['low', 'medium', 'high', 'critical'])],
             'target_audience'   => ['sometimes', 'string', Rule::in(['all', 'organizers'])],
             'is_dismissable'    => ['sometimes', 'boolean'],
-            'starts_at'         => ['required', 'date'],
+            'starts_at'         => ['nullable', 'date'],
             'ends_at'           => ['nullable', 'date', 'after:starts_at'],
             'send_email'        => ['sometimes', 'boolean'],
         ]);
+
+        $validated['starts_at'] ??= now()->toIso8601String();
 
         $announcement = SystemAnnouncement::create([
             ...collect($validated)->except('send_email')->all(),

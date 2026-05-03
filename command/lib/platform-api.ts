@@ -697,12 +697,12 @@ export interface SystemAnnouncement {
   id: number;
   title: string;
   message: string;
-  type: AnnouncementType;
+  announcement_type: string;   // backend field — may also be 'maintenance'|'outage'|'update'
   is_active: boolean;
-  is_dismissible: boolean;
+  is_dismissable: boolean;     // backend spelling (one 's')
   starts_at: string | null;
   ends_at: string | null;
-  created_by_name: string | null;
+  created_by_admin_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -716,27 +716,26 @@ export interface MaintenanceStatus {
 }
 
 export const platformAnnouncements = {
-  list: () => api.get<SystemAnnouncement[]>('/announcements'),
+  list: () => api.get<Paginated<SystemAnnouncement>>('/system-announcements'),
   create: (data: {
     title: string;
     message: string;
-    type: AnnouncementType;
-    is_dismissible: boolean;
+    announcement_type: string;
+    is_dismissable: boolean;
     starts_at?: string | null;
     ends_at?: string | null;
     send_email?: boolean;
-  }) => api.post<SystemAnnouncement>('/announcements', data),
+  }) => api.post<SystemAnnouncement>('/system-announcements', data),
   update: (id: number, data: Partial<{
     title: string;
     message: string;
-    type: AnnouncementType;
-    is_dismissible: boolean;
+    announcement_type: string;
+    is_dismissable: boolean;
     is_active: boolean;
     starts_at: string | null;
     ends_at: string | null;
-    send_email: boolean;
-  }>) => api.patch<SystemAnnouncement>(`/announcements/${id}`, data),
-  delete: (id: number) => api.delete(`/announcements/${id}`),
+  }>) => api.patch<SystemAnnouncement>(`/system-announcements/${id}`, data),
+  delete: (id: number) => api.delete(`/system-announcements/${id}`),
 };
 
 export const platformMaintenance = {
