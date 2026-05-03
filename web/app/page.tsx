@@ -4,6 +4,7 @@ import { AppTopNav } from '@/components/nav/AppTopNav';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { CartProvider } from '@/contexts/CartContext';
 import { SystemAnnouncementBanner } from '@/components/shared/SystemAnnouncementBanner';
+import FeatureHighlights from '@/components/landing/FeatureHighlights';
 
 export const metadata: Metadata = {
   title: 'Wayfield — Creative Workshop Management',
@@ -25,35 +26,6 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
 };
-
-/* ── Feature highlights ─────────────────────────────────────────────────── */
-
-const FEATURES = [
-  {
-    icon: '🎯',
-    title: 'For Participants',
-    description:
-      'Join any workshop with a code, browse sessions, build your personal schedule, and check in on the day — all from one account.',
-  },
-  {
-    icon: '🏢',
-    title: 'For Organizers',
-    description:
-      'Create workshops, manage sessions and tracks, invite leaders, share join codes, and track attendance in real time.',
-  },
-  {
-    icon: '🌐',
-    title: 'Any Format',
-    description:
-      'In-person, virtual, or hybrid. Session-based with selectable tracks or a simpler event-based schedule. Wayfield adapts to your format.',
-  },
-  {
-    icon: '📱',
-    title: 'Offline Ready',
-    description:
-      'The mobile app works without connectivity in the field. Workshop data is cached locally so leaders and participants stay in sync no matter where they are.',
-  },
-];
 
 /* ── Testimonial placeholders ────────────────────────────────────────────── */
 
@@ -179,56 +151,7 @@ export default function HomePage() {
           </section>
 
           {/* ── Features ──────────────────────────────────────────────────── */}
-          <section style={{ background: '#F9FAFB', padding: '72px 24px' }}>
-            <div className="mx-auto" style={{ maxWidth: 1100 }}>
-              <div style={{ textAlign: 'center', marginBottom: 52 }}>
-                <h2
-                  className="font-heading font-bold"
-                  style={{ fontSize: 32, color: '#2E2E2E', marginBottom: 12 }}
-                >
-                  Everything you need, nothing you don&apos;t
-                </h2>
-                <p
-                  className="font-sans"
-                  style={{ fontSize: 16, color: '#6B7280', maxWidth: 480, margin: '0 auto' }}
-                >
-                  Wayfield is purpose-built for creative workshops — from a single
-                  photography retreat to a multi-track conference.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {FEATURES.map((f) => (
-                  <div
-                    key={f.title}
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 12,
-                      padding: '28px 24px',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                    }}
-                  >
-                    <span style={{ fontSize: 32, display: 'block', marginBottom: 16 }}>
-                      {f.icon}
-                    </span>
-                    <h3
-                      className="font-heading font-bold"
-                      style={{ fontSize: 16, color: '#2E2E2E', marginBottom: 10 }}
-                    >
-                      {f.title}
-                    </h3>
-                    <p
-                      className="font-sans"
-                      style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.65 }}
-                    >
-                      {f.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+          <FeatureHighlights />
 
           {/* ── Pricing callout ───────────────────────────────────────────── */}
           <section
