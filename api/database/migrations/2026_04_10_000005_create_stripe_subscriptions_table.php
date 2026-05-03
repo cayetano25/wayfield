@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('stripe_customer_id', 255);
             $table->string('stripe_subscription_id', 255)->unique();
             $table->string('stripe_price_id', 255);
-            $table->enum('plan_code', ['free', 'starter', 'pro', 'enterprise']);
+            $table->enum('plan_code', ['foundation', 'creator', 'studio', 'enterprise']);
             $table->enum('status', [
                 'active', 'trialing', 'past_due', 'canceled',
                 'incomplete', 'incomplete_expired', 'unpaid', 'paused',

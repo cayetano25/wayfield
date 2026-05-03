@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->enum('plan_code', ['free', 'starter', 'pro', 'enterprise']);
+            $table->enum('plan_code', ['foundation', 'creator', 'studio', 'enterprise']);
             $table->enum('status', ['active', 'trialing', 'past_due', 'canceled', 'expired']);
             $table->dateTime('starts_at');
             $table->dateTime('ends_at')->nullable();

@@ -30,11 +30,11 @@ return new class extends Migration
         // Seed the initial catalog
         $now = now();
         DB::table('feature_flags')->insert([
-            ['feature_key' => 'analytics',       'description' => 'Advanced analytics dashboard',     'default_enabled' => false, 'plan_defaults' => '{"free":false,"starter":false,"pro":true,"enterprise":true}',   'created_at' => $now, 'updated_at' => $now],
-            ['feature_key' => 'api_access',       'description' => 'API and webhook access',           'default_enabled' => false, 'plan_defaults' => '{"free":false,"starter":false,"pro":true,"enterprise":true}',   'created_at' => $now, 'updated_at' => $now],
-            ['feature_key' => 'leader_messaging', 'description' => 'Leader day-of-session notifications', 'default_enabled' => true,  'plan_defaults' => '{"free":false,"starter":true,"pro":true,"enterprise":true}',    'created_at' => $now, 'updated_at' => $now],
-            ['feature_key' => 'waitlists',        'description' => 'Session waitlists',                'default_enabled' => false, 'plan_defaults' => '{"free":false,"starter":true,"pro":true,"enterprise":true}',    'created_at' => $now, 'updated_at' => $now],
-            ['feature_key' => 'custom_branding',  'description' => 'Custom branding and logo',         'default_enabled' => false, 'plan_defaults' => '{"free":false,"starter":false,"pro":false,"enterprise":true}',  'created_at' => $now, 'updated_at' => $now],
+            ['feature_key' => 'analytics',       'description' => 'Advanced analytics dashboard',     'default_enabled' => false, 'plan_defaults' => '{"foundation":false,"creator":false,"studio":true,"enterprise":true}',   'created_at' => $now, 'updated_at' => $now],
+            ['feature_key' => 'api_access',       'description' => 'API and webhook access',           'default_enabled' => false, 'plan_defaults' => '{"foundation":false,"creator":false,"studio":true,"enterprise":true}',   'created_at' => $now, 'updated_at' => $now],
+            ['feature_key' => 'leader_messaging', 'description' => 'Leader day-of-session notifications', 'default_enabled' => true,  'plan_defaults' => '{"foundation":false,"creator":true,"studio":true,"enterprise":true}',    'created_at' => $now, 'updated_at' => $now],
+            ['feature_key' => 'waitlists',        'description' => 'Session waitlists',                'default_enabled' => false, 'plan_defaults' => '{"foundation":false,"creator":true,"studio":true,"enterprise":true}',    'created_at' => $now, 'updated_at' => $now],
+            ['feature_key' => 'custom_branding',  'description' => 'Custom branding and logo',         'default_enabled' => false, 'plan_defaults' => '{"foundation":false,"creator":false,"studio":false,"enterprise":true}',  'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 
