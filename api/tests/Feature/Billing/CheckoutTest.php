@@ -36,7 +36,7 @@ test('owner can create a checkout session for starter plan', function () {
 
     // In test env no Stripe price IDs are set, so the controller returns 422
     // with stripe_not_configured — which proves the owner cleared the auth check.
-    config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
+    config(['plans.pricing.creator.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'creator',
@@ -75,7 +75,7 @@ test('billing_admin can initiate a checkout session', function () {
     [$org, $user] = billingOrg('foundation', 'billing_admin');
 
     // Ensure no price ID so controller reaches the Stripe-not-configured check
-    config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
+    config(['plans.pricing.creator.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'creator',
@@ -114,7 +114,7 @@ test('checkout returns 422 when no Stripe price is configured for the plan', fun
     [$org, $user] = billingOrg('foundation', 'owner');
 
     // Ensure no price ID is set
-    config(['plans.pricing.starter.stripe_monthly_price_id' => null]);
+    config(['plans.pricing.creator.stripe_monthly_price_id' => null]);
 
     $response = $this->actingAs($user)->postJson("/api/v1/organizations/{$org->id}/billing/checkout", [
         'plan_code' => 'creator',
