@@ -7,13 +7,13 @@ return [
     | Plan Display Names
     |--------------------------------------------------------------------------
     | Maps DB enum values to marketing display names.
-    | DB enum values (free, starter, pro, enterprise) never change.
+    | DB enum values (foundation, creator, studio, enterprise) never change.
     | Display names can be updated here without touching the database.
     */
     'display_names' => [
-        'free' => 'Foundation',
-        'starter' => 'Creator',
-        'pro' => 'Studio',
+        'foundation' => 'Foundation',
+        'creator'    => 'Creator',
+        'studio'     => 'Studio',
         'enterprise' => 'Enterprise',
     ],
 
@@ -27,24 +27,24 @@ return [
     | stripe_monthly_price_id:  Stripe Price ID for monthly billing (set in .env)
     | stripe_annual_price_id:   Stripe Price ID for annual billing  (set in .env)
     |
-    | null = not applicable (Free has no Stripe price; Enterprise is custom/contact sales).
+    | null = not applicable (Foundation has no Stripe price; Enterprise is custom/contact sales).
     */
     'pricing' => [
-        'free' => [
+        'foundation' => [
             'monthly_cents' => 0,
             'annual_cents' => 0,
             'annual_discount_pct' => 0,
             'stripe_monthly_price_id' => null,
             'stripe_annual_price_id' => null,
         ],
-        'starter' => [
+        'creator' => [
             'monthly_cents' => 4900,   // $49.00/mo
             'annual_cents' => 4165,   // ~$41.65/mo billed annually ($499.80/yr)
             'annual_discount_pct' => 15,
             'stripe_monthly_price_id' => env('STRIPE_PRICE_CREATOR_MONTHLY'),
             'stripe_annual_price_id' => env('STRIPE_PRICE_CREATOR_ANNUAL'),
         ],
-        'pro' => [
+        'studio' => [
             'monthly_cents' => 14900,  // $149.00/mo
             'annual_cents' => 12665,  // ~$126.65/mo billed annually ($1519.80/yr)
             'annual_discount_pct' => 15,
@@ -67,21 +67,25 @@ return [
     | null = unlimited.
     | These are enforced at the API layer by EnforceFeatureGateService.
     | Never enforce limits in UI only.
+    |
+    | Capacity enforcement is always-on in backend business logic regardless of
+    | plan. The capacity_enforcement feature flag in features[] controls whether
+    | organizers can configure capacity limits via the UI (Starter+ only).
     */
     'limits' => [
-        'free' => [
+        'foundation' => [
             'organizations' => 1,
             'organizers' => 1,
             'active_workshops' => 2,
             'participants_per_workshop' => 75,
         ],
-        'starter' => [
+        'creator' => [
             'organizations' => 1,
             'organizers' => 5,
             'active_workshops' => 10,
             'participants_per_workshop' => 250,
         ],
-        'pro' => [
+        'studio' => [
             'organizations' => 3,
             'organizers' => null,
             'active_workshops' => null,
@@ -102,11 +106,11 @@ return [
     | true  = included in this plan
     | false = not included
     |
-    | IMPORTANT: custom_branding is Studio (pro) and above only.
-    | It is NOT included in Creator (starter) — this is intentional.
+    | IMPORTANT: custom_branding is Studio and above only.
+    | It is NOT included in Creator — this is intentional.
     */
     'features' => [
-        'free' => [
+        'foundation' => [
             'scheduling' => true,
             'session_selection' => true,
             'self_check_in' => true,
@@ -129,7 +133,7 @@ return [
             'sso' => false,
             'white_label' => false,
         ],
-        'starter' => [
+        'creator' => [
             'scheduling' => true,
             'session_selection' => true,
             'self_check_in' => true,
@@ -152,7 +156,7 @@ return [
             'sso' => false,
             'white_label' => false,
         ],
-        'pro' => [
+        'studio' => [
             'scheduling' => true,
             'session_selection' => true,
             'self_check_in' => true,
@@ -207,7 +211,7 @@ return [
     | Used by upgrade/downgrade logic to determine direction of plan change.
     | Index 0 is lowest, index 3 is highest.
     */
-    'order' => ['free', 'starter', 'pro', 'enterprise'],
+    'order' => ['foundation', 'creator', 'studio', 'enterprise'],
 
     /*
     |--------------------------------------------------------------------------
@@ -217,7 +221,7 @@ return [
     | feature flags so display copy can change without touching business logic.
     */
     'catalog' => [
-        'free' => [
+        'foundation' => [
             'tagline'      => 'Run your first workshops without friction.',
             'monthly_price' => 0,
             'annual_price'  => 0,
@@ -233,7 +237,7 @@ return [
                 'Core offline access',
             ],
         ],
-        'starter' => [
+        'creator' => [
             'tagline'      => 'Run workshops consistently—without losing control.',
             'monthly_price' => 49,
             'annual_price'  => 41.65,
@@ -250,7 +254,7 @@ return [
                 'Basic analytics & attendance summaries',
             ],
         ],
-        'pro' => [
+        'studio' => [
             'tagline'      => 'Operate your workshop program like a system.',
             'monthly_price' => 149,
             'annual_price'  => 126.65,
