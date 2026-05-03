@@ -551,8 +551,13 @@ Route::prefix('v1')->group(function () {
         );
 
         // ─── System Announcements ─────────────────────────────────────────────
+        // GET is public — auth.optional enriches is_dismissed for logged-in users.
         Route::get('system/announcements', [SystemAnnouncementController::class, 'index'])
+            ->withoutMiddleware(['auth:sanctum', 'tenant.auth'])
+            ->middleware('auth.optional')
             ->name('system-announcements.index');
+        Route::post('system/announcements/{id}/dismiss', [SystemAnnouncementController::class, 'dismiss'])
+            ->name('system-announcements.dismiss');
 
         // ─── File Uploads ─────────────────────────────────────────────────────
         Route::post('files/presigned-url', [FileUploadController::class, 'presignedUrl']);

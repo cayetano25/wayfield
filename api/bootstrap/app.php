@@ -3,6 +3,7 @@
 use App\Http\Middleware\AttemptSanctumAuth;
 use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\CheckFeatureAccess;
+use App\Http\Middleware\CheckMaintenanceMode;
 use App\Http\Middleware\EnsureOnboardingComplete;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsurePlatformToken;
@@ -33,17 +34,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // Pure API — never redirect unauthenticated requests to a login page.
         $middleware->redirectGuestsTo(fn (Request $request) => null);
 
+        $middleware->prependToGroup('api', CheckMaintenanceMode::class);
+
         $middleware->alias([
-            'platform.admin' => EnsurePlatformAdmin::class,
-            'platform.auth' => EnsurePlatformToken::class,
-            'platform.2fa'  => \App\Http\Middleware\EnsureTwoFactorSetup::class,
-            'tenant.user' => EnsureTenantUser::class,
-            'tenant.auth' => EnsureTenantToken::class,
-            'feature' => CheckFeatureAccess::class,
-            'auth.api_key' => AuthenticateApiKey::class,
-            'onboarding.complete' => EnsureOnboardingComplete::class,
-            'payments.enabled'    => RequirePaymentsEnabled::class,
-            'auth.optional'       => AttemptSanctumAuth::class,
+            'platform.admin'     => EnsurePlatformAdmin::class,
+            'platform.auth'      => EnsurePlatformToken::class,
+            'platform.2fa'       => \App\Http\Middleware\EnsureTwoFactorSetup::class,
+            'tenant.user'        => EnsureTenantUser::class,
+            'tenant.auth'        => EnsureTenantToken::class,
+            'feature'            => CheckFeatureAccess::class,
+            'auth.api_key'       => AuthenticateApiKey::class,
+            'onboarding.complete'=> EnsureOnboardingComplete::class,
+            'payments.enabled'   => RequirePaymentsEnabled::class,
+            'auth.optional'      => AttemptSanctumAuth::class,
+            'maintenance.check'  => CheckMaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Api\V1\Platform;
 
 use App\Domain\Platform\Services\PlatformAuditService;
+use App\Http\Controllers\Api\V1\SystemAnnouncementController;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Models\PlatformConfig;
 use App\Models\SystemAnnouncement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PlatformAnnouncementController extends Controller
@@ -159,5 +163,142 @@ class PlatformAnnouncementController extends Controller
         $announcement->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * POST /api/platform/v1/system-announcements/{announcement}/deactivate
+     *
+     * Immediately hides the announcement without deleting it.
+     * Useful for emergency shutdown of an active announcement.
+     */
+    public function deactivate(Request $request, SystemAnnouncement $announcement): JsonResponse
+    {
+        /** @var AdminUser $adminUser */
+        $adminUser = $request->user('platform_admin');
+
+        if (! $adminUser->hasRole('super_admin', 'admin')) {
+            return response()->json(['message' => 'Insufficient platform role.'], 403);
+        }
+
+        $announcement->update(['is_active' => false]);
+
+        $this->audit->record(
+            action: 'system_announcement_deactivated',
+            adminUser: $adminUser,
+            options: [
+                'entity_type' => 'system_announcement',
+                'entity_id'   => $announcement->id,
+                'ip_address'  => $request->ip(),
+                'metadata_json' => ['title' => $announcement->title],
+            ]
+        );
+
+        SystemAnnouncementController::invalidateCache();
+
+        return response()->json($announcement->fresh());
+    }
+
+    /**
+     * GET /api/platform/v1/maintenance
+     *
+     * Returns the current maintenance mode state from platform_config.
+     */
+    public function maintenanceStatus(): JsonResponse
+    {
+        return response()->json([
+            'maintenance_mode'    => PlatformConfig::get('maintenance_mode', false),
+            'maintenance_message' => PlatformConfig::get('maintenance_message'),
+            'maintenance_ends_at' => DB::table('platform_config')
+                ->where('config_key', 'maintenance_ends_at')
+                ->value('config_value'),
+        ]);
+    }
+
+    /**
+     * POST /api/platform/v1/maintenance/enable
+     *
+     * Enables maintenance mode. All tenant API routes return 503.
+     * Restricted to super_admin only.
+     */
+    public function enableMaintenance(Request $request): JsonResponse
+    {
+        /** @var AdminUser $adminUser */
+        $adminUser = $request->user('platform_admin');
+
+        if (! $adminUser->hasRole('super_admin')) {
+            return response()->json(['message' => 'Insufficient platform role.'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:1000'],
+            'ends_at' => ['nullable', 'date'],
+        ]);
+
+        $this->setPlatformConfig('maintenance_mode', 'true', $adminUser->id);
+        $this->setPlatformConfig('maintenance_message', $validated['message'], $adminUser->id);
+        $this->setPlatformConfig('maintenance_ends_at', $validated['ends_at'] ?? null, $adminUser->id);
+
+        Cache::forget('maintenance_mode_active');
+        Cache::forget('maintenance_message');
+        SystemAnnouncementController::invalidateCache();
+
+        $this->audit->record(
+            action: 'maintenance_mode.enabled',
+            adminUser: $adminUser,
+            options: [
+                'ip_address'    => $request->ip(),
+                'metadata_json' => [
+                    'message' => $validated['message'],
+                    'ends_at' => $validated['ends_at'] ?? null,
+                ],
+            ]
+        );
+
+        return response()->json([
+            'maintenance_mode' => true,
+            'message'          => $validated['message'],
+            'ends_at'          => $validated['ends_at'] ?? null,
+        ]);
+    }
+
+    /**
+     * POST /api/platform/v1/maintenance/disable
+     *
+     * Disables maintenance mode. Restricted to super_admin only.
+     */
+    public function disableMaintenance(Request $request): JsonResponse
+    {
+        /** @var AdminUser $adminUser */
+        $adminUser = $request->user('platform_admin');
+
+        if (! $adminUser->hasRole('super_admin')) {
+            return response()->json(['message' => 'Insufficient platform role.'], 403);
+        }
+
+        $this->setPlatformConfig('maintenance_mode', 'false', $adminUser->id);
+        $this->setPlatformConfig('maintenance_ends_at', null, $adminUser->id);
+
+        Cache::forget('maintenance_mode_active');
+        Cache::forget('maintenance_message');
+        SystemAnnouncementController::invalidateCache();
+
+        $this->audit->record(
+            action: 'maintenance_mode.disabled',
+            adminUser: $adminUser,
+            options: ['ip_address' => $request->ip()]
+        );
+
+        return response()->json(['maintenance_mode' => false]);
+    }
+
+    private function setPlatformConfig(string $key, ?string $value, int $adminId): void
+    {
+        DB::table('platform_config')
+            ->where('config_key', $key)
+            ->update([
+                'config_value'        => $value,
+                'updated_by_admin_id' => $adminId,
+                'updated_at'          => now(),
+            ]);
     }
 }
