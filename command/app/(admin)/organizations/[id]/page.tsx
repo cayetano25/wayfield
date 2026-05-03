@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
@@ -493,9 +493,8 @@ function AuditTab({ orgId }: { orgId: number }) {
             </tr>
           ) : (
             logs.map((log) => (
-              <>
+              <React.Fragment key={log.id}>
                 <tr
-                  key={log.id}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                 >
@@ -529,7 +528,7 @@ function AuditTab({ orgId }: { orgId: number }) {
                   </Td>
                 </tr>
                 {expanded === log.id && log.metadata_json && (
-                  <tr key={`${log.id}-detail`} className="bg-gray-50">
+                  <tr className="bg-gray-50">
                     <td colSpan={5} className="px-6 py-3">
                       <pre className="text-xs text-gray-600 font-mono whitespace-pre-wrap overflow-auto max-h-48">
                         {JSON.stringify(log.metadata_json, null, 2)}
@@ -537,7 +536,7 @@ function AuditTab({ orgId }: { orgId: number }) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))
           )}
         </TableBody>
