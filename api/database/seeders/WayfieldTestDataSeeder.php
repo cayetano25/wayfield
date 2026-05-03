@@ -32,7 +32,7 @@ class WayfieldTestDataSeeder extends Seeder
 
         DB::table('subscriptions')->insert([
             'organization_id' => $org1Id,
-            'plan_code' => 'free',
+            'plan_code' => 'foundation',
             'status' => 'active',
             'starts_at' => now(),
             'ends_at' => null,
@@ -58,7 +58,7 @@ class WayfieldTestDataSeeder extends Seeder
 
         DB::table('subscriptions')->insert([
             'organization_id' => $org2Id,
-            'plan_code' => 'starter',
+            'plan_code' => 'creator',
             'status' => 'active',
             'starts_at' => now(),
             'ends_at' => null,
